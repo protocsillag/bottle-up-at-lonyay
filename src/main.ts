@@ -8,6 +8,9 @@ import { ItemSystem } from './world/items/ItemSystem';
 import { ReturnPoints } from './world/ReturnPoints';
 import { BuildingSystem } from './world/buildings/BuildingSystem';
 import { MohuGame } from './minigames/mohu/MohuGame';
+import { Shops, doorOnFacade } from './world/shops/Shops';
+import { buildMarketHall, mostNorthWestEdge } from './world/landmarks/marketHall';
+import { buildDressing } from './world/landmarks/dressing';
 import { Input } from './player/input';
 import { Player } from './player/Player';
 import { FollowCamera } from './player/FollowCamera';
@@ -19,6 +22,7 @@ import { newSeed } from './state/rng';
 import { formatFt } from './state/time';
 import { BIKE, DOG, GLASS_BREAK } from './state/balance';
 import { DayNight } from './world/DayNight';
+import { facadeUniforms } from './world/facade';
 import { Lamps } from './world/lamps';
 import { DogMess } from './world/DogMess';
 import { Bikes } from './world/Bikes';
@@ -75,25 +79,22 @@ addEventListener('resize', () => {
 });
 
 const city = await loadCity();
-const cityGroup = buildCity(city);
+const hallBuilding = city.buildings.find((b) => b.name === 'Központi Vásárcsarnok');
+const cityGroup = buildCity(city, { skip: new Set(hallBuilding ? [hallBuilding.id] : []) });
 scene.add(cityGroup);
+const hall = hallBuilding ? buildMarketHall(hallBuilding, mostNorthWestEdge(hallBuilding.outer)) : null;
+if (hall) cityGroup.add(hall.group);
 const world = CollisionWorld.fromCity(city);
 const streets = new StreetIndex(city);
 const placement = new Placement(city);
 
+const dressing = buildDressing(city, placement);
+cityGroup.add(dressing.group);
+for (const c of dressing.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const state = new GameState(newSeed());
-const items = new ItemSystem(city, placement, state);
+const items = new ItemSystem(city, placement, state, { hidden: dressing.hiddenSpots, bagSpots: dressing.kioskSpots });
 scene.add(items.group);
-const returns = new ReturnPoints(city, placement, state);
-scene.add(returns.group);
-for (const p of returns.points) {
-  const f = returns.footprint(p);
-  world.addBox(f.x, f.z, f.w, f.d, f.rot);
-}
-const mohu = new MohuGame(scene, state);
-returns.onUse = (p, m) => {
-  mohu.start({ machine: p.machines[m], name: p.name, onEnd: () => returns.stop() });
-};
+for (const c of hall?.colliders ?? []) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 
 const lamps = new Lamps(city, placement);
 scene.add(lamps.group);
@@ -118,19 +119,38 @@ const player = new Player(world, sx, sz);
 scene.add(player.mesh);
 const input = new Input(canvas);
 const follow = new FollowCamera(camera, world);
-const buildings = new BuildingSystem(city, placement, state, {
+const host = {
   player, follow, cityWorld: world,
-  setOutsideVisible(v) {
-    for (const g of [cityGroup, items.group, returns.group, buildings.gates.group, lamps.group, dogMess.group, bikes.group, sweeper.group]) g.visible = v;
+  setOutsideVisible(v: boolean) {
+    for (const g of [cityGroup, items.group, buildings.gates.group, lamps.group, dogMess.group, bikes.group, sweeper.group, shops.street]) g.visible = v;
   },
-}, streets);
+};
+// No street gates on top of the shop doors.
+const shopDoorSpots = [city.landmarks.spar ? doorOnFacade(city, city.landmarks.spar) : null, hall?.door ?? null]
+  .filter((d) => d !== null).map((d) => [d!.x, d!.z] as [number, number]);
+const buildings = new BuildingSystem(city, placement, state, host, streets, shopDoorSpots);
 scene.add(buildings.group);
+const shops = new Shops(city, state, host, hall?.door ?? null);
+scene.add(shops.group, shops.street);
+const returns = new ReturnPoints(state, shops.doors.map((d) => ({ id: d.id, name: d.name, ...d.interior.machines })));
+scene.add(returns.group);
+for (const p of returns.points) {
+  const f = returns.footprint(p);
+  shops.doors.find((d) => d.id === p.id)!.interior.world.addBox(f.x, f.z, f.w, f.d, f.rot);
+}
+const mohu = new MohuGame(scene, state);
+returns.onUse = (p, m) => {
+  mohu.start({ machine: p.machines[m], name: p.name, onEnd: () => returns.stop() });
+};
+const inside = () => buildings.inside || shops.inside;
 buildings.enterBlock = () => player.onBike ? 'Get off the bike first (F)' : null;
+shops.enterBlock = buildings.enterBlock;
 const interaction = new Interaction();
 interaction.add((x, z) => bikes.interactables(x, z));
 interaction.add((x, z) => buildings.getInteractables(x, z));
 interaction.add((x, z) => items.interactables(x, z));
 interaction.add(() => returns.interactables());
+interaction.add(() => shops.interactables());
 const hud = new Hud(state);
 {
   const kalvin = city.landmarks.kalvinTer;
@@ -139,12 +159,12 @@ const hud = new Hud(state);
 
 // The two return points: SPAR at Kinizsi/Ráday and Aldi in the market hall.
 const markers: MapMarker[] = [];
-for (const p of returns.points) {
-  markers.push(p.id === 'spar' ? { p: [p.x, p.z], label: 'S', color: '#d4202c' } : { p: [p.x, p.z], label: 'A', color: '#1f5fa8' });
+for (const d of shops.doors) {
+  markers.push(d.id === 'spar' ? { p: [d.x, d.z], label: 'S', color: '#d4202c' } : { p: [d.x, d.z], label: 'A', color: '#1f5fa8' });
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, mohu, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   b.lying = false;
@@ -196,6 +216,7 @@ function startRun() {
   if (mohu.active) mohu.finish();
   returns.reset();
   items.reset();
+  if (shops.inside) shops.leave(false);
   if (buildings.reset().bigBagInCourtyard) items.hideBigBag();
   returns.stop();
   crowd.reset();
@@ -217,6 +238,7 @@ async function endRun() {
   if (mohu.active) mohu.finish();
   returns.stop();
   if (buildings.inside) buildings.leave(false);
+  if (shops.inside) shops.leave(false);
   document.exitPointerLock();
   const s = state.stats;
   $('end-money').textContent = formatFt(state.money);
@@ -258,6 +280,7 @@ playBtn.onclick = () => input.lock();
 $('p-quit').onclick = () => {
   if (mohu.active) mohu.finish();
   if (buildings.inside) buildings.leave(false);
+  if (shops.inside) shops.leave(false);
   state.status = 'ready';
   show('title');
 };
@@ -284,6 +307,7 @@ function frame() {
   const playing = state.status === 'playing' && input.locked;
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
+  facadeUniforms.uNight.value = lighting.lamps;
 
   if (playing) {
     if (input.wasPressed('KeyT')) {
@@ -300,7 +324,7 @@ function frame() {
     player.speedMul = dogMess.slowed > 0 ? DOG.slowFactor : 1;
     if (!mohu.active) player.update(dt, input, follow.yaw);
     else mohu.update(dt, input);
-    if (!buildings.inside) {
+    if (!inside()) {
       // Pedestrians and the sweeper are solid; a fast bike into a person is a crash.
       const fast = player.onBike && player.speed > BIKE.crashSpeed;
       if (fast && crowd.hit(player.position.x, player.position.z, 0.35)) player.crashed = true;
@@ -319,7 +343,7 @@ function frame() {
     bikes.follow(player.position.x, player.position.z, player.facing, 0);
     const moved = Math.hypot(player.position.x - px, player.position.z - pz);
     state.stats.distance += moved;
-    if (!buildings.inside && dogMess.update(dt, player.position.x, player.position.z, player.facing, player.grounded, player.onBike, moved)) {
+    if (!inside() && dogMess.update(dt, player.position.x, player.position.z, player.facing, player.grounded, player.onBike, moved)) {
       state.toast('Eww! Dog mess. Slowed down for a minute.', 'bad');
     }
 
@@ -331,8 +355,9 @@ function frame() {
 
     buildings.searching = interaction.progress > 0;
     buildings.update(dt);
+    if (shops.update()) state.toast('Midnight: the shop is closing. Out you go!', 'bad');
     items.update(dt, gameMinutes, player.position.x, player.position.z, lighting.night);
-    crowd.update(dt, state.minute, player.position.x, player.position.z, !buildings.inside);
+    crowd.update(dt, state.minute, player.position.x, player.position.z, !inside());
     sweeper.update(dt, state.minute, player.position.x, player.position.z);
     returns.update(dt, player.position.x, player.position.z);
     interaction.holdDisabledReason = player.onBike ? 'Get off the bike first (F)' : null;
@@ -349,7 +374,7 @@ function frame() {
     camera.position.set(sx + Math.sin(titleAngle) * 260, 150, sz + Math.cos(titleAngle) * 260);
     camera.lookAt(sx, 0, sz);
   } else follow.update(dt, input, player.position);
-  const [mx, mz] = buildings.mapPos(player.position.x, player.position.z);
+  const [mx, mz] = shops.mapPos() ?? buildings.mapPos(player.position.x, player.position.z);
   minimap.draw(mx, mz, player.facing);
   staminaFill.style.width = `${player.stamina}%`;
   staminaEl.classList.toggle('exhausted', player.exhausted);
@@ -376,7 +401,7 @@ function frame() {
     fpsFrames = 0;
     fpsTime = 0;
     const p = player.position;
-    streetEl.textContent = buildings.streetName() ?? streets.nearest(p.x, p.z) ?? 'Belső-Ferencváros';
+    streetEl.textContent = (shops.current ? shops.current.name : null) ?? buildings.streetName() ?? streets.nearest(p.x, p.z) ?? 'Belső-Ferencváros';
     debugEl.textContent = import.meta.env.DEV || player.debugFast
       ? `${fps} fps · ${player.speed.toFixed(1)} m/s · x ${p.x.toFixed(0)} z ${p.z.toFixed(0)}` : '';
   }

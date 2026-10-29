@@ -58,8 +58,11 @@ export class ItemSystem {
   private glintMat: THREE.SpriteMaterial;
   private partyGeo = partyGeometry();
   private hiddenCandidates: Spot[];
+  private noPlanter: Set<Spot>;
+  private bagSpots: [number, number][];
 
-  constructor(private city: CityData, private place: Placement, private state: GameState) {
+  constructor(private city: CityData, private place: Placement, private state: GameState, extra: { hidden?: Spot[]; bagSpots?: [number, number][] } = {}) {
+    this.bagSpots = extra.bagSpots ?? [];
     this.group.name = 'items';
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.itemMeshes = Object.fromEntries(KINDS.map((k) => {
@@ -85,10 +88,14 @@ export class ItemSystem {
     this.hiddenCandidates = [...new Set([
       ...pickN(nehru, 16, 0.11), ...pickN(green, 12, 0.37), ...pickN(raday, 8, 0.53), ...pickN(other, 12, 0.71),
     ])];
+    // Special stashes (behind the Ráday book kiosk) have no planter of their own.
+    this.noPlanter = new Set(extra.hidden ?? []);
+    this.hiddenCandidates.push(...(extra.hidden ?? []));
     this.planters = new THREE.InstancedMesh(planterGeometry(), mat, this.hiddenCandidates.length);
     const m = new THREE.Matrix4();
     this.hiddenCandidates.forEach((s, i) => {
       m.makeRotationY(s.dir).setPosition(s.x, 0, s.z);
+      if (this.noPlanter.has(s)) m.makeScale(0, 0, 0);
       this.planters.setMatrixAt(i, m);
     });
     this.planters.castShadow = true;
@@ -154,10 +161,12 @@ export class ItemSystem {
     for (let i = 0; i < STREET.initial; i++) this.spawnStreet();
 
     // Hidden spots: a random subset of the planters is stocked this run.
-    const chosen = rng.shuffle(this.hiddenCandidates.map((s, i) => [s, i] as const)).slice(0, HIDDEN.count);
+    const chosen = rng.shuffle(this.hiddenCandidates.map((s, i) => [s, i] as const).filter(([s]) => !this.noPlanter.has(s))).slice(0, HIDDEN.count - this.noPlanter.size);
+    this.hiddenCandidates.forEach((s, i) => { if (this.noPlanter.has(s)) chosen.push([s, i]); });
     for (const [spot, planter] of chosen) {
       // The stash is behind the planter, on the side away from the street.
-      const bx = spot.x + Math.sin(spot.dir + Math.PI / 2) * 0.7, bz = spot.z + Math.cos(spot.dir + Math.PI / 2) * 0.7;
+      const special = this.noPlanter.has(spot);
+      const bx = special ? spot.x : spot.x + Math.sin(spot.dir + Math.PI / 2) * 0.7, bz = special ? spot.z : spot.z + Math.cos(spot.dir + Math.PI / 2) * 0.7;
       const glint = new THREE.Sprite(this.glintMat);
       glint.scale.setScalar(0.5);
       glint.position.set(bx, 0.35, bz);
@@ -167,7 +176,7 @@ export class ItemSystem {
         spot, planter, glint, count: rng.int(HIDDEN.items[0], HIDDEN.items[1]), refillAt: 0,
         it: {
           x: bx, z: bz, reach: 1.4, hold: 0,
-          label: () => h.count > 0 ? 'Look behind the planter' : null,
+          label: () => h.count > 0 ? (special ? 'Look behind the book kiosk' : 'Look behind the planter') : null,
           blocked: () => this.fullText(),
           act: () => this.takeHidden(h),
         },
@@ -199,7 +208,8 @@ export class ItemSystem {
     // On the Nehru part lawn; BuildingSystem may move it into a courtyard instead.
     const nehru = this.place.spots.filter((s) => s.zone === 'nehru' && s.green);
     let x: number, z: number;
-    if (nehru.length) ({ x, z } = rng.pick(nehru));
+    if (this.bagSpots.length && rng.chance(0.7)) [x, z] = rng.pick(this.bagSpots);
+    else if (nehru.length) ({ x, z } = rng.pick(nehru));
     else ({ x, z } = rng.pick(this.place.spots));
     const mesh = new THREE.Mesh(bigBagGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     mesh.position.set(x, 0, z);

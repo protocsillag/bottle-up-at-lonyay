@@ -1,5 +1,17 @@
 # Changelog
 
+## M8 Looking like Budapest (2026-10-29)
+
+- Procedural tenement facades on every building: plaster in cream, ochre, grey, brick red, salmon, pale green and yellow; a tall rusticated ground floor with a shop row; framed windows with sills and pediments; storey bands; a projecting cornice under the roof; terracotta and grey roofs. Palaces, churches and the university get bigger arched windows. At night about half the windows glow warm.
+- Granite kerbs along the streets; nicer plane trees.
+- Central Market Hall rebuilt by hand: red-brown brick, a tall gabled roof of glazed Zsolnay tiles in a diamond pattern, rose windows in the gables, and the Fővám tér front with its three-arched stone portal and two tile-capped towers.
+- SPAR and the market hall are now walk-in: SPAR has bright aisles, a white floor, red and green signage, fruit and veg up front and self-checkouts; the market hall has orange-brown steel trusses, a skylight, galleries with stalls on both sides, paprika strings and the Aldi corner. The REpont machines stand inside, by the entrance. Both open 06:00–24:00.
+- Ráday utca: red café awnings, terrace tables and chairs, potted plants, stone ball bollards and a little green book kiosk (with a stash behind it).
+- Lónyay utca: young trees along the kerb.
+- Nehru part: a riverside railing, rows of plane trees, turquoise and orange concrete loungers, kiosks (the big blue bag sometimes hides behind them), a playground and basketball hoops.
+- Bakáts tér church with its tall tower and tiled spire; the Museum of Applied Arts' green and yellow Zsolnay roof and dome; the Kálvin tér church tower and portico and a metro sign.
+- Across the river: Gellért Hill with the Liberty Statue and the citadel, the Buda bank, and the green steel towers and chords of Szabadság híd.
+
 ## M7 Character creator and local scores (2026-10-29)
 
 - Title screen over a slowly orbiting view of the neighbourhood, with Play and High scores.

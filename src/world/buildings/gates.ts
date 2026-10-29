@@ -47,7 +47,7 @@ function area(ring: Vec2[]) {
 }
 
 /** Finds a gate position for every residential building. */
-export function placeGates(city: CityData, place: Placement): Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown'>[] {
+export function placeGates(city: CityData, place: Placement, avoid: Vec2[] = []): Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown'>[] {
   const out: Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown'>[] = [];
   for (const b of city.buildings) {
     if (b.scenery || b.h < 8 || area(b.outer) < 150 || (b.name && NON_RESIDENTIAL.test(b.name))) continue;
@@ -75,6 +75,7 @@ export function placeGates(city: CityData, place: Placement): Omit<Gate, 'index'
       if (!best || score > best.score) best = { score, x: gx, z: gz, nx, nz };
     }
     if (!best) continue;
+    if (avoid.some(([ax, az]) => Math.hypot(ax - best!.x, az - best!.z) < 9)) continue;
     out.push({ b, x: best.x + best.nx * 0.02, z: best.z + best.nz * 0.02, nx: best.nx, nz: best.nz, facing: Math.atan2(-best.nx, -best.nz) });
   }
   return out;
@@ -122,9 +123,9 @@ export class GateSystem {
   /** Called when a gate clicks shut right in front of the player. */
   onSlam: (g: Gate) => void = () => {};
 
-  constructor(city: CityData, place: Placement) {
+  constructor(city: CityData, place: Placement, avoid: Vec2[] = []) {
     this.group.name = 'gates';
-    this.gates = placeGates(city, place).map((g, index) => ({ ...g, index, open: 0, state: 'closed' as GateState, timer: 0, nextExit: 5 + Math.random() * 60, bellCooldown: 0 }));
+    this.gates = placeGates(city, place, avoid).map((g, index) => ({ ...g, index, open: 0, state: 'closed' as GateState, timer: 0, nextExit: 5 + Math.random() * 60, bellCooldown: 0 }));
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
     const frames = new THREE.InstancedMesh(frameGeometry(), mat, this.gates.length);
     this.leaves = new THREE.InstancedMesh(leafGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), this.gates.length * 2);

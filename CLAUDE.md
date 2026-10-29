@@ -11,7 +11,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M5 Mohu mini-game: done** (2026-10-29, unattended).
 - **M6 Living city: done** (2026-10-29, unattended).
 - **M7 Character creator and local scores: done** (2026-10-29, unattended).
-- Next: **M8 Looking like Budapest**.
+- **M8 Looking like Budapest: done** (2026-10-29, unattended).
+- Next: **M9 Polish**.
 
 ## Commands
 
@@ -76,6 +77,10 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - `src/player/look.ts`: four presets (Tüske, Feri bácsi, Bandi, Csabi), slot option lists, swatches (hair, garment, skin), `checkName` (1–16 chars, letters incl. accents, numbers, spaces and `.'-_!?`, short folded blocklist), last look saved in `localStorage` `bual.character.v1`.
 - Creator (`src/ui/Creator.ts`) renders its own scene with the main renderer while open (the game loop skips the world). Portrait: separate scene with a Mohu-yellow background rendered into a 128 × 128 render target, flipped, PNG data URL (JPEG fallback if over 20 KB; PNGs are ~2–6 KB).
 - Scores (`src/state/scores.ts`): `ScoreStore` interface (`top`, `add` → rank or null, `offline`); `LocalScoreStore` keeps the best 20 in `localStorage` `bual.scores.v1`, sorted by amount then earlier date. Runs with 0 Ft are not saved. `src/ui/Scores.ts` renders the table with the current run highlighted.
+- Facades (`src/world/facade.ts`): one `MeshLambertMaterial` with `onBeforeCompile` draws windows in the fragment shader from per-vertex `aFacade` (u along the edge, height, edge length) and `aStyle` (seed, kind). Kinds: 1 street tenement (tall rusticated ground floor with a shop row, framed windows with sills, pediments on half the buildings), 2 courtyard ring, 3 palace/church (bigger arched windows), 0 plain, −1 no pattern (roofs, cornices). `fwidth` fades the pattern in the distance to avoid moiré. `facadeUniforms.uNight` (set from `lighting.lamps`) lights ~45% of windows warm. Cornices are real geometry along outer edges of buildings taller than 8 m. Palette and kind per building in `buildingLook()` (`buildCity.ts`).
+- Kerbs: 0.28 m granite ribbons along both edges of every road. Trees: plane trees with a pale trunk and four leafy clumps, colour-varied per instance (`buildTrees`, exported).
+- Landmarks (`src/world/landmarks/`): the market hall replaces its extruded block (skipped via `buildCity(city, { skip })`): brick facade-shader walls, a gabled Zsolnay roof over the footprint's oriented box (`obb()`), gable rose windows, and the Fővám tér front (portal with three arches and a VÁSÁRCSARNOK band, two towers with tiled pyramid caps) at the box end nearest the square. `dressing.ts`: Ráday utca terraces (red awnings, tables with chairs, potted plants, stone-ball bollards, the green KÖNYV book kiosk with a stash behind it), Lónyay utca kerb trees, Nehru part (railing on the river edge, plane-tree rows, turquoise and orange loungers, three kiosks where the big bag can hide, playground and hoops), the Bakáts tér church tower and spire with a tiled nave roof, the museum's green-yellow roof and dome, Kálvin tér church tower and portico plus a metro sign, and across the river Gellért Hill with the Liberty Statue and citadel, a row of Buda bank buildings, and the green steel of Szabadság híd over the existing deck.
+- Shops (`src/world/shops/`): SPAR and the market hall are walk-in interiors at (7000, 7000) and (8000, 8000), built once and toggled visible. Doors: SPAR on the facade nearest the City Spar node (with a green/red shopfront), the hall at its portal. Closed 00:00–06:00 (at midnight you are shown out). The REpont pairs now stand inside: SPAR just right of the entrance, the hall in front of the Aldi corner. Street gates are not placed within 9 m of shop doors. The minimap markers point at the doors.
 - `CollisionWorld.addBox()` adds solid props (machines now; kiosks and gates later).
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
@@ -111,6 +116,12 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/ui/Creator.ts` | Character creator, turntable, portrait capture |
 | `src/state/scores.ts` | `ScoreStore` interface, `LocalScoreStore` |
 | `src/ui/Scores.ts` | Top 10 table |
+| `src/world/facade.ts` | Procedural facade shader |
+| `src/world/landmarks/common.ts` | `obb`, Zsolnay tile texture, sign texture, pyramid |
+| `src/world/landmarks/marketHall.ts` | Central Market Hall exterior |
+| `src/world/landmarks/dressing.ts` | Ráday, Lónyay, Nehru part, churches, museum, Kálvin tér, far bank, Szabadság híd |
+| `src/world/shops/Shops.ts` | Shop doors, enter/leave, opening hours |
+| `src/world/shops/interiors.ts` | SPAR and market hall interiors |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -129,9 +140,9 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 ## Known gaps / notes for later milestones
 
 - OSM has only 16 `entrance` nodes in the area: gates use the longest street-facing edge per building (one gate per building, not per facade).
-- Központi Vásárcsarnok is tagged low (8.4 m); M8 replaces it with a hand-built landmark anyway.
+- Központi Vásárcsarnok is tagged low (8.4 m) in OSM; the hand-built hall ignores that height.
 - Bridges are flat decks at 7 m with no ramps; scenery only.
-- Roads use one fixed width per OSM class; Ráday utca looks all-asphalt. Kerbs and real pavement widths are M8.
+- Roads use one fixed width per OSM class; Ráday utca looks all-asphalt (it is partly pedestrian in reality). Kerbs follow the road ribbon edges, so they also run across junctions.
 
 ## Questions for Alex
 
@@ -152,3 +163,6 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M6 NPC drops** add roughly 1–3 bottles per real minute in the evening near the player.
 - **M7 creator before every run.** "Play again" goes back to the creator, pre-filled with your last character, as the brief says. If that gets tedious in playtests, a "Same again" button is a one-liner.
 - **M7 name blocklist** is a short folded list of slurs and swear words (Hungarian and English). Send me any words you want added.
+- **M8 interiors are teleports.** SPAR and the market hall are walk-in interiors reached through their doors, like the courtyards, rather than hollowed-out real footprints. The hall interior is about 90 × 34 m (the real one is longer) and the Aldi corner is on the ground floor near the entrance (the real Aldi is in the basement).
+- **M8 SPAR and Aldi signs** use the plain words "SPAR" and "ALDI" in the game font on flat colour boards, no logo files, like the REpont lookalike. If you would rather avoid the brand names entirely, they are easy to swap for generic "ABC" signs.
+- **M8 time cap.** Each landmark got a short pass (well under 20 minutes each). Not done: corner towers and balconies on Lónyay tenements, the brick Református gimnázium, a passing yellow tram (left out because the brief says no moving traffic in v1), and Corvinus beyond the palace-style facade.

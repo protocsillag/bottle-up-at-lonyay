@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import type { CityData, Vec2 } from './cityData';
-import type { Placement } from './placement';
 import type { GameState } from '../state/GameState';
 import type { Interactable } from '../player/Interaction';
 import { MOHU, SHOP_OPEN } from '../state/balance';
@@ -10,7 +8,7 @@ import { cosmetic, randomColors } from '../npc/looks';
 import { binGeometry } from './items/models';
 
 // The two return points: SPAR at Kinizsi/Ráday and Aldi in the Central Market Hall.
-// Each has a pair of REpont machines and a bin. When you arrive, 0–2 people are already
+// Each has a pair of REpont machines and a bin, inside the shop interiors (M8). When you arrive, 0–2 people are already
 // using the machines; rarely one machine shows "Megtelt" (full).
 
 export interface ReturnPoint {
@@ -61,26 +59,11 @@ export class ReturnPoints {
   /** Which machine the player is using (−1 = none). */
   inUse: { p: ReturnPoint; m: number } | null = null;
 
-  constructor(city: CityData, place: Placement, private state: GameState) {
-    const spar = city.landmarks.spar;
-    if (spar) this.add('spar', 'SPAR, Kinizsi utca', place.nearestFree(spar, 1.6), spar);
-    const hall = city.buildings.find((b) => b.name === 'Központi Vásárcsarnok');
-    if (hall) {
-      // Main entrance: the middle of the short north-west facade facing Fővám tér.
-      const [a, b] = mostNorthWestEdge(hall.outer);
-      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
-      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      let nx = (b[1] - a[1]) / len, nz = -(b[0] - a[0]) / len;
-      if (nx + nz > 0) { nx = -nx; nz = -nz; }
-      this.add('aldi', 'Aldi, Central Market Hall', place.nearestFree([mx + nx * 3, mz + nz * 3], 1.6), [mx, mz]);
-    } else if (city.landmarks.marketHall) {
-      this.add('aldi', 'Aldi, Central Market Hall', place.nearestFree(city.landmarks.marketHall, 1.6), city.landmarks.marketHall);
-    }
+  constructor(private state: GameState, defs: { id: ReturnPoint['id']; name: string; x: number; z: number; facing: number }[]) {
+    for (const d of defs) this.add(d.id, d.name, d.x, d.z, d.facing);
   }
 
-  private add(id: ReturnPoint['id'], name: string, [x, z]: Vec2, shop: Vec2) {
-    // Back to the shop wall, front to the street.
-    const facing = Math.atan2(-(x - shop[0]), -(z - shop[1]));
+  private add(id: ReturnPoint['id'], name: string, x: number, z: number, facing: number) {
     const group = new THREE.Group();
     group.position.set(x, 0, z);
     group.rotation.y = facing;
@@ -207,16 +190,4 @@ export class ReturnPoints {
   stop() { this.inUse = null; }
 
   *interactables(): Iterable<Interactable> { yield* this.its; }
-}
-
-function mostNorthWestEdge(ring: Vec2[]): [Vec2, Vec2] {
-  // The edge whose midpoint is furthest toward -x -z, among edges longer than 15 m.
-  let best: [Vec2, Vec2] = [ring[0], ring[1]], bestV = Infinity;
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i], b = ring[(i + 1) % ring.length];
-    if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 15) continue;
-    const v = (a[0] + b[0]) / 2 + (a[1] + b[1]) / 2;
-    if (v < bestV) { bestV = v; best = [a, b]; }
-  }
-  return best;
 }

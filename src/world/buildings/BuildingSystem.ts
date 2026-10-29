@@ -57,8 +57,8 @@ export class BuildingSystem {
   /** Reason the player cannot go in right now (on a bike), or null. */
   enterBlock: () => string | null = () => null;
 
-  constructor(city: CityData, place: Placement, private state: GameState, private host: BuildingHost, private streets: StreetIndex) {
-    this.gates = new GateSystem(city, place);
+  constructor(city: CityData, place: Placement, private state: GameState, private host: BuildingHost, private streets: StreetIndex, avoid: Vec2[] = []) {
+    this.gates = new GateSystem(city, place, avoid);
     this.gates.onSlam = () => {
       this.state.stats.doorsSlammed++;
       this.state.toast('Slam! The gate clicked shut.', 'bad');
