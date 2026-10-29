@@ -46,6 +46,15 @@ export class Player {
     this.syncMesh();
   }
 
+  /** Moves the player instantly (new run, entering or leaving a building). */
+  teleport(x: number, z: number, heading = this.heading) {
+    this.position.set(x, 0, z);
+    this.velocity.set(0, 0);
+    this.vy = 0;
+    this.heading = heading;
+    this.syncMesh();
+  }
+
   get speed() { return this.velocity.length(); }
   get grounded() { return this.position.y <= 0; }
   /** Facing angle around y; 0 faces north (-z). */

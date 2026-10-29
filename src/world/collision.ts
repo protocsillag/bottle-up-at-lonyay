@@ -22,7 +22,7 @@ export class CollisionWorld {
 
   private key(cx: number, cz: number) { return (cx + 4096) * 8192 + (cz + 4096); }
 
-  private addRing(ring: Vec2[]) {
+  addRing(ring: Vec2[]) {
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
       const s: Segment = { ax: ring[j][0], az: ring[j][1], bx: ring[i][0], bz: ring[i][1] };
       const x0 = Math.floor(Math.min(s.ax, s.bx) / CELL), x1 = Math.floor(Math.max(s.ax, s.bx) / CELL);
@@ -36,6 +36,13 @@ export class CollisionWorld {
         }
       }
     }
+  }
+
+  /** Adds a solid rotated rectangle (props: machines, kiosks). rot: radians around y. */
+  addBox(x: number, z: number, w: number, d: number, rot = 0) {
+    const c = Math.cos(rot), s = Math.sin(rot);
+    const pts: Vec2[] = [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]];
+    this.addRing(pts.map(([px, pz]) => [x + px * c + pz * s, z - px * s + pz * c] as Vec2));
   }
 
   private nearby(x: number, z: number, r: number): Set<Segment> {

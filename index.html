@@ -9,24 +9,44 @@
   <body>
     <canvas id="game"></canvas>
     <div id="hud">
-      <div class="title">Bottle Up at Lónyay <span>M2 · player prototype</span></div>
+      <div class="clock"><span id="day">Friday</span> <span id="time">08:00</span></div>
       <div id="street">Loading Belső-Ferencváros…</div>
+      <div id="shops"></div>
       <div id="debug"></div>
     </div>
+    <div id="wallet">
+      <div id="money">0&nbsp;Ft</div>
+      <div class="bagrow"><span id="bagcount">0 / 40</span></div>
+      <div class="bar"><div id="bag-fill"></div></div>
+      <div id="status"></div>
+    </div>
+    <div id="toasts"></div>
+    <div id="prompt" class="hidden"><span id="prompt-key">E</span><span id="prompt-text"></span><div class="bar"><div id="prompt-fill"></div></div></div>
     <div id="stamina"><div class="label">Stamina</div><div class="bar"><div id="stamina-fill"></div></div></div>
     <canvas id="minimap" width="200" height="200"></canvas>
     <div id="start" class="overlay">
       <div class="card">
         <h1>Bottle Up at Lónyay</h1>
-        <p>Friday, 08:00. Lónyay utca.</p>
-        <p class="muted">Milestone 2: walk, run and jump around the real neighbourhood.</p>
+        <p class="intro">Friday, 08:00. Lónyay utca.<br />48 hours. Every bottle and can is 50&nbsp;Ft.</p>
+        <p class="muted">Fill your bag from streets, planters, bins and party leftovers, then feed it to the bottle machine at SPAR (S) or Aldi in the market hall (A). Open 06:00–24:00. Items in the bag are worth nothing until they go through a machine.</p>
         <ul class="controls">
           <li><b>WASD</b> move</li><li><b>Mouse</b> look</li>
           <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
-          <li><b>M</b> big map</li><li><b>Wheel</b> zoom</li>
-          <li><b>Esc</b> pause</li><li><b>G</b> fast walk (debug)</li>
+          <li><b>E</b> interact (hold for bins)</li><li><b>M</b> big map</li>
+          <li><b>Wheel</b> zoom</li><li><b>Esc</b> pause</li>
+          <li><b>G</b> fast walk (debug)</li><li><b>T</b> fast time (debug)</li>
         </ul>
         <button id="play" disabled>Loading…</button>
+      </div>
+    </div>
+    <div id="end" class="overlay hidden">
+      <div class="card wide">
+        <h1>Sunday, 08:00</h1>
+        <p class="muted">The weekend is over.</p>
+        <div id="end-money" class="big"></div>
+        <table id="end-stats"></table>
+        <p id="end-fun" class="fun"></p>
+        <button id="again">Play again</button>
       </div>
     </div>
     <div id="attribution">Map data © OpenStreetMap contributors (ODbL)</div>

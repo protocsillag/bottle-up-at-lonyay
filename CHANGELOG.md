@@ -1,5 +1,18 @@
 # Changelog
 
+## M3 Core loop in grey boxes (2026-10-29)
+
+- Game clock: Friday 08:00 to Sunday 08:00 in 30 real minutes, shown top-left with the day. The clock stops while paused.
+- Money only counts at the machine: wallet and bag (0 / 40) top-right, the bag bar turns red when full.
+- Item sources: loose street items (bottles, cans, glass) that keep spawning, busier on Ráday utca at night, Nehru part in the evening and Corvinus on Friday; 44 hidden stashes behind planters with a glint up close, restocked each morning; 98 public bins (hold E for 2 s, refill after 6 game hours, fuller in hot zones); party leftovers on Ráday utca and the Nehru part lawn between 22:00 and 04:00 (hold E for 3 s, 15–30 items).
+- One big blue bag hidden per run on the Nehru part lawn: picking it up raises the bag to 100.
+- Each item gets a condition when picked up (fine, crushed, wet, no deposit) for the M5 machine.
+- Running with a nearly full bag can break a glass bottle (clink).
+- Placeholder bottle machines outside SPAR (Kinizsi utca) and the market hall (Fővám tér), open 06:00–24:00; E feeds 3 items per second for 50 Ft each.
+- Interaction prompt with hold progress, toasts for pickups, bag full and closing time.
+- End screen at Sunday 08:00 with money, items returned, items left in the bag, and the funniest stat. Play again starts a fresh random run.
+- Debug: T toggles time ×30.
+
 ## M2 Player and camera (2026-10-29)
 
 - Low-poly street character built in code (parka, jeans, red beanie) replaces the capsule, with procedural walk, run (forward lean, pumping arms), jump (knee tuck, arms up) and idle breathing.
