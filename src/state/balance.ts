@@ -35,14 +35,16 @@ export const PARTY = {
   clearAt: 9, // street cleaners clear leftovers at 09:00
 };
 
-// Pickup condition odds per source (fine is the remainder).
+// Pickup condition odds per source (fine is the remainder). Crushed, wet and no-deposit
+// items are always rejected by the machine; together with machine hiccups on fine items
+// that makes about 1 in 8 items rejected (BRIEF). Bins: more crushed; street: more wet.
 export const CONDITION = {
-  street: { crushed: 0.08, wet: 0.16, nodeposit: 0.05 },
-  hidden: { crushed: 0.06, wet: 0.1, nodeposit: 0.05 },
-  bin: { crushed: 0.2, wet: 0.08, nodeposit: 0.06 },
-  party: { crushed: 0.15, wet: 0.1, nodeposit: 0.04 },
-  courtyard: { crushed: 0.18, wet: 0.06, nodeposit: 0.06 },
-  jackpot: { crushed: 0.12, wet: 0.05, nodeposit: 0.03 },
+  street: { crushed: 0.025, wet: 0.055, nodeposit: 0.02 },
+  hidden: { crushed: 0.02, wet: 0.04, nodeposit: 0.02 },
+  bin: { crushed: 0.06, wet: 0.02, nodeposit: 0.02 },
+  party: { crushed: 0.05, wet: 0.03, nodeposit: 0.02 },
+  courtyard: { crushed: 0.055, wet: 0.02, nodeposit: 0.025 },
+  jackpot: { crushed: 0.04, wet: 0.02, nodeposit: 0.015 },
 } as const;
 
 /** Kind odds: plastic, can, glass. */
@@ -62,4 +64,16 @@ export const COURTYARD = {
   hazmester: 0.25,
   hazmesterJackpot: 0.7,
   hazmesterAsleep: 0.7, // at night
+};
+
+export const MOHU = {
+  feedRate: 3, // items per real second while Space is held
+  hiccup: 0.035, // chance a fine item is refused with "Próbálja újra"
+  hiccupAgain: 0.35, // chance the retry hiccups again
+  mashPresses: 7, // E presses to pop a crushed item back into shape
+  wipeHold: 1.2, // seconds of holding E to wipe a wet label
+  alignTolerance: 0.26, // radians either side of upright that counts as green
+  queueOdds: [0.5, 0.35, 0.15], // 0, 1 or 2 people already at the machines
+  queueTime: [10, 30] as const, // real seconds each
+  megtelt: 0.1, // chance one machine is full on arrival
 };

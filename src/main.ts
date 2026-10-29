@@ -7,6 +7,7 @@ import { Placement } from './world/placement';
 import { ItemSystem } from './world/items/ItemSystem';
 import { ReturnPoints } from './world/ReturnPoints';
 import { BuildingSystem } from './world/buildings/BuildingSystem';
+import { MohuGame } from './minigames/mohu/MohuGame';
 import { Input } from './player/input';
 import { Player } from './player/Player';
 import { FollowCamera } from './player/FollowCamera';
@@ -69,7 +70,14 @@ const items = new ItemSystem(city, placement, state);
 scene.add(items.group);
 const returns = new ReturnPoints(city, placement, state);
 scene.add(returns.group);
-for (const p of returns.points) world.addBox(p.x, p.z, 1.8, 0.7, p.facing);
+for (const p of returns.points) {
+  const f = returns.footprint(p);
+  world.addBox(f.x, f.z, f.w, f.d, f.rot);
+}
+const mohu = new MohuGame(scene, state);
+returns.onUse = (p, m) => {
+  mohu.start({ machine: p.machines[m], name: p.name, onEnd: () => returns.stop() });
+};
 
 const [sx, sz] = city.landmarks.spawn ?? [0, 0];
 const player = new Player(world, sx, sz);
@@ -100,10 +108,12 @@ for (const p of returns.points) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, mohu } });
 
 function startRun() {
   state.reset(newSeed());
+  if (mohu.active) mohu.finish();
+  returns.reset();
   items.reset();
   if (buildings.reset().bigBagInCourtyard) items.hideBigBag();
   returns.stop();
@@ -118,6 +128,7 @@ function startRun() {
 }
 
 function endRun() {
+  if (mohu.active) mohu.finish();
   returns.stop();
   document.exitPointerLock();
   const s = state.stats;
@@ -168,7 +179,8 @@ function frame() {
     const gameMinutes = state.minute - before;
 
     const px = player.position.x, pz = player.position.z;
-    player.update(dt, input, follow.yaw);
+    if (!mohu.active) player.update(dt, input, follow.yaw);
+    else mohu.update(dt, input);
     state.stats.distance += Math.hypot(player.position.x - px, player.position.z - pz);
 
     // Running with a nearly full bag can break a glass bottle.
@@ -181,17 +193,20 @@ function frame() {
     buildings.update(dt);
     items.update(dt, gameMinutes, player.position.x, player.position.z);
     returns.update(dt, player.position.x, player.position.z);
-    interaction.update(dt, input, player.position.x, player.position.z, player.facing);
+    if (!mohu.active) interaction.update(dt, input, player.position.x, player.position.z, player.facing);
+    else interaction.prompt = null;
     if (input.wasPressed('KeyM')) minimap.toggleLarge();
   }
-  follow.update(dt, input, player.position);
+  player.mesh.visible = !mohu.active;
+  document.body.classList.toggle('mohu-on', mohu.active);
+  if (mohu.active) mohu.camera(camera);
+  else follow.update(dt, input, player.position);
   const [mx, mz] = buildings.mapPos(player.position.x, player.position.z);
   minimap.draw(mx, mz, player.facing);
   staminaFill.style.width = `${player.stamina}%`;
   staminaEl.classList.toggle('exhausted', player.exhausted);
 
   const status: string[] = [];
-  if (returns.isFeeding) status.push('Feeding the machine');
   if (player.debugFast) status.push('Debug walk');
   if (state.timeScale > 1) status.push(`Time ×${state.timeScale}`);
   if (state.bigBag) status.push('Big blue bag');

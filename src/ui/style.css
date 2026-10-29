@@ -105,3 +105,33 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fc3e0; fon
 #alert.hidden { display: none; }
 #fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.35s; }
 #fade.on { opacity: 1; transition: none; }
+
+/* ---- M5 Mohu close-up ---- */
+#mohu {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); min-width: 360px; padding: 10px 18px 12px;
+  border-radius: 10px; background: rgba(20, 20, 20, 0.82); color: #fff; text-align: center; pointer-events: none;
+  border-top: 4px solid var(--mohu-yellow);
+}
+#mohu.hidden { display: none; }
+#mohu-title { font-size: 12px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; }
+#mohu-msg { font-size: 20px; font-weight: 800; margin-top: 4px; }
+#mohu-help { font-size: 14px; color: var(--mohu-yellow); margin-top: 6px; }
+#mohu .bar { height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.15); overflow: hidden; margin: 8px auto 0; width: 260px; }
+#mohu .bar.hidden { display: none; }
+#mohu-fill { height: 100%; width: 0; background: var(--mohu-yellow); }
+#mohu-dial { position: relative; width: 64px; height: 64px; margin: 8px auto 0; border-radius: 50%; border: 4px solid #c0392b; }
+#mohu-dial.ok { border-color: #2ecc71; }
+#mohu-dial.hidden { display: none; }
+#mohu-dial .target { position: absolute; left: 50%; top: -4px; width: 4px; height: 14px; margin-left: -2px; background: #2ecc71; }
+#mohu-needle { position: absolute; left: 50%; top: 6px; width: 4px; height: 26px; margin-left: -2px; background: #fff; transform-origin: 2px 26px; border-radius: 2px; }
+#receipt {
+  position: fixed; right: 18%; top: 18%; width: 210px; padding: 14px 14px 18px; background: #f6f3ea; color: #222;
+  font: 13px ui-monospace, Menlo, monospace; text-align: center; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  transform: rotate(2deg); animation: receipt 0.5s ease-out; pointer-events: none;
+}
+#receipt.hidden { display: none; }
+#receipt .b { font-weight: 700; }
+#receipt .big { font-size: 22px; margin: 4px 0; }
+#receipt .hr { border-top: 1px dashed #999; margin: 6px 0; }
+@keyframes receipt { from { transform: translateY(-30px) rotate(2deg); opacity: 0; } to { transform: rotate(2deg); opacity: 1; } }
+body.mohu-on #minimap, body.mohu-on #stamina, body.mohu-on #prompt { display: none; }

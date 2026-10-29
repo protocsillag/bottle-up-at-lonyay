@@ -114,11 +114,14 @@ export class GameState {
   /** Removes and returns the next item to feed into a machine. */
   takeFromBag(): Item | undefined { return this.bag.shift(); }
 
-  /** Pays for one accepted item. */
-  payItem() {
-    this.money += ITEM_VALUE_FT;
+  /** Counts one item accepted by a machine; returns its value. Money arrives with the receipt. */
+  acceptItem() {
     this.stats.itemsReturned++;
+    return ITEM_VALUE_FT;
   }
+
+  /** The receipt: money goes straight into the total. */
+  payout(ft: number) { this.money += ft; }
 
   /** Loses one glass item (running with a full bag). */
   breakGlass() {

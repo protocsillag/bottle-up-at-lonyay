@@ -110,6 +110,7 @@ export class Minimap {
     const dpr = this.canvas.width / (this.canvas.clientWidth || 1);
     const W = this.canvas.width / dpr, H = this.canvas.height / dpr;
     const R = Math.min(W, H) / 2;
+    if (R < 8) return; // hidden
     // Metres shown across the map.
     const span = this.large ? Math.max(this.city.extent.maxX - this.city.extent.minX, this.city.extent.maxZ - this.city.extent.minZ) * 0.72 : 320;
     const scale = (R * 2) / span; // screen px per metre

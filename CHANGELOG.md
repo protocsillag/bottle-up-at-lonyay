@@ -1,5 +1,14 @@
 # Changelog
 
+## M5 Mohu mini-game (2026-10-29)
+
+- Both return points now have a pair of REpont-style machines in flat shapes (black body, yellow header and front panel with ALU / ÜVEG / PET icons, "1 dl és 3 l között" and "Ne nyomd össze!" panels, printer slot), plus a bin for refused items. Lookalike wordmark only, no logo files.
+- E at the machines cuts to a close-up. Hold Space: items fly from the bag into the round opening at 3 per second, each scan adding 50 Ft on the machine screen.
+- About 1 in 8 items is refused, with the screen turning red: "Ne nyomd össze!" (mash E to pop it back), "Nem olvasható vonalkód" (hold E to wipe the label), "Próbálja újra" (just retry; can happen again) or "Nem visszaváltható termék" (lost into the bin). Then roll the item with A / D until the ring around the opening turns green and push it in with Space.
+- Item condition is rolled at pickup: bin items are more often crushed, street items more often wet.
+- On arrival 0, 1 or 2 people (pensioner with a trolley, student with a crate, collector with a sack) may be using the machines for 10–30 s; rarely one machine shows "Megtelt".
+- When the bag is empty the printer pushes out a receipt and the money goes into the total. Walking away, closing time or the end of the run also print what you fed.
+
 ## M4 Buildings (2026-10-29)
 
 - 266 residential buildings get a big wooden street gate with a stone surround and an intercom panel.

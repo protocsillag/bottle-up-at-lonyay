@@ -8,7 +8,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M2 Player and camera: done** (2026-10-29).
 - **M3 Core loop in grey boxes: done** (2026-10-29, built unattended overnight).
 - **M4 Buildings: done** (2026-10-29, unattended).
-- Next: **M5 Mohu mini-game**.
+- **M5 Mohu mini-game: done** (2026-10-29, unattended).
+- Next: **M6 Living city**.
 
 ## Commands
 
@@ -22,6 +23,8 @@ npm run osm:bake   # -> public/data/city.json (committed)
 Node is not installed system-wide on Alex's Mac; it lives at `~/.local/node/bin` (Node 24 LTS). Use `export PATH=~/.local/node/bin:$PATH`.
 
 ## Controls (current)
+
+At the bottle machine: hold Space to feed · E mash / hold to fix a refused item · A / D roll it · Space push it in · E (between items) or S walk away.
 
 WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · M large map · wheel zoom · G 20 m/s debug walk · T time ×30 (debug) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
 
@@ -48,7 +51,9 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Interaction: systems register `Interactable` providers with `Interaction`; nearest in reach wins, things in front of the player are preferred. `hold > 0` means hold E. `blocked()` replaces the prompt with a reason (bag full, closed, searched).
 - Spots (`src/world/placement.ts`): pavement points every 10 m both sides of each road (half width + 1.6 m), beside footpaths, plus a 14 m grid in parks and squares; each tagged with a zone (raday, nehru, corvinus, market, kalvin, bakats, museum, lonyay, street). Street items, party leftovers and the big bag sample from them; zone × time weights are in `zoneWeight()` in `ItemSystem.ts`.
 - Public bins: OSM `waste_basket`/`recycling` inside the boundary (snapped off buildings, at least 8 m apart) plus top-ups in hot zones: 98 bins. Hidden spots: 48 fixed planters (Nehru-heavy), 44 stocked per run, restock at the next 06:00. Party leftovers: 4 per night between 22:00 and 04:00, cleared at 09:00.
-- Return points (`src/world/ReturnPoints.ts`): machines on the pavement outside City Spar (Kinizsi utca) and outside the market hall's north-west (Fővám tér) facade. Open 06:00–24:00. M3 placeholder feeds 3 items/s while you stand within 3 m.
+- Return points (`src/world/ReturnPoints.ts`): a pair of REpont machines plus a bin, on the pavement outside City Spar (Kinizsi utca) and outside the market hall's north-west (Fővám tér) facade. Open 06:00–24:00. Arriving within 30 m rolls the queue (0/1/2 people at 50/35/15%, 10–30 s each) and a 10% "Megtelt" machine; walking 80 m away clears it so the next visit rolls again. Each person occupies one machine; you wait only when no working machine is free.
+- Mohu mini-game (`src/minigames/mohu/`): `MachineModel` draws the machine from canvas textures (header with a lookalike wordmark, panel with ALU/ÜVEG/PET pictograms and the two rule panels, strip with the printer slot) and a live screen canvas. `MohuGame` takes over the camera (1.25 m in front of the opening) and input. Phases: ready → flying (0.26 s) → accept, or returning → fix (crushed: mash E ×7; wet: hold E 1.2 s) → align (A/D roll, ±0.26 rad is green) → pushing; hiccup goes straight to align and can repeat (35%); no-deposit is lost into the bin. Money is paid with the receipt (`state.payout`), on an empty bag, on walking away, at closing time or at the end of the run. `acceptItem()` only counts the item.
+- Reject odds: crushed, wet and no-deposit items are always refused; fine items hiccup 3.5%. Condition odds per source in `CONDITION` (about 10%) give roughly 1 in 8 refused overall.
 - Gates (`src/world/buildings/gates.ts`): one per residential building (266), on the longest outer edge that faces free pavement (probes 1.5, 2 and 4 m out and across the gate width); an OSM `entrance` on an edge wins. Non-residential names are skipped by regex. Frames and leaves are two `InstancedMesh`es; leaves swing outward to the street (reads better than inward, which would clip into the extruded block). Only gates within 80 m animate; timers tick everywhere.
 - Residents: each gate's timer fires every 30–90 real s (×0.45 at 07–09 and 17–19, ×2 at 22–24, ×6 at 00–06). If the player is within 80 m a resident (random-coloured `CharacterModel`) walks out and the gate holds 1.4 s, then swings shut over 4 s, accelerating. Walking within 0.95 m of an open gate (open > 0.3) or pressing E enters. A gate that clicks shut with you within 2.5 m counts as a slammed door.
 - Bell: intercom panel right of the gate (as seen from the street); 1 in 10 buzzes it open for 3 s; otherwise a random intercom line, never twice in a row, night-only lines between 22:00 and 06:00. 4 s cooldown.
@@ -72,13 +77,15 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/world/placement.ts` | `BuildingIndex`, walkable spot generation, zones |
 | `src/world/items/ItemSystem.ts` | Street items, hidden spots, bins, party leftovers, big bag |
 | `src/world/items/models.ts` | Item, bin, planter, party heap and big-bag meshes |
-| `src/world/ReturnPoints.ts` | The two return points (M3 placeholder machines) |
+| `src/world/ReturnPoints.ts` | The two return points: machine pairs, queue NPCs, Megtelt |
 | `src/world/buildings/BuildingSystem.ts` | Enter/leave, bell, courtyard contents, házmester, escape countdown |
 | `src/world/buildings/gates.ts` | Gate placement, instanced gates, resident exits |
 | `src/world/buildings/interior.ts` | Courtyard template, wheelie bins, jackpot meshes |
 | `src/npc/Hazmester.ts` | Caretaker patrol, detection, chase |
 | `src/npc/looks.ts` | NPC colour palettes |
 | `src/audio/lines.ts`, `voice.ts` | Voice line catalogue, subtitles |
+| `src/minigames/mohu/MachineModel.ts` | REpont-style machine, canvas textures, live screen, receipt strip |
+| `src/minigames/mohu/MohuGame.ts` | Close-up feeding mini-game, rejects, fixes, receipt |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -112,3 +119,6 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M4 gate leaves swing outward** toward the street (real Pest gates swing inward) because the extruded building blocks have no hollow behind the facade. M8 could recess the gateway.
 - **M4 interiors are teleports** to a template courtyard rather than the real courtyard footprint in the street geometry. Courtyard size follows the OSM courtyard area, but its shape is always a rectangle.
 - **M4 escape rule.** Once the házmester spots you, you are caught if he reaches you *or* the 5 s run out while you are still inside. Is that the intended reading?
+- **M5 queue reading.** I read "0–2 people already at the machines" as each person using one of the two machines, so you only wait when both are taken (or one is "Megtelt" and the other is busy). If you meant one shared line in front of the pair, it is a small change in `ReturnPoints.roll()`.
+- **M5 payout timing.** Money is added when the receipt prints (bag empty, walking away, closing time or end of run), with +50 Ft ticking up on the machine screen meanwhile.
+- **M5 walking away.** Releasing Space only pauses feeding; E (between items) or S walks away. Esc pauses the game as usual.
