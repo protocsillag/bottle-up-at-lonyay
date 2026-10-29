@@ -17,7 +17,7 @@ export class FollowCamera {
   private current = 6;
   private smoothY = 0;
 
-  constructor(readonly camera: THREE.PerspectiveCamera, private world: CollisionWorld) {}
+  constructor(readonly camera: THREE.PerspectiveCamera, public world: CollisionWorld) {}
 
   update(dt: number, input: Input, target: THREE.Vector3) {
     this.yaw -= input.mouseDX * MOUSE_SENS;

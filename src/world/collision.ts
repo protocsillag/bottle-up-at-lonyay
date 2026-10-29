@@ -11,29 +11,43 @@ export class CollisionWorld {
   private cells = new Map<number, Segment[]>();
   private boundary: Vec2[];
 
-  constructor(city: CityData) {
-    this.boundary = city.boundary;
+  /** rings: closed wall rings; boundary: the playable area (also a wall). */
+  constructor(rings: Vec2[][], boundary: Vec2[]) {
+    this.boundary = boundary;
+    for (const r of rings) this.addRing(r);
+    this.addRing(boundary);
+  }
+
+  static fromCity(city: CityData) {
+    const rings: Vec2[][] = [];
     for (const b of city.buildings) {
-      this.addRing(b.outer);
-      b.holes?.forEach((h) => this.addRing(h));
+      rings.push(b.outer);
+      b.holes?.forEach((h) => rings.push(h));
     }
-    this.addRing(city.boundary);
+    return new CollisionWorld(rings, city.boundary);
+  }
+
+  /** Adds an open polyline wall (not closed). */
+  addLine(pts: Vec2[]) {
+    for (let i = 0; i < pts.length - 1; i++) this.addSegment(pts[i], pts[i + 1]);
   }
 
   private key(cx: number, cz: number) { return (cx + 4096) * 8192 + (cz + 4096); }
 
   addRing(ring: Vec2[]) {
-    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-      const s: Segment = { ax: ring[j][0], az: ring[j][1], bx: ring[i][0], bz: ring[i][1] };
-      const x0 = Math.floor(Math.min(s.ax, s.bx) / CELL), x1 = Math.floor(Math.max(s.ax, s.bx) / CELL);
-      const z0 = Math.floor(Math.min(s.az, s.bz) / CELL), z1 = Math.floor(Math.max(s.az, s.bz) / CELL);
-      for (let cx = x0; cx <= x1; cx++) {
-        for (let cz = z0; cz <= z1; cz++) {
-          const k = this.key(cx, cz);
-          let list = this.cells.get(k);
-          if (!list) this.cells.set(k, (list = []));
-          list.push(s);
-        }
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) this.addSegment(ring[j], ring[i]);
+  }
+
+  private addSegment(a: Vec2, b: Vec2) {
+    const s: Segment = { ax: a[0], az: a[1], bx: b[0], bz: b[1] };
+    const x0 = Math.floor(Math.min(s.ax, s.bx) / CELL), x1 = Math.floor(Math.max(s.ax, s.bx) / CELL);
+    const z0 = Math.floor(Math.min(s.az, s.bz) / CELL), z1 = Math.floor(Math.max(s.az, s.bz) / CELL);
+    for (let cx = x0; cx <= x1; cx++) {
+      for (let cz = z0; cz <= z1; cz++) {
+        const k = this.key(cx, cz);
+        let list = this.cells.get(k);
+        if (!list) this.cells.set(k, (list = []));
+        list.push(s);
       }
     }
   }

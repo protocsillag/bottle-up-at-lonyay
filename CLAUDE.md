@@ -7,7 +7,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M1 Setup and city: done** (2026-10-29).
 - **M2 Player and camera: done** (2026-10-29).
 - **M3 Core loop in grey boxes: done** (2026-10-29, built unattended overnight).
-- Next: **M4 Buildings**.
+- **M4 Buildings: done** (2026-10-29, unattended).
+- Next: **M5 Mohu mini-game**.
 
 ## Commands
 
@@ -30,7 +31,7 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - `city.json` is the only map input at runtime. Re-bake after changing anything in `tools/osm/`.
 - Missing building heights: 5 storeys × 3.6 m + 1.2 m ledge. `building=roof` canopies are skipped.
 - Buildings outside the boundary are baked as `scenery: 1` (far-side facades up to 220 m out); they still get colliders but the boundary stops you first.
-- Collision is 2D: player circle (r = 0.35 m) against building wall segments and the boundary polygon in a 16 m grid (`src/world/collision.ts`). Movement is substepped so you cannot tunnel at debug speed. Courtyard rings (multipolygon inners) are walls too; M4 will open gates into them.
+- Collision is 2D: player circle (r = 0.35 m) against building wall segments and the boundary polygon in a 16 m grid (`src/world/collision.ts`). Movement is substepped so you cannot tunnel at debug speed. Courtyard rings (multipolygon inners) stay walls; courtyards are reached through the gate teleport, not by opening the street geometry.
 - Camera pull-in uses a 2D raycast against the same wall segments (no mesh raycasts).
 - Ground layers use small y offsets plus `polygonOffset` to avoid z-fighting: areas < footpaths < roads. Pavements are the base ground colour; OSM `footway=sidewalk` lines are dropped.
 - Buildings are merged per 200 m tile (one draw call each) for culling. Trees are instanced.
@@ -48,6 +49,14 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Spots (`src/world/placement.ts`): pavement points every 10 m both sides of each road (half width + 1.6 m), beside footpaths, plus a 14 m grid in parks and squares; each tagged with a zone (raday, nehru, corvinus, market, kalvin, bakats, museum, lonyay, street). Street items, party leftovers and the big bag sample from them; zone × time weights are in `zoneWeight()` in `ItemSystem.ts`.
 - Public bins: OSM `waste_basket`/`recycling` inside the boundary (snapped off buildings, at least 8 m apart) plus top-ups in hot zones: 98 bins. Hidden spots: 48 fixed planters (Nehru-heavy), 44 stocked per run, restock at the next 06:00. Party leftovers: 4 per night between 22:00 and 04:00, cleared at 09:00.
 - Return points (`src/world/ReturnPoints.ts`): machines on the pavement outside City Spar (Kinizsi utca) and outside the market hall's north-west (Fővám tér) facade. Open 06:00–24:00. M3 placeholder feeds 3 items/s while you stand within 3 m.
+- Gates (`src/world/buildings/gates.ts`): one per residential building (266), on the longest outer edge that faces free pavement (probes 1.5, 2 and 4 m out and across the gate width); an OSM `entrance` on an edge wins. Non-residential names are skipped by regex. Frames and leaves are two `InstancedMesh`es; leaves swing outward to the street (reads better than inward, which would clip into the extruded block). Only gates within 80 m animate; timers tick everywhere.
+- Residents: each gate's timer fires every 30–90 real s (×0.45 at 07–09 and 17–19, ×2 at 22–24, ×6 at 00–06). If the player is within 80 m a resident (random-coloured `CharacterModel`) walks out and the gate holds 1.4 s, then swings shut over 4 s, accelerating. Walking within 0.95 m of an open gate (open > 0.3) or pressing E enters. A gate that clicks shut with you within 2.5 m counts as a slammed door.
+- Bell: intercom panel right of the gate (as seen from the street); 1 in 10 buzzes it open for 3 s; otherwise a random intercom line, never twice in a row, night-only lines between 22:00 and 06:00. 4 s cooldown.
+- Interiors (`src/world/buildings/interior.ts`): built on entry at world (6000, 6000) with their own `CollisionWorld`; the player's and camera's `world` are swapped, and the street groups are hidden. Courtyard size from the largest OSM courtyard ring (or 18% of the footprint), clamped 9–30 × 9–28 m; storeys from the building height. Walking back to the gate (z > exitZ) leaves. Interior meshes are disposed on leave.
+- Courtyard contents roll on first entry per run (`BuildingSystem.court`): 1–3 wheelie bins (5–20, hold 4 s, refill 12 h; the first has a yellow recycling lid), 3–4 jackpot courtyards per run (renovation skip or party-flat recycling, 40–80, hold 6 s, once), the big bag in a courtyard 60% of runs (else on the Nehru part lawn).
+- Házmester (`src/npc/Hazmester.ts`): 25% of courtyards, 70% of jackpots. Patrols a 4-point loop, spots you within 8 m in a ±55° cone, within 1.6 m any direction, or within 12 m while you hold E. Then a 5 s "Get out!" countdown and a walking-speed chase; caught = half the bag (rounded down) and out. 22:00–06:00 he is asleep 70% of visits (snore subtitle).
+- Voice lines (`src/audio/lines.ts`) and `say()` (`src/audio/voice.ts`) show Hungarian text with English subtitles; `setVoicePlayer()` is the hook for M9 audio.
+- `CharacterModel` takes `CharacterOptions` (hat, prop, width, scale) for NPCs until the M7 creator generalises it. NPC colour sets in `src/npc/looks.ts`.
 - `CollisionWorld.addBox()` adds solid props (machines now; kiosks and gates later).
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
@@ -64,6 +73,12 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/world/items/ItemSystem.ts` | Street items, hidden spots, bins, party leftovers, big bag |
 | `src/world/items/models.ts` | Item, bin, planter, party heap and big-bag meshes |
 | `src/world/ReturnPoints.ts` | The two return points (M3 placeholder machines) |
+| `src/world/buildings/BuildingSystem.ts` | Enter/leave, bell, courtyard contents, házmester, escape countdown |
+| `src/world/buildings/gates.ts` | Gate placement, instanced gates, resident exits |
+| `src/world/buildings/interior.ts` | Courtyard template, wheelie bins, jackpot meshes |
+| `src/npc/Hazmester.ts` | Caretaker patrol, detection, chase |
+| `src/npc/looks.ts` | NPC colour palettes |
+| `src/audio/lines.ts`, `voice.ts` | Voice line catalogue, subtitles |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -81,7 +96,7 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 
 ## Known gaps / notes for later milestones
 
-- OSM has only 16 `entrance` nodes in the area: M4 gate placement will mostly use "one gate per street facade".
+- OSM has only 16 `entrance` nodes in the area: gates use the longest street-facing edge per building (one gate per building, not per facade).
 - Központi Vásárcsarnok is tagged low (8.4 m); M8 replaces it with a hand-built landmark anyway.
 - Bridges are flat decks at 7 m with no ramps; scenery only.
 - Roads use one fixed width per OSM class; Ráday utca looks all-asphalt. Kerbs and real pavement widths are M8.
@@ -93,3 +108,7 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M3 debug keys.** G (fast walk) and T (time ×30) are on for everyone so playtesters can skip ahead. Should they be hidden behind `?debug` for the friends playtest?
 - **M3 item budget.** Street items: 45 at start + ~5 spots per game hour (×2 from 18:00–02:00, ×0.3 from 02:00–07:00), 1–2 items each; 44 hidden spots of 2–6 items, restocked daily; 98 bins of 2–8 every 6 game hours; 8 party heaps of 15–30. Rough total over a run is well over 1 400 if you search everything; the M9 balance pass tunes it.
 - **M3 machine placement.** The Aldi machine stands outside the market hall's Fővám tér entrance, not in the basement Aldi, until the interior exists in M8. OK?
+- **M4 one gate per building.** The brief says one gate per facade; I placed one per building (266 gates) on its longest street-facing side, to keep the street readable and the gate count manageable. More gates per corner building is easy if you want it.
+- **M4 gate leaves swing outward** toward the street (real Pest gates swing inward) because the extruded building blocks have no hollow behind the facade. M8 could recess the gateway.
+- **M4 interiors are teleports** to a template courtyard rather than the real courtyard footprint in the street geometry. Courtyard size follows the OSM courtyard area, but its shape is always a rectangle.
+- **M4 escape rule.** Once the házmester spots you, you are caught if he reaches you *or* the 5 s run out while you are still inside. Is that the intended reading?

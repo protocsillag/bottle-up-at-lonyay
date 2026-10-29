@@ -50,3 +50,16 @@ export const KIND_ODDS = { pet: 0.45, can: 0.38, glass: 0.17 } as const;
 
 /** Running with a nearly full bag: chance per real second to break a glass bottle. */
 export const GLASS_BREAK = { minFill: 0.8, perSecond: 1 / 25 };
+
+export const COURTYARD = {
+  bellOdds: 0.1, // 1 in 10 rings buzzes the door open
+  binItems: [5, 20] as const,
+  binHold: 4,
+  binRefill: 12 * 60,
+  jackpots: [3, 4] as const,
+  jackpotItems: [40, 80] as const,
+  jackpotHold: 6,
+  hazmester: 0.25,
+  hazmesterJackpot: 0.7,
+  hazmesterAsleep: 0.7, // at night
+};

@@ -40,7 +40,7 @@ export class Player {
   private shiftLatch = false;
   debugFast = false;
 
-  constructor(private world: CollisionWorld, x: number, z: number) {
+  constructor(public world: CollisionWorld, x: number, z: number) {
     this.position.set(x, 0, z);
     this.mesh = this.model.root;
     this.syncMesh();

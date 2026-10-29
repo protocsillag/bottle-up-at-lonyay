@@ -58,8 +58,6 @@ export class ItemSystem {
   private glintMat: THREE.SpriteMaterial;
   private partyGeo = partyGeometry();
   private hiddenCandidates: Spot[];
-  /** Extra places the big bag may hide (courtyards, added by M4). */
-  bigBagSpots: { x: number; z: number; enter?: () => void }[] = [];
 
   constructor(private city: CityData, private place: Placement, private state: GameState) {
     this.group.name = 'items';
@@ -198,11 +196,10 @@ export class ItemSystem {
   private placeBigBag() {
     if (this.bigBag) this.group.remove(this.bigBag.mesh);
     const rng = this.state.rng;
-    // Behind the Nehru part kiosks (green spots there) or, from M4, in a courtyard.
+    // On the Nehru part lawn; BuildingSystem may move it into a courtyard instead.
     const nehru = this.place.spots.filter((s) => s.zone === 'nehru' && s.green);
     let x: number, z: number;
-    if (this.bigBagSpots.length && rng.chance(0.6)) ({ x, z } = rng.pick(this.bigBagSpots));
-    else if (nehru.length) ({ x, z } = rng.pick(nehru));
+    if (nehru.length) ({ x, z } = rng.pick(nehru));
     else ({ x, z } = rng.pick(this.place.spots));
     const mesh = new THREE.Mesh(bigBagGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
     mesh.position.set(x, 0, z);
@@ -225,6 +222,13 @@ export class ItemSystem {
     this.bigBag = bag;
   }
 
+  /** Removes the street big bag (M4 hides it in a courtyard instead). */
+  hideBigBag() {
+    if (!this.bigBag) return;
+    this.group.remove(this.bigBag.mesh);
+    this.bigBag = null;
+  }
+
   /** Where the big bag is this run (for debugging and the M4 courtyard logic). */
   get bigBagPos() { return this.bigBag && !this.bigBag.taken ? [this.bigBag.x, this.bigBag.z] : null; }
 
@@ -235,9 +239,7 @@ export class ItemSystem {
   }
 
   private pickup(n: number, source: Parameters<GameState['collect']>[1], kinds?: ItemKind[]) {
-    const got = this.state.collect(n, source, kinds);
-    if (got > 0) this.state.toast(`+${got} ${got === 1 ? 'item' : 'items'}${got < n ? ' — bag full!' : ''}`, got < n ? 'bad' : 'good');
-    return got;
+    return this.state.pickup(n, source, kinds);
   }
 
   private takeStreet(s: StreetItem) {

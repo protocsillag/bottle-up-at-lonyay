@@ -104,6 +104,13 @@ export class GameState {
     return take;
   }
 
+  /** collect() plus the pickup toast. */
+  pickup(n: number, source: SourceKind, kinds?: ItemKind[]) {
+    const got = this.collect(n, source, kinds);
+    if (got > 0) this.toast(`+${got} ${got === 1 ? 'item' : 'items'}${got < n ? ' — bag full!' : ''}`, got < n ? 'bad' : 'good');
+    return got;
+  }
+
   /** Removes and returns the next item to feed into a machine. */
   takeFromBag(): Item | undefined { return this.bag.shift(); }
 

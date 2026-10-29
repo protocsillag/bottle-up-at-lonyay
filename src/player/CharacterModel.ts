@@ -22,6 +22,17 @@ export const DEFAULT_COLORS: CharacterColors = {
   shoes: 0x2a2522,
 };
 
+/** NPC variations until the M7 creator generalises the pieces. */
+export interface CharacterOptions {
+  hat?: 'none' | 'beanie' | 'flatcap';
+  /** Carried in the right hand. */
+  prop?: 'broom' | 'bag';
+  /** Body width multiplier (stocky házmester). */
+  width?: number;
+  /** Overall scale. */
+  scale?: number;
+}
+
 const HIP_Y = 0.92;
 
 function box(w: number, h: number, d: number, color: number, y = -h / 2) {
@@ -52,8 +63,9 @@ export class CharacterModel {
   private airBlend = 0;
   private time = 0;
 
-  constructor(c: CharacterColors = DEFAULT_COLORS) {
+  constructor(c: CharacterColors = DEFAULT_COLORS, opts: CharacterOptions = {}) {
     this.root.add(this.body);
+    this.body.scale.set((opts.width ?? 1) * (opts.scale ?? 1), opts.scale ?? 1, (opts.width ?? 1) * (opts.scale ?? 1));
 
     // Hips and torso (the parka hangs a little below the waist).
     const hips = box(0.36, 0.16, 0.22, c.bottoms, 0.04);
@@ -74,20 +86,38 @@ export class CharacterModel {
     const skull = box(0.24, 0.27, 0.25, c.skin, 0.16);
     const hair = box(0.26, 0.1, 0.27, c.hair, 0.2);
     hair.position.z = 0.01;
-    const beanie = box(0.27, 0.12, 0.27, c.hat, 0.31);
-    const fold = box(0.28, 0.04, 0.28, c.hat, 0.24);
+    const hat = opts.hat ?? 'beanie';
+    const hatParts: THREE.Mesh[] = [];
+    if (hat === 'beanie') hatParts.push(box(0.27, 0.12, 0.27, c.hat, 0.31), box(0.28, 0.04, 0.28, c.hat, 0.24));
+    if (hat === 'flatcap') {
+      const peak = box(0.24, 0.03, 0.12, c.hat, 0.29);
+      peak.position.z = -0.16;
+      hatParts.push(box(0.28, 0.07, 0.29, c.hat, 0.3), peak);
+    }
     const nose = box(0.05, 0.06, 0.05, c.skin, 0.13);
     nose.position.z = -0.14;
     const eyes = box(0.14, 0.03, 0.01, 0x1b1b1b, 0.19);
     eyes.position.z = -0.128;
     const neck = box(0.1, 0.06, 0.1, c.skin, 0.02);
-    this.head.add(skull, hair, beanie, fold, nose, eyes, neck);
+    this.head.add(skull, hair, ...hatParts, nose, eyes, neck);
     this.torso.add(this.head);
 
     // Arms from the shoulders, legs from the hips.
     const hand = box(0.08, 0.09, 0.09, c.skin, -0.3);
     this.armL = limb(0.3, 0.28, 0.11, c.top, c.top, hand);
     this.armR = limb(0.3, 0.28, 0.11, c.top, c.top, hand.clone());
+    if (opts.prop === 'broom') {
+      const broom = new THREE.Group();
+      broom.add(box(0.03, 1.3, 0.03, 0x8a6a3e, 0.35), box(0.32, 0.12, 0.08, 0x3a2f22, -0.32));
+      broom.position.set(0, -0.3, -0.05);
+      broom.rotation.x = 0.25;
+      this.armR.knee.add(broom);
+    }
+    if (opts.prop === 'bag') {
+      const bag = box(0.24, 0.3, 0.12, 0xe8e2d0, -0.4);
+      bag.position.y = -0.1;
+      this.armR.knee.add(bag);
+    }
     this.armL.pivot.position.set(-0.29, 0.56, 0);
     this.armR.pivot.position.set(0.29, 0.56, 0);
     this.torso.add(this.armL.pivot, this.armR.pivot);

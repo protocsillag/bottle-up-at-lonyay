@@ -1,5 +1,16 @@
 # Changelog
 
+## M4 Buildings (2026-10-29)
+
+- 266 residential buildings get a big wooden street gate with a stone surround and an intercom panel.
+- Residents leave at random (every 30–90 s, more often at 07–09 and 17–19, rarely after midnight). The heavy gate swings shut over 4 seconds: walk in before it clicks. Slammed doors are counted.
+- Ring the bell (E at the intercom): 1 in 10 buzzes the door open; the rest get a grumpy intercom line in Hungarian with an English subtitle, never the same twice in a row, with a night-only line.
+- Courtyard interiors from one reusable Pest template scaled to each building: gateway passage with mailboxes, courtyard, staircase door, open corridors (gang) on every floor. Leave through the gate, which opens freely from inside.
+- Courtyard bins: 1–3 wheelie bins with 5–20 items each (hold E 4 s, refill after 12 game hours).
+- 3–4 jackpot courtyards per run: a renovation skip full of cans or a party flat's recycling, 40–80 items (hold E 6 s).
+- The big blue bag now hides in a random courtyard in most runs.
+- The házmester: in about one courtyard in four (and most jackpots), grey work coat and broom, patrolling a loop. He spots you within 8 m in his view cone or hears you searching a bin; you then have 5 seconds to get out before he takes half your bag and marches you out. Asleep most nights (you hear the snoring).
+
 ## M3 Core loop in grey boxes (2026-10-29)
 
 - Game clock: Friday 08:00 to Sunday 08:00 in 30 real minutes, shown top-left with the day. The clock stops while paused.

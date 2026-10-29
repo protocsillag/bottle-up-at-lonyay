@@ -6,6 +6,7 @@ import { StreetIndex } from './world/streets';
 import { Placement } from './world/placement';
 import { ItemSystem } from './world/items/ItemSystem';
 import { ReturnPoints } from './world/ReturnPoints';
+import { BuildingSystem } from './world/buildings/BuildingSystem';
 import { Input } from './player/input';
 import { Player } from './player/Player';
 import { FollowCamera } from './player/FollowCamera';
@@ -57,8 +58,9 @@ addEventListener('resize', () => {
 });
 
 const city = await loadCity();
-scene.add(buildCity(city));
-const world = new CollisionWorld(city);
+const cityGroup = buildCity(city);
+scene.add(cityGroup);
+const world = CollisionWorld.fromCity(city);
 const streets = new StreetIndex(city);
 const placement = new Placement(city);
 
@@ -74,7 +76,15 @@ const player = new Player(world, sx, sz);
 scene.add(player.mesh);
 const input = new Input(canvas);
 const follow = new FollowCamera(camera, world);
+const buildings = new BuildingSystem(city, placement, state, {
+  player, follow, cityWorld: world,
+  setOutsideVisible(v) {
+    for (const g of [cityGroup, items.group, returns.group, buildings.gates.group]) g.visible = v;
+  },
+}, streets);
+scene.add(buildings.group);
 const interaction = new Interaction();
+interaction.add((x, z) => buildings.getInteractables(x, z));
 interaction.add((x, z) => items.interactables(x, z));
 interaction.add(() => returns.interactables());
 const hud = new Hud(state);
@@ -90,11 +100,12 @@ for (const p of returns.points) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings } });
 
 function startRun() {
   state.reset(newSeed());
   items.reset();
+  if (buildings.reset().bigBagInCourtyard) items.hideBigBag();
   returns.stop();
   player.teleport(sx, sz, 0);
   player.stamina = 100;
@@ -166,13 +177,16 @@ function frame() {
       state.toast('Clink! A glass bottle broke.', 'bad');
     }
 
+    buildings.searching = interaction.progress > 0;
+    buildings.update(dt);
     items.update(dt, gameMinutes, player.position.x, player.position.z);
     returns.update(dt, player.position.x, player.position.z);
     interaction.update(dt, input, player.position.x, player.position.z, player.facing);
     if (input.wasPressed('KeyM')) minimap.toggleLarge();
   }
   follow.update(dt, input, player.position);
-  minimap.draw(player.position.x, player.position.z, player.facing);
+  const [mx, mz] = buildings.mapPos(player.position.x, player.position.z);
+  minimap.draw(mx, mz, player.facing);
   staminaFill.style.width = `${player.stamina}%`;
   staminaEl.classList.toggle('exhausted', player.exhausted);
 
@@ -181,6 +195,7 @@ function frame() {
   if (player.debugFast) status.push('Debug walk');
   if (state.timeScale > 1) status.push(`Time ×${state.timeScale}`);
   if (state.bigBag) status.push('Big blue bag');
+  if (buildings.inside) status.push('In a courtyard');
   hud.update(state, interaction, status);
 
   sun.position.copy(player.position).add(SUN_OFFSET);
@@ -196,7 +211,7 @@ function frame() {
     fpsFrames = 0;
     fpsTime = 0;
     const p = player.position;
-    streetEl.textContent = streets.nearest(p.x, p.z) ?? 'Belső-Ferencváros';
+    streetEl.textContent = buildings.streetName() ?? streets.nearest(p.x, p.z) ?? 'Belső-Ferencváros';
     debugEl.textContent = import.meta.env.DEV || player.debugFast
       ? `${fps} fps · ${player.speed.toFixed(1)} m/s · x ${p.x.toFixed(0)} z ${p.z.toFixed(0)}` : '';
   }

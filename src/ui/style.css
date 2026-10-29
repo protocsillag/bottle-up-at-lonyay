@@ -88,3 +88,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fc3e0; fon
 #end-stats td:last-child { text-align: right; font-weight: 700; }
 .card .fun { font-style: italic; }
 #debug:empty { display: none; }
+
+/* ---- M4 subtitles, alerts, fade ---- */
+#subtitle {
+  position: fixed; left: 50%; top: 22%; transform: translateX(-50%); text-align: center; pointer-events: none;
+  opacity: 0; transition: opacity 0.25s; max-width: 70vw;
+}
+#subtitle.show { opacity: 1; }
+#subtitle .hu { font-size: 26px; font-weight: 800; color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8); }
+#subtitle .en { font-size: 16px; color: #ffe9a6; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9); margin-top: 2px; }
+#subtitle.hazmester .hu { color: #ff9b85; }
+#alert {
+  position: fixed; left: 50%; top: 12%; transform: translateX(-50%); padding: 8px 18px; border-radius: 8px;
+  background: #b8332b; color: #fff; font-size: 22px; font-weight: 800; pointer-events: none;
+}
+#alert.hidden { display: none; }
+#fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.35s; }
+#fade.on { opacity: 1; transition: none; }
