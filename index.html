@@ -9,16 +9,23 @@
   <body>
     <canvas id="game"></canvas>
     <div id="hud">
-      <div class="title">Bottle Up at Lónyay <span>M1 · city prototype</span></div>
+      <div class="title">Bottle Up at Lónyay <span>M2 · player prototype</span></div>
       <div id="street">Loading Belső-Ferencváros…</div>
       <div id="debug"></div>
     </div>
-    <div id="controls">WASD move · Mouse look · Shift run · Wheel zoom · G fast-walk (debug) · Esc release mouse</div>
+    <div id="stamina"><div class="label">Stamina</div><div class="bar"><div id="stamina-fill"></div></div></div>
+    <canvas id="minimap" width="200" height="200"></canvas>
     <div id="start" class="overlay">
       <div class="card">
         <h1>Bottle Up at Lónyay</h1>
         <p>Friday, 08:00. Lónyay utca.</p>
-        <p class="muted">Milestone 1: walk the real neighbourhood at 1 m = 1 m.</p>
+        <p class="muted">Milestone 2: walk, run and jump around the real neighbourhood.</p>
+        <ul class="controls">
+          <li><b>WASD</b> move</li><li><b>Mouse</b> look</li>
+          <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
+          <li><b>M</b> big map</li><li><b>Wheel</b> zoom</li>
+          <li><b>Esc</b> pause</li><li><b>G</b> fast walk (debug)</li>
+        </ul>
         <button id="play" disabled>Loading…</button>
       </div>
     </div>

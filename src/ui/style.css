@@ -14,10 +14,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fc3e0; fon
 #hud .title span { font-weight: 400; color: #bbb; font-size: 12px; margin-left: 6px; }
 #street { font-size: 20px; font-weight: 600; margin-top: 4px; }
 #debug { font: 12px ui-monospace, Menlo, monospace; color: #ccc; margin-top: 4px; white-space: pre; }
-#controls {
-  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); padding: 6px 12px; border-radius: 6px;
-  background: var(--panel); color: #eee; font-size: 13px; pointer-events: none; white-space: nowrap;
-}
 #attribution { position: fixed; bottom: 4px; right: 8px; font-size: 11px; color: #333; opacity: 0.8; }
 .overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.45); }
 .overlay.hidden { display: none; }
@@ -30,3 +26,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fc3e0; fon
   background: var(--ink); color: var(--mohu-yellow); cursor: pointer; font-weight: 700;
 }
 .card button:disabled { opacity: 0.5; cursor: wait; }
+#stamina {
+  position: fixed; left: 12px; bottom: 12px; width: 220px; padding: 8px 12px; border-radius: 8px;
+  background: var(--panel); color: #eee; font-size: 12px; pointer-events: none;
+}
+#stamina .bar { margin-top: 4px; height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+#stamina-fill { height: 100%; width: 100%; background: var(--mohu-yellow); transition: background 0.2s; }
+#stamina.exhausted #stamina-fill { background: #e0523d; }
+#minimap {
+  position: fixed; right: 12px; bottom: 28px; width: 200px; height: 200px; pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+#minimap.large { width: min(80vh, 80vw); height: min(80vh, 80vw); right: 50%; bottom: 50%; transform: translate(50%, 50%); }
+.card .controls {
+  list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
+  text-align: left; font-size: 14px;
+}
+.card .controls b { display: inline-block; min-width: 52px; }

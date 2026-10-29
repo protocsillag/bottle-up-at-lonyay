@@ -6,12 +6,15 @@ import { StreetIndex } from './world/streets';
 import { Input } from './player/input';
 import { Player } from './player/Player';
 import { FollowCamera } from './player/FollowCamera';
+import { Minimap, type MapMarker } from './ui/Minimap';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const streetEl = document.getElementById('street')!;
 const debugEl = document.getElementById('debug')!;
 const startEl = document.getElementById('start')!;
 const playBtn = document.getElementById('play') as HTMLButtonElement;
+const staminaEl = document.getElementById('stamina')!;
+const staminaFill = document.getElementById('stamina-fill')!;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -55,7 +58,13 @@ const follow = new FollowCamera(camera, world);
 // Start looking up Lónyay utca toward Kálvin tér.
 const kalvin = city.landmarks.kalvinTer;
 if (kalvin) follow.yaw = Math.atan2(sx - kalvin[0], sz - kalvin[1]);
-if (import.meta.env.DEV) Object.assign(window, { game: { scene, camera, player, follow, city, world } });
+// The two return points: SPAR at Kinizsi/Ráday and Aldi in the market hall.
+const markers: MapMarker[] = [];
+if (city.landmarks.spar) markers.push({ p: city.landmarks.spar, label: 'S', color: '#d4202c' });
+if (city.landmarks.marketHall) markers.push({ p: city.landmarks.marketHall, label: 'A', color: '#1f5fa8' });
+const minimap = new Minimap(document.getElementById('minimap') as HTMLCanvasElement, city, markers);
+
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap } });
 
 streetEl.textContent = 'Lónyay utca';
 playBtn.disabled = false;
@@ -72,6 +81,10 @@ renderer.setAnimationLoop(() => {
 
   player.update(dt, input, follow.yaw);
   follow.update(dt, input, player.position);
+  if (input.wasPressed('KeyM')) minimap.toggleLarge();
+  minimap.draw(player.position.x, player.position.z, player.facing);
+  staminaFill.style.width = `${player.stamina}%`;
+  staminaEl.classList.toggle('exhausted', player.exhausted);
 
   sun.position.copy(player.position).add(SUN_OFFSET);
   sun.target.position.copy(player.position);

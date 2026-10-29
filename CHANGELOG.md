@@ -1,5 +1,14 @@
 # Changelog
 
+## M2 Player and camera (2026-10-29)
+
+- Low-poly street character built in code (parka, jeans, red beanie) replaces the capsule, with procedural walk, run (forward lean, pumping arms), jump (knee tuck, arms up) and idle breathing.
+- Jump on Space: about 0.8 m high, 0.6 s in the air, reduced air control, costs a little stamina.
+- Stamina: 10 s of running from full, refills in about 5 s after a short delay. Emptying the bar blocks running until it is back to 30% and Shift is pressed again. Stamina bar bottom-left, red while exhausted.
+- North-up round minimap bottom-right, pre-rendered from `city.json`: buildings, streets, parks, the Danube and the dashed playable boundary. The two return points (S = SPAR at Kinizsi/Ráday, A = Aldi in the market hall) stay pinned to the rim when off-screen. M opens a large map of the whole area.
+- Follow camera only half-follows jumps so the view does not bounce.
+- Controls list moved into the start/pause card.
+
 ## M1 Setup and city (2026-10-29)
 
 - Vite + TypeScript + Three.js scaffold; GitHub Pages deploy workflow.

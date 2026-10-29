@@ -15,6 +15,7 @@ export class FollowCamera {
   pitch = 0.3;
   distance = 6;
   private current = 6;
+  private smoothY = 0;
 
   constructor(readonly camera: THREE.PerspectiveCamera, private world: CollisionWorld) {}
 
@@ -23,7 +24,9 @@ export class FollowCamera {
     this.pitch = THREE.MathUtils.clamp(this.pitch + input.mouseDY * MOUSE_SENS, MIN_PITCH, MAX_PITCH);
     this.distance = THREE.MathUtils.clamp(this.distance * (1 + input.wheel * 0.1), 2.5, 40);
 
-    const fx = target.x, fz = target.z, fy = target.y + LOOK_HEIGHT;
+    // Follow jumps only partly so the view does not bounce.
+    this.smoothY = THREE.MathUtils.lerp(this.smoothY, target.y * 0.5, 1 - Math.exp(-6 * dt));
+    const fx = target.x, fz = target.z, fy = this.smoothY + LOOK_HEIGHT;
     const horiz = Math.cos(this.pitch) * this.distance;
     const dx = Math.sin(this.yaw) * horiz;
     const dz = Math.cos(this.yaw) * horiz;
