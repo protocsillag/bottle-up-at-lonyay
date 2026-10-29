@@ -17,6 +17,8 @@ export interface ShopDoor { id: ShopId; name: string; x: number; z: number; faci
 export class Shops {
   readonly group = new THREE.Group();
   readonly street = new THREE.Group();
+  /** Interior lights live outside the (hidden) interiors so the light count never changes. */
+  readonly lights = new THREE.Group();
   readonly doors: ShopDoor[] = [];
   current: ShopDoor | null = null;
   private fadeEl = document.getElementById('fade')!;
@@ -34,8 +36,17 @@ export class Shops {
   }
 
   private add(id: ShopId, name: string, d: { x: number; z: number; facing: number }, interior: ShopInterior) {
-    interior.group.visible = false;
     this.group.add(interior.group);
+    interior.group.updateMatrixWorld(true);
+    const lights: THREE.PointLight[] = [];
+    interior.group.traverse((o) => { if (o instanceof THREE.PointLight) lights.push(o); });
+    for (const l of lights) {
+      this.lights.attach(l);
+      l.userData.on = l.intensity;
+      l.intensity = 0;
+      l.userData.shop = id;
+    }
+    interior.group.visible = false;
     const door: ShopDoor = { id, name, ...d, interior };
     this.doors.push(door);
     this.its.push({
@@ -66,6 +77,10 @@ export class Shops {
     this.street.add(g);
   }
 
+  private setLights(id: ShopId | null) {
+    for (const l of this.lights.children as THREE.PointLight[]) l.intensity = l.userData.shop === id ? l.userData.on : 0;
+  }
+
   get inside() { return this.current !== null; }
   mapPos(): Vec2 | null { return this.current ? [this.current.x, this.current.z] : null; }
 
@@ -80,6 +95,7 @@ export class Shops {
     if (this.current || !this.state.shopsOpen) return;
     this.current = d;
     d.interior.group.visible = true;
+    this.setLights(d.id);
     this.host.setOutsideVisible(false);
     this.host.player.world = d.interior.world;
     this.host.follow.world = d.interior.world;
@@ -92,6 +108,7 @@ export class Shops {
     const d = this.current;
     if (!d) return;
     d.interior.group.visible = false;
+    this.setLights(null);
     this.current = null;
     const { player, follow, cityWorld } = this.host;
     player.world = cityWorld;

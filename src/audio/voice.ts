@@ -1,4 +1,5 @@
 import { LINES, type Line } from './lines';
+import { sound } from './Sfx';
 
 // Speaks a line: shows the Hungarian text with an English subtitle, and plays the
 // generated voice file when one exists (M9). Subtitles always show.
@@ -6,7 +7,7 @@ import { LINES, type Line } from './lines';
 const el = document.getElementById('subtitle')!;
 let hideTimer = 0;
 type Player = (line: Line) => void;
-let player: Player | null = null;
+let player: Player | null = (line) => sound.speak(line);
 
 /** M9 audio hooks in here. */
 export function setVoicePlayer(p: Player) { player = p; }

@@ -173,7 +173,7 @@ export class ItemSystem {
       glint.visible = false;
       this.group.add(glint);
       const h: Hidden = {
-        spot, planter, glint, count: rng.int(HIDDEN.items[0], HIDDEN.items[1]), refillAt: 0,
+        spot, planter, glint, count: this.state.supply(rng.int(HIDDEN.items[0], HIDDEN.items[1])), refillAt: 0,
         it: {
           x: bx, z: bz, reach: 1.4, hold: 0,
           label: () => h.count > 0 ? (special ? 'Look behind the book kiosk' : 'Look behind the planter') : null,
@@ -283,7 +283,7 @@ export class ItemSystem {
     if (b.zone === 'corvinus' && weekday && hourIn(h, 9, 19)) n += rng.int(2, 3);
     if (b.zone === 'nehru' && hourIn(h, 17, 24)) n += rng.int(2, 3);
     if (b.zone === 'market' && hourIn(h, 8, 18)) n += rng.int(0, 2);
-    n = Math.min(BINS.items[1], n);
+    n = this.state.supply(Math.min(BINS.items[1], n));
     this.state.stats.binsSearched++;
     const got = this.pickup(n, 'bin');
     // Whatever did not fit stays for next time: the bin is ready again sooner.
@@ -310,7 +310,9 @@ export class ItemSystem {
       if (this.used.has(s)) continue;
       if (rng.next() * 5 > zoneWeight(s.zone, this.state.minute)) continue;
       this.used.add(s);
-      const n = rng.int(STREET.items[0], STREET.items[1]);
+      // Late in a generous run, fewer new items turn up.
+      if (!rng.chance(this.state.supplyFactor)) return;
+      const n = this.state.supply(rng.int(STREET.items[0], STREET.items[1]));
       const kinds: ItemKind[] = [], yaw: number[] = [], off: [number, number][] = [];
       for (let i = 0; i < n; i++) {
         kinds.push(rng.weighted({ pet: 0.45, can: 0.38, glass: 0.17 }));
@@ -345,7 +347,7 @@ export class ItemSystem {
     this.group.add(mesh);
     const clearAt = this.state.minute + minutesUntilHour(this.state.minute, PARTY.clearAt);
     const p: Party = {
-      x: s.x, z: s.z, count: rng.int(PARTY.items[0], PARTY.items[1]), clearAt, mesh,
+      x: s.x, z: s.z, count: this.state.supply(rng.int(PARTY.items[0], PARTY.items[1])), clearAt, mesh,
       it: {
         x: s.x, z: s.z, reach: 1.8, hold: PARTY.hold,
         label: () => `Party leftovers (${p.count})`,
@@ -371,6 +373,8 @@ export class ItemSystem {
   /** Drops a single item on the ground (an NPC finishing a drink, M6). */
   drop(x: number, z: number, kind: ItemKind) {
     if (this.street.length >= STREET.maxActive || !this.place.free(x, z, 0.3)) return;
+    if (!this.state.rng.chance(this.state.supplyFactor)) return;
+    this.state.supply(1);
     const spot: Spot = { x, z, zone: this.place.zoneAt(x, z), green: false, dir: 0 };
     const item: StreetItem = {
       spot, kinds: [kind], yaw: [Math.random() * 6.28], off: [[0, 0]],
@@ -390,7 +394,11 @@ export class ItemSystem {
   private nightGlints: THREE.Sprite[] = [];
 
   /** Faint glints on the nearest loose items at night so they stay findable. */
-  private updateNightGlints(night: number, px: number, pz: number) {
+  private glintTimer = 0;
+  private updateNightGlints(night: number, px: number, pz: number, dt: number) {
+    this.glintTimer -= dt;
+    const refresh = this.glintTimer <= 0;
+    if (refresh) this.glintTimer = 0.25;
     if (!this.nightGlints.length) {
       for (let i = 0; i < 24; i++) {
         const s = new THREE.Sprite(this.glintMat.clone());
@@ -399,6 +407,10 @@ export class ItemSystem {
         this.nightGlints.push(s);
         this.group.add(s);
       }
+    }
+    if (!refresh && this.nightGlints.length) {
+      this.nightGlints.forEach((g, i) => { if (g.visible) (g.material as THREE.SpriteMaterial).opacity = night * (0.35 + 0.25 * Math.sin(performance.now() / 300 + i)); });
+      return;
     }
     const near = night < 0.3 ? [] : this.street
       .map((s) => [s, (s.spot.x - px) ** 2 + (s.spot.z - pz) ** 2] as const)
@@ -414,8 +426,8 @@ export class ItemSystem {
     });
   }
 
-  update(_dt: number, gameMinutes: number, px: number, pz: number, night = 0) {
-    this.updateNightGlints(night, px, pz);
+  update(dt: number, gameMinutes: number, px: number, pz: number, night = 0) {
+    this.updateNightGlints(night, px, pz, dt);
     const minute = this.state.minute;
     // Street spawns.
     this.spawnAcc += (gameMinutes / 60) * STREET.perHour * streetRate(hourOf(minute));
@@ -430,7 +442,7 @@ export class ItemSystem {
     // Hidden spots refill and glint up close.
     for (const h of this.hidden) {
       if (h.count <= 0 && h.refillAt > 0 && minute >= h.refillAt) {
-        h.count = this.state.rng.int(HIDDEN.items[0], HIDDEN.items[1]);
+        h.count = this.state.supply(this.state.rng.int(HIDDEN.items[0], HIDDEN.items[1]));
         h.refillAt = 0;
       }
       const d = Math.hypot(h.it.x - px, h.it.z - pz);

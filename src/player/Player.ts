@@ -44,6 +44,8 @@ export class Player {
   running = false;
   private shiftLatch = false;
   debugFast = false;
+  /** G toggles the fast debug walk only when this is set (?debug or dev builds). */
+  allowDebug = false;
   /** Speed multiplier (dog mess slows to 0.7). */
   speedMul = 1;
   onBike = false;
@@ -88,7 +90,7 @@ export class Player {
 
   /** cameraYaw: the camera's heading, so W walks away from the camera. */
   update(dt: number, input: Input, cameraYaw: number) {
-    if (input.wasPressed('KeyG')) this.debugFast = !this.debugFast;
+    if (this.allowDebug && input.wasPressed('KeyG')) this.debugFast = !this.debugFast;
     this.crashed = false;
     if (this.stun > 0) {
       this.stun -= dt;

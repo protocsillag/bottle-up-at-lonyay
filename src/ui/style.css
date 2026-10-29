@@ -185,3 +185,8 @@ table.scores img { display: block; border-radius: 6px; }
 table.scores tr.me { background: var(--ink); color: var(--mohu-yellow); }
 #end .card { max-height: 92vh; overflow-y: auto; }
 body.in-menu #hud, body.in-menu #wallet, body.in-menu #stamina, body.in-menu #minimap, body.in-menu #prompt, body.in-menu #toasts, body.in-menu #subtitle { display: none; }
+
+/* ---- M9 settings ---- */
+.settings label { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 10px; text-align: left; margin: 8px 0; font-weight: 600; }
+.settings input[type=range] { width: 100%; accent-color: var(--ink); }
+.settings select { width: 100%; min-width: 0; font: inherit; padding: 4px 6px; border-radius: 6px; border: 2px solid var(--ink); background: #fff8d0; }

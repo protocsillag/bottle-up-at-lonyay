@@ -1,5 +1,6 @@
-import { BAG_BIG, BAG_SMALL, CONDITION, ITEM_VALUE_FT, KIND_ODDS } from './balance';
+import { BAG_BIG, BAG_SMALL, CONDITION, ITEM_VALUE_FT, KIND_ODDS, SUPPLY } from './balance';
 import { Rng } from './rng';
+import { sound } from '../audio/Sfx';
 import { END_MINUTE, GAME_MIN_PER_SEC, START_MINUTE, hourIn, hourOf } from './time';
 import { SHOP_CLOSE, SHOP_OPEN } from './balance';
 
@@ -46,6 +47,8 @@ export class GameState {
   stats = freshStats();
   /** Real seconds since the run started (not counting pauses). */
   realTime = 0;
+  /** Items spawned into the world so far this run (see SUPPLY). */
+  spawned = 0;
   /** Multiplies the clock speed (debug key T). */
   timeScale = 1;
   private toastListeners: ((t: Toast) => void)[] = [];
@@ -61,6 +64,21 @@ export class GameState {
     this.status = 'playing';
     this.stats = freshStats();
     this.realTime = 0;
+    this.spawned = 0;
+  }
+
+  /** How generous sources are right now (1 = full, falls to SUPPLY.minFactor). */
+  get supplyFactor() {
+    const left = SUPPLY.budget - this.spawned;
+    return Math.max(SUPPLY.minFactor, Math.min(1, left / (SUPPLY.budget * SUPPLY.soft)));
+  }
+
+  /** Scales a rolled amount by the supply budget and counts it as spawned. */
+  supply(n: number) {
+    if (n <= 0) return 0;
+    const m = Math.max(1, Math.round(n * this.supplyFactor));
+    this.spawned += m;
+    return m;
   }
 
   get capacity() { return this.bigBag ? BAG_BIG : BAG_SMALL; }
@@ -107,7 +125,11 @@ export class GameState {
   /** collect() plus the pickup toast. */
   pickup(n: number, source: SourceKind, kinds?: ItemKind[]) {
     const got = this.collect(n, source, kinds);
-    if (got > 0) this.toast(`+${got} ${got === 1 ? 'item' : 'items'}${got < n ? ' — bag full!' : ''}`, got < n ? 'bad' : 'good');
+    if (got > 0) {
+      this.toast(`+${got} ${got === 1 ? 'item' : 'items'}${got < n ? ' — bag full!' : ''}`, got < n ? 'bad' : 'good');
+      sound.play(got > 3 ? 'bag' : 'pickup');
+      if (got > 1) setTimeout(() => sound.play('pickup', 0.7), 90);
+    }
     return got;
   }
 

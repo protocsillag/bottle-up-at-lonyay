@@ -39,6 +39,7 @@
       <div class="card">
         <h1>Bottle Up at Lónyay</h1>
         <p class="tag">48 hours. An empty bag. Every bottle and can is 50&nbsp;Ft.</p>
+        <p class="muted small">A street game in Belső-Ferencváros, Budapest</p>
         <div class="menu">
           <button id="t-play" disabled>Loading…</button>
           <button id="t-scores" class="ghost">High scores</button>
@@ -68,7 +69,7 @@
           <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
           <li><b>E</b> interact, ring bells (hold for bins)</li><li><b>M</b> big map</li>
           <li><b>F</b> get on / off a bike</li><li><b>Wheel</b> zoom</li>
-          <li><b>Esc</b> pause</li><li><b>G</b> / <b>T</b> fast walk / time (debug)</li>
+          <li><b>Esc</b> pause</li>
         </ul>
         <button id="i-go">Start</button>
       </div>
@@ -81,9 +82,9 @@
           <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
           <li><b>E</b> interact, ring bells (hold for bins)</li><li><b>M</b> big map</li>
           <li><b>F</b> get on / off a bike</li><li><b>Wheel</b> zoom</li>
-          <li><b>Esc</b> pause</li><li><b>G</b> / <b>T</b> fast walk / time (debug)</li>
+          <li><b>Esc</b> pause</li>
         </ul>
-        <div class="menu row"><button id="play">Resume</button><button id="p-quit" class="ghost">Quit to title</button></div>
+        <div class="menu row"><button id="play">Resume</button><button id="p-settings" class="ghost">Settings</button><button id="p-quit" class="ghost">Quit to title</button></div>
       </div>
     </div>
     <div id="end" class="overlay hidden">
@@ -96,6 +97,31 @@
         <p id="end-fun" class="fun"></p>
         <div id="end-scores"></div>
         <div class="menu row"><button id="again">Play again</button><button id="e-title" class="ghost">Title</button></div>
+      </div>
+    </div>
+    <div id="settings" class="overlay hidden">
+      <div class="card wide settings">
+        <h1>Settings</h1>
+        <label>Volume <input id="st-master" type="range" min="0" max="1" step="0.05" /></label>
+        <label>Effects <input id="st-sfx" type="range" min="0" max="1" step="0.05" /></label>
+        <label>Voices <input id="st-voice" type="range" min="0" max="1" step="0.05" /></label>
+        <label>Voice lines
+          <select id="st-voicemode">
+            <option value="auto">Generated voices (or browser speech)</option>
+            <option value="speech">Browser speech (hu-HU)</option>
+            <option value="off">Subtitles only</option>
+          </select>
+        </label>
+        <label>Mouse sensitivity <input id="st-mouse" type="range" min="0.3" max="2.5" step="0.05" /></label>
+        <label>Graphics
+          <select id="st-quality">
+            <option value="low">Low (no shadows, fewer people)</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+        <p id="st-voicenote" class="muted small"></p>
+        <button id="st-back">Back</button>
       </div>
     </div>
     <div id="scores" class="overlay hidden">

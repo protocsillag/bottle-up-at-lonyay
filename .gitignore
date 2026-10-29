@@ -3,3 +3,4 @@ dist/
 tools/osm/raw/
 .DS_Store
 *.log
+tools/voice/models/

@@ -124,6 +124,8 @@ export interface CrowdHooks {
 export class Crowd {
   readonly group = new THREE.Group();
   readonly npcs: Npc[] = [];
+  /** Cap on visible people (graphics quality). */
+  maxNpcs = MAX;
   private meshes = {} as Record<PartName, THREE.InstancedMesh>;
   private propMeshes = {} as Record<Exclude<Prop, 'none'>, THREE.InstancedMesh>;
   private groupId = 1;
@@ -271,11 +273,12 @@ export class Crowd {
       this.spawnTimer = 0.25;
       const walkers = this.npcs.filter((n) => n.mode === 'walk').length;
       const first = this.npcs.length === 0;
-      for (let k = 0; k < (first ? 30 : 2) && walkers + k < walkerTarget(h) && this.npcs.length < MAX; k++) this.spawnWalker(px, pz, h, first ? 15 : SPAWN_MIN);
+      const scale = this.maxNpcs / MAX;
+      for (let k = 0; k < (first ? 30 : 2) && walkers + k < walkerTarget(h) * scale && this.npcs.length < this.maxNpcs; k++) this.spawnWalker(px, pz, h, first ? 15 : SPAWN_MIN);
       const groups = (type: NpcType) => new Set(this.npcs.filter((n) => n.type === type).map((n) => n.group)).size;
-      if (hourIn(h, 18, 3) && groups('bar') < 4 && this.npcs.length < MAX - 5) this.spawnGroup('bar', px, pz);
-      if (hourIn(h, 16, 23) && groups('picnic') < 3 && this.npcs.length < MAX - 4) this.spawnGroup('picnic', px, pz);
-      if (this.npcs.filter((n) => n.type === 'street' && n.mode === 'sit').length < 3 && this.npcs.length < MAX) this.spawnGroup('bench', px, pz);
+      if (hourIn(h, 18, 3) && groups('bar') < 4 && this.npcs.length < this.maxNpcs - 5) this.spawnGroup('bar', px, pz);
+      if (hourIn(h, 16, 23) && groups('picnic') < 3 && this.npcs.length < this.maxNpcs - 4) this.spawnGroup('picnic', px, pz);
+      if (this.npcs.filter((n) => n.type === 'street' && n.mode === 'sit').length < 3 && this.npcs.length < this.maxNpcs) this.spawnGroup('bench', px, pz);
     }
 
     for (const n of this.npcs) this.step(n, dt, h, px, pz);

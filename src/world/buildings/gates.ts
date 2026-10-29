@@ -6,6 +6,7 @@ import { merge } from '../items/models';
 import { CharacterModel } from '../../player/CharacterModel';
 import { cosmetic, randomColors } from '../../npc/looks';
 import { hourIn } from '../../state/time';
+import { sound } from '../../audio/Sfx';
 
 // Street gates: one big wooden gate per residential building on its longest street
 // facade (or at an OSM entrance). Residents leave at random and the heavy gate swings
@@ -159,8 +160,13 @@ export class GateSystem {
     this.residents = [];
   }
 
+  private px = 0;
+  private pz = 0;
+
   /** Opens the gate; it stays open `hold` seconds and then swings shut over 4 s. */
   openGate(g: Gate, hold: number) {
+    const d = Math.hypot(g.x - this.px, g.z - this.pz);
+    if (d < 30 && g.state === 'closed') sound.play('creak', 1 - d / 30);
     if (g.state === 'closed' || g.state === 'closing') { g.state = 'opening'; g.timer = hold; }
     else g.timer = Math.max(g.timer, hold);
   }
@@ -175,6 +181,7 @@ export class GateSystem {
   }
 
   update(dt: number, hour: number, px: number, pz: number, playerOutside: boolean) {
+    this.px = px; this.pz = pz;
     for (const g of this.gates) {
       g.bellCooldown = Math.max(0, g.bellCooldown - dt);
       g.nextExit -= dt;
@@ -196,7 +203,9 @@ export class GateSystem {
         g.open = Math.max(0, g.open - (dt / CLOSE_TIME) * (0.6 + 0.8 * (1 - g.open)));
         if (g.open <= 0) {
           g.state = 'closed';
-          if (playerOutside && Math.hypot(px - g.x, pz - g.z) < 2.5) this.onSlam(g);
+          const d = Math.hypot(px - g.x, pz - g.z);
+          if (playerOutside && d < 25) sound.play('slam', Math.max(0.15, 1 - d / 25));
+          if (playerOutside && d < 2.5) this.onSlam(g);
         }
       }
       if (near && g.open !== before) this.setLeaves(g);

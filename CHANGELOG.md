@@ -1,5 +1,16 @@
 # Changelog
 
+## M9 Polish (2026-10-29)
+
+- Sound: every effect is synthesised in code, with no audio files: scan beeps, reject buzz, printer rattle, clinks when you pick things up, rustling while you search a bin, smashing glass, creaking and slamming gates, the door buzzer, intercom crackle, the squelch of dog mess, a bike bell, the receipt "ching", footsteps, a quiet city hum and birds by day.
+- Voice lines: subtitles always show. The game plays generated Hungarian recordings once they exist (`tools/voice/` has the Piper script; run it locally), otherwise your browser's Hungarian voice, with a higher, slower voice for the intercom granny and a gruff one for the házmester.
+- Settings screen from the title and the pause card: volume, effects, voices, voice mode, mouse sensitivity and graphics quality (low / medium / high).
+- Title screen tagline; pause card with Settings and Quit to title.
+- Performance: no shader recompiles when entering shops or at dusk; all shaders are compiled at startup; lighter night glints; shorter far plane.
+- Balance: the world now spawns about 1 400 items per run. Sources thin out once most of that is used, keeping the best possible run near 50 000 Ft.
+- Debug keys (G, T) and the fps line now need `?debug` in the URL.
+- At the machine, pressing S while a bottle is in flight now walks away as soon as it lands.
+
 ## M8 Looking like Budapest (2026-10-29)
 
 - Procedural tenement facades on every building: plaster in cream, ochre, grey, brick red, salmon, pale green and yellow; a tall rusticated ground floor with a shop row; framed windows with sills and pediments; storey bands; a projecting cornice under the roof; terracotta and grey roofs. Palaces, churches and the university get bigger arched windows. At night about half the windows glow warm.

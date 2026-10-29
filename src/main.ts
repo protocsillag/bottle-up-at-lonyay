@@ -34,6 +34,11 @@ import { Creator } from './ui/Creator';
 import { loadLook, saveLook, type CharacterLook } from './player/look';
 import { LocalScoreStore, type ScoreStore } from './state/scores';
 import { renderScores } from './ui/Scores';
+import { sound } from './audio/Sfx';
+import { loadSettings, saveSettings, type Settings } from './state/settings';
+
+/** Debug keys (G fast walk, T fast time) and the fps line: dev builds or ?debug. */
+const DEBUG = import.meta.env.DEV || new URLSearchParams(location.search).has('debug');
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const $ = (id: string) => document.getElementById(id)!;
@@ -59,7 +64,7 @@ const sky = new THREE.Color(0x9fc3e0);
 scene.background = sky;
 scene.fog = new THREE.Fog(sky, 250, 1300);
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.2, 3000);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.2, 2400);
 
 const hemi = new THREE.HemisphereLight(0xdcecff, 0x8a8172, 1.6);
 scene.add(hemi);
@@ -131,7 +136,7 @@ const shopDoorSpots = [city.landmarks.spar ? doorOnFacade(city, city.landmarks.s
 const buildings = new BuildingSystem(city, placement, state, host, streets, shopDoorSpots);
 scene.add(buildings.group);
 const shops = new Shops(city, state, host, hall?.door ?? null);
-scene.add(shops.group, shops.street);
+scene.add(shops.group, shops.street, shops.lights);
 const returns = new ReturnPoints(state, shops.doors.map((d) => ({ id: d.id, name: d.name, ...d.interior.machines })));
 scene.add(returns.group);
 for (const p of returns.points) {
@@ -152,6 +157,9 @@ interaction.add((x, z) => items.interactables(x, z));
 interaction.add(() => returns.interactables());
 interaction.add(() => shops.interactables());
 const hud = new Hud(state);
+player.allowDebug = DEBUG;
+mohu.onSound = (n) => sound.play(n);
+interaction.onRustle = () => sound.play('search');
 {
   const kalvin = city.landmarks.kalvinTer;
   if (kalvin) follow.yaw = Math.atan2(sx - kalvin[0], sz - kalvin[1]);
@@ -167,6 +175,7 @@ const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
+  sound.play('bell');
   b.lying = false;
   b.ridden = true;
   bikes.current = b;
@@ -273,7 +282,6 @@ titlePlay.disabled = false;
 titlePlay.textContent = 'Play';
 titlePlay.onclick = () => openCreator();
 $('t-scores').onclick = async () => { await renderScores($('scores-table'), scoreStore); show('scores'); };
-$('t-settings').classList.add('hidden');
 $('s-back').onclick = () => show('title');
 $('i-go').onclick = () => { startRun(); input.lock(); };
 playBtn.onclick = () => input.lock();
@@ -292,10 +300,62 @@ document.addEventListener('pointerlockchange', () => {
 });
 show('title');
 
+// ---------------------------------------------------------------- settings
+const settings: Settings = loadSettings();
+function applySettings() {
+  sound.volumes = { master: settings.master, sfx: settings.sfx, voice: settings.voice };
+  sound.voiceMode = settings.voiceMode;
+  sound.applyVolumes();
+  follow.sensitivity = settings.mouse;
+  const q = settings.quality;
+  renderer.setPixelRatio(q === 'low' ? 1 : Math.min(devicePixelRatio, q === 'medium' ? 1.5 : 2));
+  renderer.setSize(innerWidth, innerHeight);
+  sun.castShadow = q !== 'low';
+  const size = q === 'high' ? 2048 : 1024;
+  if (sun.shadow.mapSize.x !== size) {
+    sun.shadow.mapSize.set(size, size);
+    sun.shadow.map?.dispose();
+    sun.shadow.map = null;
+  }
+  crowd.maxNpcs = q === 'low' ? 30 : q === 'medium' ? 45 : 60;
+}
+applySettings();
+let settingsReturn: Screen | 'pause' = 'title';
+const stEl = $('settings');
+function openSettings(from: Screen | 'pause') {
+  settingsReturn = from;
+  for (const [id, key] of [['st-master', 'master'], ['st-sfx', 'sfx'], ['st-voice', 'voice'], ['st-mouse', 'mouse']] as const) {
+    const el = $(id) as HTMLInputElement;
+    el.value = String(settings[key]);
+    el.oninput = () => { settings[key] = Number(el.value); applySettings(); saveSettings(settings); };
+  }
+  for (const [id, key] of [['st-voicemode', 'voiceMode'], ['st-quality', 'quality']] as const) {
+    const el = $(id) as HTMLSelectElement;
+    el.value = settings[key];
+    el.onchange = () => { (settings as unknown as Record<string, string>)[key] = el.value; applySettings(); saveSettings(settings); };
+  }
+  $('st-voicenote').textContent = 'Voice lines use generated Hungarian recordings when present, otherwise your browser\'s Hungarian voice if it has one. Subtitles always show.';
+  titleEl.classList.add('hidden');
+  startEl.classList.add('hidden');
+  stEl.classList.remove('hidden');
+}
+$('st-back').onclick = () => {
+  stEl.classList.add('hidden');
+  if (settingsReturn === 'pause') startEl.classList.remove('hidden');
+  else show(settingsReturn);
+};
+$('t-settings').classList.remove('hidden');
+$('t-settings').onclick = () => openSettings('title');
+$('p-settings').onclick = () => openSettings('pause');
+// Audio starts on the first click (browsers require a gesture); every button clicks.
+addEventListener('pointerdown', () => sound.init());
+addEventListener('click', (e) => { if ((e.target as HTMLElement).tagName === 'BUTTON') sound.play('click'); });
+
 const clock = new THREE.Clock();
 let fpsTime = 0, fpsFrames = 0, fps = 0;
 
 let titleAngle = 0;
+let stepAcc = 0;
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -308,9 +368,10 @@ function frame() {
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
   facadeUniforms.uNight.value = lighting.lamps;
+  sound.ambience(lighting.night, !inside() && screen === 'run', dt);
 
   if (playing) {
-    if (input.wasPressed('KeyT')) {
+    if (DEBUG && input.wasPressed('KeyT')) {
       state.timeScale = state.timeScale === 1 ? 30 : 1;
       state.toast(state.timeScale > 1 ? 'Debug: time ×30' : 'Debug: time normal');
     }
@@ -339,18 +400,26 @@ function frame() {
       player.fall(BIKE.stun);
       state.stats.bikeCrashes++;
       state.toast('Crash! You fell off the bike.', 'bad');
+      sound.play('clunk');
     }
     bikes.follow(player.position.x, player.position.z, player.facing, 0);
     const moved = Math.hypot(player.position.x - px, player.position.z - pz);
+    // Footsteps.
+    if (!player.onBike && player.grounded && moved < 1) {
+      stepAcc += moved;
+      if (stepAcc > (player.running ? 1.1 : 0.75)) { stepAcc = 0; sound.play('step', dogMess.slowed > 0 ? 2 : 1); }
+    }
     state.stats.distance += moved;
     if (!inside() && dogMess.update(dt, player.position.x, player.position.z, player.facing, player.grounded, player.onBike, moved)) {
       state.toast('Eww! Dog mess. Slowed down for a minute.', 'bad');
+      sound.play('squelch');
     }
 
     // Running with a nearly full bag can break a glass bottle.
     if (player.running && player.speed > 3 && state.bag.length >= state.capacity * GLASS_BREAK.minFill &&
         state.rng.chance(GLASS_BREAK.perSecond * dt) && state.breakGlass()) {
       state.toast('Clink! A glass bottle broke.', 'bad');
+      sound.play('glass');
     }
 
     buildings.searching = interaction.progress > 0;
@@ -402,8 +471,19 @@ function frame() {
     fpsTime = 0;
     const p = player.position;
     streetEl.textContent = (shops.current ? shops.current.name : null) ?? buildings.streetName() ?? streets.nearest(p.x, p.z) ?? 'Belső-Ferencváros';
-    debugEl.textContent = import.meta.env.DEV || player.debugFast
-      ? `${fps} fps · ${player.speed.toFixed(1)} m/s · x ${p.x.toFixed(0)} z ${p.z.toFixed(0)}` : '';
+    debugEl.textContent = DEBUG
+      ? `${fps} fps · ${player.speed.toFixed(1)} m/s · x ${p.x.toFixed(0)} z ${p.z.toFixed(0)} · spawned ${state.spawned}` : '';
   }
+}
+// Compile every shader once up front (interiors and close-up items included) so that
+// entering a shop or feeding the first bottle does not stall on a shader compile.
+{
+  const hidden: THREE.Object3D[] = [];
+  scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+  const extra = mohu.prewarmMeshes();
+  scene.add(...extra);
+  renderer.compile(scene, camera);
+  scene.remove(...extra);
+  for (const o of hidden) o.visible = false;
 }
 renderer.setAnimationLoop(frame);

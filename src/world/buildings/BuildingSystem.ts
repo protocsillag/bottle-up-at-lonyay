@@ -15,6 +15,7 @@ import { say } from '../../audio/voice';
 import { hourIn } from '../../state/time';
 import { bigBagGeometry } from '../items/models';
 import { COURTYARD } from '../../state/balance';
+import { sound } from '../../audio/Sfx';
 
 // Getting into buildings: gates (residents, the bell), courtyard interiors with their
 // bins, jackpots and the big bag, and the házmester.
@@ -96,10 +97,10 @@ export class BuildingSystem {
     const jackpot = this.jackpotGates.has(g.index);
     c = {
       bins: Array.from({ length: nBins }, (_, i) => ({
-        count: rng.int(COURTYARD.binItems[0], COURTYARD.binItems[1]), readyAt: 0,
+        count: this.state.supply(rng.int(COURTYARD.binItems[0], COURTYARD.binItems[1])), readyAt: 0,
         lid: i === 0 ? 0xf2c418 : rng.pick([0x4d5a52, 0x2f63b8, 0xf2c418]),
       })),
-      jackpot: jackpot ? { kind: rng.chance(0.5) ? 'skip' : 'party', count: rng.int(COURTYARD.jackpotItems[0], COURTYARD.jackpotItems[1]) } : null,
+      jackpot: jackpot ? { kind: rng.chance(0.5) ? 'skip' : 'party', count: this.state.supply(rng.int(COURTYARD.jackpotItems[0], COURTYARD.jackpotItems[1])) } : null,
       hazmester: rng.chance(jackpot ? COURTYARD.hazmesterJackpot : COURTYARD.hazmester),
       bigBag: g.index === this.bigBagGate,
     };
@@ -113,7 +114,9 @@ export class BuildingSystem {
     const s = this.state;
     s.stats.bellsRung++;
     g.bellCooldown = 4;
+    sound.play('click');
     if (s.rng.chance(COURTYARD.bellOdds)) {
+      sound.play('buzz');
       say('ic_buzz', 2);
       this.gates.openGate(g, 3);
       return;
@@ -193,7 +196,7 @@ export class BuildingSystem {
           bin.count -= got;
           if (bin.count <= 0) {
             bin.readyAt = this.state.minute + COURTYARD.binRefill;
-            bin.count = this.state.rng.int(COURTYARD.binItems[0], COURTYARD.binItems[1]);
+            bin.count = this.state.supply(this.state.rng.int(COURTYARD.binItems[0], COURTYARD.binItems[1]));
           }
         },
       });

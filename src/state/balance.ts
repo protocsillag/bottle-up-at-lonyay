@@ -90,3 +90,8 @@ export const BIKE = {
   crashSpeed: 4.5, // m/s: hitting a wall or a person faster than this throws you off
   stun: 2.5, // real seconds on the ground
 };
+
+/** The world spawns about this many items per run (BRIEF). Sources roll their contents
+ *  through GameState.supply(): full amounts until SOFT of the budget is used, then
+ *  thinning out to MIN_FACTOR, so a perfect run tops out near the 50 000 Ft ceiling. */
+export const SUPPLY = { budget: 1400, soft: 0.35, minFactor: 0.12 };

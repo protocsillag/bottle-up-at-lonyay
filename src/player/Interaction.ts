@@ -26,6 +26,9 @@ export class Interaction {
   prompt: string | null = null;
   promptBlocked = false;
   promptKey = 'E';
+  private rustle = 0;
+  /** Called every ~0.3 s while holding E (search sounds). */
+  onRustle: () => void = () => {};
   /** Set by other systems to switch interaction off. */
   disabledReason: string | null = null;
   /** Blocks only hold-E actions (searching bins on a bike). */
@@ -67,6 +70,8 @@ export class Interaction {
     }
     if (input.isDown('KeyE')) {
       this.progress += dt / best.hold;
+      this.rustle -= dt;
+      if (this.rustle <= 0) { this.rustle = 0.28; this.onRustle(); }
       if (this.progress >= 1) {
         this.progress = 0;
         best.act();

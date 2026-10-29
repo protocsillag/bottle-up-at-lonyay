@@ -78,6 +78,7 @@ export class MohuGame {
   private fixProgress = 0;
   private angle = 0;
   private count = 0;
+  private wantLeave = false;
   private ft = 0;
   private flyFrom = new THREE.Vector3();
   private flyTo = new THREE.Vector3();
@@ -91,9 +92,14 @@ export class MohuGame {
   private uiNeedle = $('mohu-needle');
   private receiptEl = $('receipt');
   /** Sound hooks (M9). */
-  onSound: (name: 'beep' | 'reject' | 'print' | 'clunk' | 'pop' | 'wipe') => void = () => {};
+  onSound: (name: 'beep' | 'reject' | 'print' | 'clunk' | 'pop' | 'wipe' | 'ching') => void = () => {};
 
   constructor(private scene: THREE.Scene, private state: GameState) {}
+
+  /** Meshes to compile up front so the first feed does not hitch. */
+  prewarmMeshes() {
+    return (['pet', 'can', 'glass'] as ItemKind[]).map((k, i) => heldItem(k, i === 1));
+  }
 
   start(s: MohuSession) {
     this.s = s;
@@ -102,6 +108,7 @@ export class MohuGame {
     this.count = 0;
     this.ft = 0;
     this.sinceLast = 99;
+    this.wantLeave = false;
     s.machine.setScreen({ kind: 'idle' });
     s.machine.setRing(0x444444);
     s.machine.receipt.visible = false;
@@ -165,16 +172,17 @@ export class MohuGame {
       return;
     }
 
-    // E walks away only between items (it is the fix key during a reject); S works any time.
-    const leave = this.phase !== 'printing' && this.phase !== 'flying' && this.phase !== 'pushing' &&
-      (input.wasPressed('KeyS') || (input.wasPressed('KeyE') && this.phase === 'ready'));
+    // E walks away only between items (it is the fix key during a reject); S works any time,
+    // and a press while an item is in flight waits for it to land.
+    if (this.phase !== 'printing' && (input.wasPressed('KeyS') || (input.wasPressed('KeyE') && this.phase === 'ready'))) this.wantLeave = true;
+    const leave = this.wantLeave && this.phase !== 'printing' && this.phase !== 'flying' && this.phase !== 'pushing';
 
     switch (this.phase) {
       case 'ready': {
         msg = st.bag.length ? `${st.bag.length} items in the bag` : 'Bag empty';
         help = space ? 'Feeding…' : 'Hold SPACE to feed · E / S walk away';
         if (!st.bag.length && this.count > 0) { this.print(); break; }
-        if (space && st.bag.length && this.sinceLast >= 1 / MOHU.feedRate) {
+        if (space && !this.wantLeave && st.bag.length && this.sinceLast >= 1 / MOHU.feedRate) {
           this.sinceLast = 0;
           this.item = st.takeFromBag()!;
           this.spawnMesh(this.item);
@@ -372,6 +380,7 @@ export class MohuGame {
       ].map(([cls, text]) => Object.assign(document.createElement('div'), { className: cls, textContent: text })),
     );
     this.receiptEl.classList.remove('hidden');
+    this.onSound('ching');
     st.toast(`+${formatFt(paid)}`, 'good');
   }
 

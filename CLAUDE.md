@@ -12,7 +12,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M6 Living city: done** (2026-10-29, unattended).
 - **M7 Character creator and local scores: done** (2026-10-29, unattended).
 - **M8 Looking like Budapest: done** (2026-10-29, unattended).
-- Next: **M9 Polish**.
+- **M9 Polish: done** (2026-10-29, unattended), except the Piper voice files (generate locally, see `tools/voice/README.md`) and the playtest with friends.
+- Next: **M10 Shared high scores** (needs Alex's Cloudflare account).
 
 ## Commands
 
@@ -29,7 +30,7 @@ Node is not installed system-wide on Alex's Mac; it lives at `~/.local/node/bin`
 
 At the bottle machine: hold Space to feed · E mash / hold to fix a refused item · A / D roll it · Space push it in · E (between items) or S walk away.
 
-WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · F get on / off a bike · M large map · wheel zoom · G 20 m/s debug walk · T time ×30 (debug) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
+WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · F get on / off a bike · M large map · wheel zoom · G 20 m/s debug walk and T time ×30 (only with `?debug` or in dev) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
 
 ## Conventions and decisions
 
@@ -81,6 +82,12 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Kerbs: 0.28 m granite ribbons along both edges of every road. Trees: plane trees with a pale trunk and four leafy clumps, colour-varied per instance (`buildTrees`, exported).
 - Landmarks (`src/world/landmarks/`): the market hall replaces its extruded block (skipped via `buildCity(city, { skip })`): brick facade-shader walls, a gabled Zsolnay roof over the footprint's oriented box (`obb()`), gable rose windows, and the Fővám tér front (portal with three arches and a VÁSÁRCSARNOK band, two towers with tiled pyramid caps) at the box end nearest the square. `dressing.ts`: Ráday utca terraces (red awnings, tables with chairs, potted plants, stone-ball bollards, the green KÖNYV book kiosk with a stash behind it), Lónyay utca kerb trees, Nehru part (railing on the river edge, plane-tree rows, turquoise and orange loungers, three kiosks where the big bag can hide, playground and hoops), the Bakáts tér church tower and spire with a tiled nave roof, the museum's green-yellow roof and dome, Kálvin tér church tower and portico plus a metro sign, and across the river Gellért Hill with the Liberty Statue and citadel, a row of Buda bank buildings, and the green steel of Szabadság híd over the existing deck.
 - Shops (`src/world/shops/`): SPAR and the market hall are walk-in interiors at (7000, 7000) and (8000, 8000), built once and toggled visible. Doors: SPAR on the facade nearest the City Spar node (with a green/red shopfront), the hall at its portal. Closed 00:00–06:00 (at midnight you are shown out). The REpont pairs now stand inside: SPAR just right of the entrance, the hall in front of the Aldi corner. Street gates are not placed within 9 m of shop doors. The minimap markers point at the doors.
+- Audio (`src/audio/Sfx.ts`, singleton `sound`): every effect is synthesised with WebAudio (scan beep, reject buzz, printer, clunk, pop, wipe, pickup clinks, bag rustle, search rustle while holding E, glass smash, gate creak and slam with distance falloff, door buzzer, intercom crackle, dog-mess squelch, bike bell, receipt ching, footsteps, UI clicks) plus a low-passed brown-noise city hum and birds by day. The `AudioContext` starts on the first pointerdown. Voices: `say()` shows subtitles and calls `sound.speak()`: MP3 from `public/audio/voice/` if `manifest.json` lists the id (intercom lines get a band-pass/overdrive filter at runtime), else the browser's `hu-HU` speech voice with per-speaker pitch/rate, else nothing.
+- Piper could not run here: huggingface.co is blocked by this sandbox's network policy. `tools/voice/generate.mjs` parses `src/audio/lines.ts`, runs Piper per speaker (Anna for the old lady, Imre for men, Berta spare) and ffmpeg (pitch/tempo, loudnorm, 48 kbps mono MP3), and writes `manifest.json`. The committed manifest is `[]`.
+- Settings (`src/state/settings.ts`, `localStorage` `bual.settings.v1`): master/effects/voice volume, voice mode (auto/speech/off), mouse sensitivity (×0.3–2.5), graphics quality (low: pixel ratio 1, no shadows, 30 NPCs; medium: ≤1.5, 1024 shadow map, 45; high: ≤2, 2048, 60). Reachable from the title and the pause card.
+- Debug: `DEBUG` in `main.ts` is dev builds or `?debug`; it enables G, T and the fps/position/spawned line.
+- Performance: the scene light count never changes (lamp pool lights and shop interior lights stay "visible" at intensity 0) because a changed light count recompiles every shader; `renderer.compile()` runs once at startup with hidden groups temporarily shown, plus the close-up item meshes. Camera far plane 2400. Night glints refresh every 0.25 s. A typical street view is ~160 draw calls and ~315k triangles including the shadow pass.
+- Balance (`SUPPLY` in `balance.ts`): every source rolls its contents through `state.supply(n)`. Full amounts until 35% of the 1 400-item budget is left, then thinning to 12% (minimum 1 item, street spawns skip proportionally). At run start ~245 items are already out (street items plus stocked stashes). This keeps a perfect run near the 50 000 Ft ceiling even with 266 courtyards. Estimates: a courtyard gives ~20 items for 30–90 s of waiting, a bin 2–8 for 2 s, a party heap 15–30; the machine takes 3/s; machines are shut 7.5 of the 30 real minutes. First runs that learn the bins and a few courtyards should land near 10 000 Ft; a planned route with the big bag early 25 000–35 000 Ft. Unverified without real playtests.
 - `CollisionWorld.addBox()` adds solid props (machines now; kiosks and gates later).
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
@@ -122,6 +129,9 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/world/landmarks/dressing.ts` | Ráday, Lónyay, Nehru part, churches, museum, Kálvin tér, far bank, Szabadság híd |
 | `src/world/shops/Shops.ts` | Shop doors, enter/leave, opening hours |
 | `src/world/shops/interiors.ts` | SPAR and market hall interiors |
+| `src/audio/Sfx.ts` | Synthesised SFX, ambience, voice playback |
+| `src/state/settings.ts` | Settings load/save |
+| `tools/voice/` | Piper voice generation script and README |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -148,7 +158,7 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 
 Open questions and assumptions made while building unattended (M3–M9). Answer any of these and I'll adjust.
 
-- **M3 debug keys.** G (fast walk) and T (time ×30) are on for everyone so playtesters can skip ahead. Should they be hidden behind `?debug` for the friends playtest?
+- **M3 debug keys.** Since M9, G (fast walk) and T (time ×30) only work with `?debug` in the URL (or in dev builds).
 - **M3 item budget.** Street items: 45 at start + ~5 spots per game hour (×2 from 18:00–02:00, ×0.3 from 02:00–07:00), 1–2 items each; 44 hidden spots of 2–6 items, restocked daily; 98 bins of 2–8 every 6 game hours; 8 party heaps of 15–30. Rough total over a run is well over 1 400 if you search everything; the M9 balance pass tunes it.
 - **M3 machine placement.** The Aldi machine stands outside the market hall's Fővám tér entrance, not in the basement Aldi, until the interior exists in M8. OK?
 - **M4 one gate per building.** The brief says one gate per facade; I placed one per building (266 gates) on its longest street-facing side, to keep the street readable and the gate count manageable. More gates per corner building is easy if you want it.
@@ -166,3 +176,6 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M8 interiors are teleports.** SPAR and the market hall are walk-in interiors reached through their doors, like the courtyards, rather than hollowed-out real footprints. The hall interior is about 90 × 34 m (the real one is longer) and the Aldi corner is on the ground floor near the entrance (the real Aldi is in the basement).
 - **M8 SPAR and Aldi signs** use the plain words "SPAR" and "ALDI" in the game font on flat colour boards, no logo files, like the REpont lookalike. If you would rather avoid the brand names entirely, they are easy to swap for generic "ABC" signs.
 - **M8 time cap.** Each landmark got a short pass (well under 20 minutes each). Not done: corner towers and balconies on Lónyay tenements, the brick Református gimnázium, a passing yellow tram (left out because the brief says no moving traffic in v1), and Corvinus beyond the palace-style facade.
+- **M9 voices need you.** The sandbox could not reach huggingface.co, so no Piper MP3s are committed. Run the four commands in `tools/voice/README.md` on your Mac and commit `public/audio/voice/`. Until then the game uses your browser's Hungarian voice if it has one (Safari and Chrome on macOS usually ship "Mariska"), and subtitles always show.
+- **M9 playtest.** The "playtest with friends" step is yours. Things to watch: is ~10 000 Ft a fair first run, does the supply budget feel stingy late in a run (`SUPPLY` in `balance.ts`), are the 30–90 s resident waits too long, and is the 5 s házmester escape fair?
+- **M9 balance budget.** The brief says ~1 400 items spawn per run. With a courtyard in every building the raw supply was far higher, so I added the soft supply budget instead of cutting courtyards. Late in a run, bins and courtyards that you open for the first time hold less. Tell me if you would rather have fewer, richer courtyards.

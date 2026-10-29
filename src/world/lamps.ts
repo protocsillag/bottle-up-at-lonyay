@@ -90,8 +90,8 @@ export class Lamps {
     posts.castShadow = true;
     this.group.add(posts, heads, pools);
     for (let i = 0; i < POOL_LIGHTS; i++) {
+      // Always visible: toggling lights changes the light count and recompiles every shader.
       const l = new THREE.PointLight(0xffd29a, 0, 22, 1.6);
-      l.visible = false;
       this.lights.push(l);
       this.group.add(l);
     }
@@ -155,7 +155,7 @@ export class Lamps {
     if (this.refresh > 0) return;
     this.refresh = 0.4;
     const on = lamps > 0.3;
-    if (!on) { for (const l of this.lights) l.visible = false; return; }
+    if (!on) { for (const l of this.lights) l.intensity = 0; return; }
     // Move the few real lights to the nearest lamps.
     const near = this.positions
       .map((p) => [p, (p.x - px) ** 2 + (p.z - pz) ** 2] as const)
@@ -163,7 +163,6 @@ export class Lamps {
       .slice(0, POOL_LIGHTS);
     near.forEach(([p], i) => {
       const l = this.lights[i];
-      l.visible = true;
       l.position.set(p.x, 4.2, p.z);
       l.intensity = 18 * lamps;
     });

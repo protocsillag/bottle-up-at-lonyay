@@ -12,6 +12,8 @@ const LOOK_HEIGHT = 1.6;
 
 export class FollowCamera {
   yaw = 0;
+  /** Mouse sensitivity multiplier (settings). */
+  sensitivity = 1;
   pitch = 0.3;
   distance = 6;
   private current = 6;
@@ -20,8 +22,8 @@ export class FollowCamera {
   constructor(readonly camera: THREE.PerspectiveCamera, public world: CollisionWorld) {}
 
   update(dt: number, input: Input, target: THREE.Vector3) {
-    this.yaw -= input.mouseDX * MOUSE_SENS;
-    this.pitch = THREE.MathUtils.clamp(this.pitch + input.mouseDY * MOUSE_SENS, MIN_PITCH, MAX_PITCH);
+    this.yaw -= input.mouseDX * MOUSE_SENS * this.sensitivity;
+    this.pitch = THREE.MathUtils.clamp(this.pitch + input.mouseDY * MOUSE_SENS * this.sensitivity, MIN_PITCH, MAX_PITCH);
     this.distance = THREE.MathUtils.clamp(this.distance * (1 + input.wheel * 0.1), 2.5, 40);
 
     // Follow jumps only partly so the view does not bounce.
