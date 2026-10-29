@@ -1,5 +1,13 @@
 # Changelog
 
+## M7 Character creator and local scores (2026-10-29)
+
+- Title screen over a slowly orbiting view of the neighbourhood, with Play and High scores.
+- Character creator: four presets (The Punk "Tüske", The Old Timer "Feri bácsi", The Hobo Romantic "Bandi", The Festival Survivor "Csabi"), slots for hat, hair, face, top, bottoms, shoes and accessory (sunglasses, earring, chain, backpack, dog on a string), colour swatches for hair, garment and skin, a Randomise button and a name (1–16 characters, accents allowed, short blocklist). The model turns on a yellow turntable; drag to spin it.
+- On confirm a 128 × 128 head-and-shoulders portrait is rendered against Mohu yellow. Your character is remembered for next time.
+- Intro card ("Friday, 08:00. Lónyay utca. 48 hours. Every bottle and can is 50 Ft.") with the controls; the pause card can quit to the title.
+- End screen shows your portrait and total; runs that make the top 10 are saved locally (behind a `ScoreStore` interface, ready for the online board) and the table highlights your row. Amounts use the Hungarian format (`12 350 Ft`).
+
 ## M6 Living city (2026-10-29)
 
 - Day and night: the sun crosses the sky with the game clock, dawn and dusk glow orange, nights are dark blue with moonlight. A full day lasts 15 real minutes.

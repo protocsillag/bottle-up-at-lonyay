@@ -10,7 +10,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M4 Buildings: done** (2026-10-29, unattended).
 - **M5 Mohu mini-game: done** (2026-10-29, unattended).
 - **M6 Living city: done** (2026-10-29, unattended).
-- Next: **M7 Character creator and local scores**.
+- **M7 Character creator and local scores: done** (2026-10-29, unattended).
+- Next: **M8 Looking like Budapest**.
 
 ## Commands
 
@@ -70,6 +71,11 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Bikes (`src/world/Bikes.ts`): 6–10 per run on pavement spots; F to mount (interactable with `key: 'KeyF'`) and F anywhere to get off. 8 m/s, turns at 3.2 rad/s, no run/jump; hold-E actions and entering gates are blocked while riding. Losing >55% of speed against a wall at >4.5 m/s, or touching a pedestrian at that speed, is a crash: 2.5 s on the ground, bike left lying there.
 - Sweeper (`src/npc/Sweeper.ts`): 02:00–07:00, starts 60–140 m from the player and drives the road graph (biased toward the player) at 3.5 m/s, clearing loose street items within 6 m. Solid.
 - Items get faint night glints (24 sprites on the nearest loose items within 30 m).
+- Screens (`main.ts` `show()`): title (orbiting city camera) → creator → intro card → run → end (with top 10) → creator again; title → scores. Pause card has Resume and Quit to title. `body.in-menu` hides the HUD (do not name a body class `menu`: it collides with `.menu button`).
+- Character pieces (`CharacterModel` + `CharacterOptions`): hat (none, beanie, flat cap, bucket, cap), hair (short, long, mohawk, bald), face (clean, stubble, moustache, beard), top (parka, studded leather, tweed, long coat with scarf and gloves, band T-shirt with the invented band "Zúzmara", hoodie), bottoms (jeans, ripped, trousers, cargo shorts, tracksuit), shoes (boots, sneakers, sandals with socks, slippers), accessory (none, sunglasses, earring, chain, backpack, dog on a string). NPCs pass only a few options; the defaults keep the old look.
+- `src/player/look.ts`: four presets (Tüske, Feri bácsi, Bandi, Csabi), slot option lists, swatches (hair, garment, skin), `checkName` (1–16 chars, letters incl. accents, numbers, spaces and `.'-_!?`, short folded blocklist), last look saved in `localStorage` `bual.character.v1`.
+- Creator (`src/ui/Creator.ts`) renders its own scene with the main renderer while open (the game loop skips the world). Portrait: separate scene with a Mohu-yellow background rendered into a 128 × 128 render target, flipped, PNG data URL (JPEG fallback if over 20 KB; PNGs are ~2–6 KB).
+- Scores (`src/state/scores.ts`): `ScoreStore` interface (`top`, `add` → rank or null, `offline`); `LocalScoreStore` keeps the best 20 in `localStorage` `bual.scores.v1`, sorted by amount then earlier date. Runs with 0 Ft are not saved. `src/ui/Scores.ts` renders the table with the current run highlighted.
 - `CollisionWorld.addBox()` adds solid props (machines now; kiosks and gates later).
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
@@ -101,6 +107,10 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/npc/RoadGraph.ts` | Walking graph from OSM ways |
 | `src/npc/Crowd.ts` | Instanced pedestrians, groups, behaviour |
 | `src/npc/Sweeper.ts` | Night street sweeper |
+| `src/player/look.ts` | Presets, slots, swatches, name check, saved look |
+| `src/ui/Creator.ts` | Character creator, turntable, portrait capture |
+| `src/state/scores.ts` | `ScoreStore` interface, `LocalScoreStore` |
+| `src/ui/Scores.ts` | Top 10 table |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -140,3 +150,5 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M6 sun times.** Sunrise ~06:00 and sunset ~19:00 (late spring) so there is a long light evening. Real late October would be 06:30/16:45. Say if you want a specific season.
 - **M6 sweeper.** The brief says the sweeper clears street items on its route. To make it noticeable I start it near the player each night and bias its route toward you. That makes it a bit of a nemesis; it can roam freely instead.
 - **M6 NPC drops** add roughly 1–3 bottles per real minute in the evening near the player.
+- **M7 creator before every run.** "Play again" goes back to the creator, pre-filled with your last character, as the brief says. If that gets tedious in playtests, a "Same again" button is a one-liner.
+- **M7 name blocklist** is a short folded list of slurs and swear words (Hungarian and English). Send me any words you want added.

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { CollisionWorld } from '../world/collision';
 import type { Input } from './input';
-import { CharacterModel } from './CharacterModel';
+import { CharacterModel, type CharacterColors, type CharacterOptions } from './CharacterModel';
 import { BIKE } from '../state/balance';
 
 const BIKE_TURN = 3.2; // rad/s
@@ -37,6 +37,7 @@ export class Player {
   private vy = 0;
   private heading = 0;
   private model = new CharacterModel();
+  private holder = new THREE.Group();
   private sinceDrain = 0;
   stamina = STAMINA_MAX;
   exhausted = false;
@@ -53,8 +54,16 @@ export class Player {
 
   constructor(public world: CollisionWorld, x: number, z: number) {
     this.position.set(x, 0, z);
-    this.mesh = this.model.root;
+    this.mesh = this.holder;
+    this.holder.add(this.model.root);
     this.syncMesh();
+  }
+
+  /** Swaps the character model (creator). */
+  setLook(colors: CharacterColors, opts: CharacterOptions) {
+    this.holder.remove(this.model.root);
+    this.model = new CharacterModel(colors, opts);
+    this.holder.add(this.model.root);
   }
 
   /** Knocked down: lie on the ground for `seconds`. */

@@ -35,30 +35,74 @@
     <div id="prompt" class="hidden"><span id="prompt-key">E</span><span id="prompt-text"></span><div class="bar"><div id="prompt-fill"></div></div></div>
     <div id="stamina"><div class="label">Stamina</div><div class="bar"><div id="stamina-fill"></div></div></div>
     <canvas id="minimap" width="200" height="200"></canvas>
-    <div id="start" class="overlay">
+    <div id="title" class="overlay title">
       <div class="card">
         <h1>Bottle Up at Lónyay</h1>
-        <p class="intro">Friday, 08:00. Lónyay utca.<br />48 hours. Every bottle and can is 50&nbsp;Ft.</p>
-        <p class="muted">Fill your bag from streets, planters, bins and party leftovers, then feed it to the bottle machine at SPAR (S) or Aldi in the market hall (A). Open 06:00–24:00. Items in the bag are worth nothing until they go through a machine.</p>
+        <p class="tag">48 hours. An empty bag. Every bottle and can is 50&nbsp;Ft.</p>
+        <div class="menu">
+          <button id="t-play" disabled>Loading…</button>
+          <button id="t-scores" class="ghost">High scores</button>
+          <button id="t-settings" class="ghost">Settings</button>
+        </div>
+      </div>
+    </div>
+    <div id="creator" class="hidden">
+      <div class="panel">
+        <h2>Who are you?</h2>
+        <div id="cr-presets" class="presets"></div>
+        <div id="cr-slots"></div>
+        <div id="cr-colors"></div>
+        <label class="name">Name <input id="cr-name" maxlength="16" autocomplete="off" spellcheck="false" /></label>
+        <div id="cr-error" class="error"></div>
+        <div class="row"><button id="cr-random" class="ghost">Randomise</button><button id="cr-done">Hit the streets</button></div>
+        <p class="muted small">Drag to turn the model.</p>
+      </div>
+    </div>
+    <div id="intro" class="overlay hidden">
+      <div class="card">
+        <h1>Friday, 08:00.</h1>
+        <p class="intro">Lónyay utca. 48 hours.<br />Every bottle and can is 50&nbsp;Ft.</p>
+        <p class="muted">Fill your bag from streets, planters, bins, party leftovers and courtyards, then feed it to the bottle machine at SPAR (S) or Aldi in the market hall (A). Open 06:00–24:00. Items in the bag are worth nothing until they go through a machine.</p>
         <ul class="controls">
           <li><b>WASD</b> move</li><li><b>Mouse</b> look</li>
           <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
           <li><b>E</b> interact, ring bells (hold for bins)</li><li><b>M</b> big map</li>
           <li><b>F</b> get on / off a bike</li><li><b>Wheel</b> zoom</li>
-          <li><b>Esc</b> pause</li>
-          <li><b>G</b> fast walk (debug)</li><li><b>T</b> fast time (debug)</li>
+          <li><b>Esc</b> pause</li><li><b>G</b> / <b>T</b> fast walk / time (debug)</li>
         </ul>
-        <button id="play" disabled>Loading…</button>
+        <button id="i-go">Start</button>
+      </div>
+    </div>
+    <div id="start" class="overlay hidden">
+      <div class="card">
+        <h1>Paused</h1>
+        <ul class="controls">
+          <li><b>WASD</b> move</li><li><b>Mouse</b> look</li>
+          <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
+          <li><b>E</b> interact, ring bells (hold for bins)</li><li><b>M</b> big map</li>
+          <li><b>F</b> get on / off a bike</li><li><b>Wheel</b> zoom</li>
+          <li><b>Esc</b> pause</li><li><b>G</b> / <b>T</b> fast walk / time (debug)</li>
+        </ul>
+        <div class="menu row"><button id="play">Resume</button><button id="p-quit" class="ghost">Quit to title</button></div>
       </div>
     </div>
     <div id="end" class="overlay hidden">
       <div class="card wide">
         <h1>Sunday, 08:00</h1>
         <p class="muted">The weekend is over.</p>
-        <div id="end-money" class="big"></div>
+        <div class="endtop"><img id="end-portrait" width="64" height="64" alt="" /><div id="end-money" class="big"></div></div>
+        <p id="end-rank" class="rank"></p>
         <table id="end-stats"></table>
         <p id="end-fun" class="fun"></p>
-        <button id="again">Play again</button>
+        <div id="end-scores"></div>
+        <div class="menu row"><button id="again">Play again</button><button id="e-title" class="ghost">Title</button></div>
+      </div>
+    </div>
+    <div id="scores" class="overlay hidden">
+      <div class="card wide">
+        <h1>Wall of fame</h1>
+        <div id="scores-table"></div>
+        <button id="s-back">Back</button>
       </div>
     </div>
     <div id="attribution">Map data © OpenStreetMap contributors (ODbL)</div>

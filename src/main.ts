@@ -26,6 +26,10 @@ import { RoadGraph } from './npc/RoadGraph';
 import { Crowd } from './npc/Crowd';
 import { Sweeper } from './npc/Sweeper';
 import { say } from './audio/voice';
+import { Creator } from './ui/Creator';
+import { loadLook, saveLook, type CharacterLook } from './player/look';
+import { LocalScoreStore, type ScoreStore } from './state/scores';
+import { renderScores } from './ui/Scores';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const $ = (id: string) => document.getElementById(id)!;
@@ -34,6 +38,9 @@ const debugEl = $('debug');
 const startEl = $('start');
 const endEl = $('end');
 const playBtn = $('play') as HTMLButtonElement;
+const titleEl = $('title');
+const introEl = $('intro');
+const scoresEl = $('scores');
 const staminaEl = $('stamina');
 const staminaFill = $('stamina-fill');
 
@@ -155,6 +162,35 @@ function dismount(crashed: boolean) {
 }
 bikes.onToggle = (b) => mount(b);
 
+const creator = new Creator(renderer);
+const scoreStore: ScoreStore = new LocalScoreStore();
+let look: CharacterLook = loadLook();
+let portrait = '';
+player.setLook(look.colors, look.opts);
+type Screen = 'title' | 'creator' | 'intro' | 'run' | 'end' | 'scores';
+let screen: Screen = 'title';
+
+function show(next: Screen) {
+  screen = next;
+  titleEl.classList.toggle('hidden', next !== 'title');
+  introEl.classList.toggle('hidden', next !== 'intro');
+  endEl.classList.toggle('hidden', next !== 'end');
+  scoresEl.classList.toggle('hidden', next !== 'scores');
+  startEl.classList.add('hidden');
+  document.body.classList.toggle('in-menu', next !== 'run');
+}
+
+function openCreator() {
+  show('creator');
+  creator.open(look, (l, p) => {
+    look = l;
+    portrait = p;
+    saveLook(l);
+    player.setLook(l.colors, l.opts);
+    show('intro');
+  });
+}
+
 function startRun() {
   state.reset(newSeed());
   if (mohu.active) mohu.finish();
@@ -173,17 +209,18 @@ function startRun() {
   // Start looking up Lónyay utca toward Kálvin tér.
   const kalvin = city.landmarks.kalvinTer;
   if (kalvin) follow.yaw = Math.atan2(sx - kalvin[0], sz - kalvin[1]);
-  endEl.classList.add('hidden');
-  $('start').querySelector('h1')!.textContent = 'Paused';
-  playBtn.textContent = 'Resume';
+  follow.pitch = 0.3;
+  show('run');
 }
 
-function endRun() {
+async function endRun() {
   if (mohu.active) mohu.finish();
   returns.stop();
+  if (buildings.inside) buildings.leave(false);
   document.exitPointerLock();
   const s = state.stats;
   $('end-money').textContent = formatFt(state.money);
+  ($('end-portrait') as HTMLImageElement).src = portrait;
   const rows: [string, string | number][] = [
     ['Items returned', s.itemsReturned],
     ['Items still in the bag (worth nothing)', state.bag.length],
@@ -197,27 +234,53 @@ function endRun() {
     return tr;
   }));
   $('end-fun').textContent = funniestStat(s);
-  endEl.classList.remove('hidden');
+  $('end-rank').textContent = '';
+  show('end');
+  let highlight: string | undefined;
+  if (state.money > 0) {
+    const { rank, entry } = await scoreStore.add({ name: look.name, amountFt: state.money, items: s.itemsReturned, portrait });
+    highlight = entry.id;
+    $('end-rank').textContent = rank ? `You made the wall of fame: #${rank}!` : 'Not in the top 10 this time.';
+  }
+  await renderScores($('end-scores'), scoreStore, highlight);
 }
 
 streetEl.textContent = 'Lónyay utca';
-playBtn.disabled = false;
-playBtn.textContent = 'Play';
-playBtn.onclick = () => {
-  if (state.status !== 'playing') startRun();
-  input.lock();
+const titlePlay = $('t-play') as HTMLButtonElement;
+titlePlay.disabled = false;
+titlePlay.textContent = 'Play';
+titlePlay.onclick = () => openCreator();
+$('t-scores').onclick = async () => { await renderScores($('scores-table'), scoreStore); show('scores'); };
+$('t-settings').classList.add('hidden');
+$('s-back').onclick = () => show('title');
+$('i-go').onclick = () => { startRun(); input.lock(); };
+playBtn.onclick = () => input.lock();
+$('p-quit').onclick = () => {
+  if (mohu.active) mohu.finish();
+  if (buildings.inside) buildings.leave(false);
+  state.status = 'ready';
+  show('title');
 };
-$('again').onclick = () => { startRun(); input.lock(); };
-canvas.onclick = () => { if (!input.locked && state.status === 'playing') input.lock(); };
+$('again').onclick = () => openCreator();
+$('e-title').onclick = () => show('title');
+canvas.onclick = () => { if (!input.locked && screen === 'run' && state.status === 'playing') input.lock(); };
 document.addEventListener('pointerlockchange', () => {
-  startEl.classList.toggle('hidden', input.locked || state.status === 'ended');
+  startEl.classList.toggle('hidden', input.locked || screen !== 'run' || state.status !== 'playing');
 });
+show('title');
 
 const clock = new THREE.Clock();
 let fpsTime = 0, fpsFrames = 0, fps = 0;
 
+let titleAngle = 0;
+
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
+  if (creator.active) {
+    creator.render(dt);
+    input.endFrame();
+    return;
+  }
   const playing = state.status === 'playing' && input.locked;
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
@@ -228,7 +291,7 @@ function frame() {
       state.toast(state.timeScale > 1 ? 'Debug: time ×30' : 'Debug: time normal');
     }
     const before = state.minute;
-    if (state.tick(dt)) endRun();
+    if (state.tick(dt)) void endRun();
     const gameMinutes = state.minute - before;
 
     const px = player.position.x, pz = player.position.z;
@@ -280,7 +343,12 @@ function frame() {
   player.mesh.visible = !mohu.active;
   document.body.classList.toggle('mohu-on', mohu.active);
   if (mohu.active) mohu.camera(camera);
-  else follow.update(dt, input, player.position);
+  else if (screen === 'title' || screen === 'scores') {
+    // Slow orbit over the neighbourhood behind the menus.
+    titleAngle += dt * 0.04;
+    camera.position.set(sx + Math.sin(titleAngle) * 260, 150, sz + Math.cos(titleAngle) * 260);
+    camera.lookAt(sx, 0, sz);
+  } else follow.update(dt, input, player.position);
   const [mx, mz] = buildings.mapPos(player.position.x, player.position.z);
   minimap.draw(mx, mz, player.facing);
   staminaFill.style.width = `${player.stamina}%`;
