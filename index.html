@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bottle Up at Lónyay</title>
+    <link rel="stylesheet" href="./src/ui/style.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+    <div id="hud">
+      <div class="title">Bottle Up at Lónyay <span>M1 · city prototype</span></div>
+      <div id="street">Loading Belső-Ferencváros…</div>
+      <div id="debug"></div>
+    </div>
+    <div id="controls">WASD move · Mouse look · Shift run · Wheel zoom · G fast-walk (debug) · Esc release mouse</div>
+    <div id="start" class="overlay">
+      <div class="card">
+        <h1>Bottle Up at Lónyay</h1>
+        <p>Friday, 08:00. Lónyay utca.</p>
+        <p class="muted">Milestone 1: walk the real neighbourhood at 1 m = 1 m.</p>
+        <button id="play" disabled>Loading…</button>
+      </div>
+    </div>
+    <div id="attribution">Map data © OpenStreetMap contributors (ODbL)</div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
