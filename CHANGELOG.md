@@ -1,5 +1,15 @@
 # Changelog
 
+## M6 Living city (2026-10-29)
+
+- Day and night: the sun crosses the sky with the game clock, dawn and dusk glow orange, nights are dark blue with moonlight. A full day lasts 15 real minutes.
+- Curly street lamps along every street switch on at dusk with pools of light on the pavement; shop windows light up warm at night. Benches from OSM.
+- Pedestrians: commuters, tourists with phones (who stop for photos), students with backpacks, pensioners with shopping trolleys, dog walkers with dogs, bar crowds outside Ráday utca at night, picnickers on the Nehru part lawn in the evening, and street people pushing trolleys or sitting on benches, who say "Szia, haver!". Density follows the time of day (busy mornings and evenings, near-empty from 02:00), capped at 60. People pause in front of you and occasionally drop a bottle.
+- Dog mess: step in it and you slow to 70% for a minute, leaving brown footprints. Dogs add more during the day.
+- Bikes: 6–10 unlocked bikes per run. F to get on and off; 8 m/s, no running, no bin searching, no going through gates. Crash into a wall or a person and you fall off for a few seconds.
+- A street sweeper truck drives the streets from 02:00 to 07:00 and brushes away loose items.
+- Loose items glint faintly at night.
+
 ## M5 Mohu mini-game (2026-10-29)
 
 - Both return points now have a pair of REpont-style machines in flat shapes (black body, yellow header and front panel with ALU / ÜVEG / PET icons, "1 dl és 3 l között" and "Ne nyomd össze!" panels, printer slot), plus a bin for refused items. Lookalike wordmark only, no logo files.

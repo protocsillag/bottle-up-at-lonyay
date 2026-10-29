@@ -17,7 +17,15 @@ import { Hud, funniestStat } from './ui/Hud';
 import { GameState } from './state/GameState';
 import { newSeed } from './state/rng';
 import { formatFt } from './state/time';
-import { GLASS_BREAK } from './state/balance';
+import { BIKE, DOG, GLASS_BREAK } from './state/balance';
+import { DayNight } from './world/DayNight';
+import { Lamps } from './world/lamps';
+import { DogMess } from './world/DogMess';
+import { Bikes } from './world/Bikes';
+import { RoadGraph } from './npc/RoadGraph';
+import { Crowd } from './npc/Crowd';
+import { Sweeper } from './npc/Sweeper';
+import { say } from './audio/voice';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const $ = (id: string) => document.getElementById(id)!;
@@ -42,10 +50,11 @@ scene.fog = new THREE.Fog(sky, 250, 1300);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.2, 3000);
 
-scene.add(new THREE.HemisphereLight(0xdcecff, 0x8a8172, 1.6));
-// Morning sun from the south-east; the shadow box follows the player.
+const hemi = new THREE.HemisphereLight(0xdcecff, 0x8a8172, 1.6);
+scene.add(hemi);
+// Sun (and moon at night); the shadow box follows the player.
 const sun = new THREE.DirectionalLight(0xfff1d6, 2.2);
-const SUN_OFFSET = new THREE.Vector3(120, 160, 80);
+const dayNight = new DayNight(scene, hemi, sun);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -90, right: 90, top: 90, bottom: -90, near: 10, far: 500 });
@@ -79,6 +88,24 @@ returns.onUse = (p, m) => {
   mohu.start({ machine: p.machines[m], name: p.name, onEnd: () => returns.stop() });
 };
 
+const lamps = new Lamps(city, placement);
+scene.add(lamps.group);
+for (const [x, z] of lamps.posts) world.addBox(x, z, 0.3, 0.3);
+const dogMess = new DogMess(placement, state);
+scene.add(dogMess.group);
+const bikes = new Bikes(placement, state);
+scene.add(bikes.group);
+const graph = new RoadGraph(city, placement);
+const crowd = new Crowd(city, graph, placement, {
+  drop: (x, z) => items.drop(x, z, state.rng.weighted({ pet: 0.4, can: 0.4, glass: 0.2 })),
+  dogMess: (x, z) => dogMess.add(x, z),
+  greet: () => say(Math.random() < 0.7 ? 'st_szia' : 'st_jo_fogas', 2.2),
+});
+scene.add(crowd.group);
+const sweeper = new Sweeper(graph);
+sweeper.onSweep = (x, z, r) => items.sweep(x, z, r);
+scene.add(sweeper.group);
+
 const [sx, sz] = city.landmarks.spawn ?? [0, 0];
 const player = new Player(world, sx, sz);
 scene.add(player.mesh);
@@ -87,11 +114,13 @@ const follow = new FollowCamera(camera, world);
 const buildings = new BuildingSystem(city, placement, state, {
   player, follow, cityWorld: world,
   setOutsideVisible(v) {
-    for (const g of [cityGroup, items.group, returns.group, buildings.gates.group]) g.visible = v;
+    for (const g of [cityGroup, items.group, returns.group, buildings.gates.group, lamps.group, dogMess.group, bikes.group, sweeper.group]) g.visible = v;
   },
 }, streets);
 scene.add(buildings.group);
+buildings.enterBlock = () => player.onBike ? 'Get off the bike first (F)' : null;
 const interaction = new Interaction();
+interaction.add((x, z) => bikes.interactables(x, z));
 interaction.add((x, z) => buildings.getInteractables(x, z));
 interaction.add((x, z) => items.interactables(x, z));
 interaction.add(() => returns.interactables());
@@ -108,7 +137,23 @@ for (const p of returns.points) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, mohu } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, mohu, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+
+function mount(b: import('./world/Bikes').Bike) {
+  b.lying = false;
+  b.ridden = true;
+  bikes.current = b;
+  player.onBike = true;
+  player.teleport(b.x, b.z, b.heading);
+  state.toast('On the bike: F to get off', 'info');
+}
+function dismount(crashed: boolean) {
+  const b = bikes.current;
+  if (!b) return;
+  player.onBike = false;
+  bikes.drop(b, player.position.x, player.position.z, player.facing, crashed);
+}
+bikes.onToggle = (b) => mount(b);
 
 function startRun() {
   state.reset(newSeed());
@@ -117,6 +162,12 @@ function startRun() {
   items.reset();
   if (buildings.reset().bigBagInCourtyard) items.hideBigBag();
   returns.stop();
+  crowd.reset();
+  dogMess.reset();
+  bikes.reset();
+  sweeper.reset();
+  player.onBike = false;
+  player.stun = 0;
   player.teleport(sx, sz, 0);
   player.stamina = 100;
   // Start looking up Lónyay utca toward Kálvin tér.
@@ -168,6 +219,8 @@ let fpsTime = 0, fpsFrames = 0, fps = 0;
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
   const playing = state.status === 'playing' && input.locked;
+  const lighting = dayNight.update(state.minute);
+  lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
 
   if (playing) {
     if (input.wasPressed('KeyT')) {
@@ -179,9 +232,33 @@ function frame() {
     const gameMinutes = state.minute - before;
 
     const px = player.position.x, pz = player.position.z;
+    // F gets off the bike anywhere.
+    if (bikes.current && input.wasPressed('KeyF') && !mohu.active) dismount(false);
+    player.speedMul = dogMess.slowed > 0 ? DOG.slowFactor : 1;
     if (!mohu.active) player.update(dt, input, follow.yaw);
     else mohu.update(dt, input);
-    state.stats.distance += Math.hypot(player.position.x - px, player.position.z - pz);
+    if (!buildings.inside) {
+      // Pedestrians and the sweeper are solid; a fast bike into a person is a crash.
+      const fast = player.onBike && player.speed > BIKE.crashSpeed;
+      if (fast && crowd.hit(player.position.x, player.position.z, 0.35)) player.crashed = true;
+      let [nx, nz] = crowd.pushOut(player.position.x, player.position.z, 0.35);
+      [nx, nz] = sweeper.pushOut(nx, nz, 0.35);
+      [nx, nz] = world.resolve(nx, nz, 0.35);
+      player.position.x = nx; player.position.z = nz;
+      player.mesh.position.copy(player.position);
+    }
+    if (player.crashed && bikes.current) {
+      dismount(true);
+      player.fall(BIKE.stun);
+      state.stats.bikeCrashes++;
+      state.toast('Crash! You fell off the bike.', 'bad');
+    }
+    bikes.follow(player.position.x, player.position.z, player.facing, 0);
+    const moved = Math.hypot(player.position.x - px, player.position.z - pz);
+    state.stats.distance += moved;
+    if (!buildings.inside && dogMess.update(dt, player.position.x, player.position.z, player.facing, player.grounded, player.onBike, moved)) {
+      state.toast('Eww! Dog mess. Slowed down for a minute.', 'bad');
+    }
 
     // Running with a nearly full bag can break a glass bottle.
     if (player.running && player.speed > 3 && state.bag.length >= state.capacity * GLASS_BREAK.minFill &&
@@ -191,8 +268,11 @@ function frame() {
 
     buildings.searching = interaction.progress > 0;
     buildings.update(dt);
-    items.update(dt, gameMinutes, player.position.x, player.position.z);
+    items.update(dt, gameMinutes, player.position.x, player.position.z, lighting.night);
+    crowd.update(dt, state.minute, player.position.x, player.position.z, !buildings.inside);
+    sweeper.update(dt, state.minute, player.position.x, player.position.z);
     returns.update(dt, player.position.x, player.position.z);
+    interaction.holdDisabledReason = player.onBike ? 'Get off the bike first (F)' : null;
     if (!mohu.active) interaction.update(dt, input, player.position.x, player.position.z, player.facing);
     else interaction.prompt = null;
     if (input.wasPressed('KeyM')) minimap.toggleLarge();
@@ -210,10 +290,12 @@ function frame() {
   if (player.debugFast) status.push('Debug walk');
   if (state.timeScale > 1) status.push(`Time ×${state.timeScale}`);
   if (state.bigBag) status.push('Big blue bag');
+  if (player.onBike) status.push('On a bike');
+  if (dogMess.slowed > 0) status.push(`Slowed: dog mess ${Math.ceil(dogMess.slowed)} s`);
   if (buildings.inside) status.push('In a courtyard');
   hud.update(state, interaction, status);
 
-  sun.position.copy(player.position).add(SUN_OFFSET);
+  sun.position.copy(player.position).add(dayNight.offset);
   sun.target.position.copy(player.position);
 
   renderer.render(scene, camera);

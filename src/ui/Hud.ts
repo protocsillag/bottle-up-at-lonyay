@@ -18,6 +18,7 @@ export class Hud {
   private status = $('status');
   private prompt = $('prompt');
   private promptText = $('prompt-text');
+  private promptKeyEl = $('prompt-key');
   private promptFill = $('prompt-fill');
   private toasts = $('toasts');
   private lastStatus = '';
@@ -53,6 +54,7 @@ export class Hud {
     if (inter.prompt) {
       this.prompt.classList.remove('hidden');
       this.promptText.textContent = inter.prompt;
+      this.promptKeyEl.textContent = inter.promptKey;
       this.prompt.classList.toggle('blocked', inter.promptBlocked);
       const holding = !inter.promptBlocked && (inter.target?.hold ?? 0) > 0;
       this.prompt.classList.toggle('holding', holding);

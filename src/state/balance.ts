@@ -77,3 +77,16 @@ export const MOHU = {
   queueTime: [10, 30] as const, // real seconds each
   megtelt: 0.1, // chance one machine is full on arrival
 };
+
+export const DOG = {
+  fixedPiles: 28,
+  slowSeconds: 60, // real seconds
+  slowFactor: 0.7,
+};
+
+export const BIKE = {
+  count: [6, 10] as const,
+  speed: 8,
+  crashSpeed: 4.5, // m/s: hitting a wall or a person faster than this throws you off
+  stun: 2.5, // real seconds on the ground
+};

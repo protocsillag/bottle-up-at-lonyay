@@ -135,8 +135,12 @@ export class CharacterModel {
    * speed: horizontal m/s. running: sprinting (more lean, bigger stride).
    * airborne: off the ground. vy: vertical velocity, to pick a rising or falling pose.
    */
-  animate(dt: number, speed: number, running: boolean, airborne: boolean, vy: number) {
+  animate(dt: number, speed: number, running: boolean, airborne: boolean, vy: number, pose: 'normal' | 'ride' | 'fallen' = 'normal') {
     this.time += dt;
+    this.body.rotation.z = 0;
+    this.body.position.x = 0;
+    if (pose === 'ride') return this.ride(dt, speed);
+    if (pose === 'fallen') return this.fallen();
     // Stride length grows with speed, so the cycle rate stays believable.
     const stride = running ? 1.7 : 1.25;
     this.phase += (speed / stride) * Math.PI * dt;
@@ -172,5 +176,39 @@ export class CharacterModel {
     this.torso.rotation.x = -lean - breathe * 2;
     this.torso.rotation.y = s * 0.08 * move;
     this.head.rotation.x = lean * 0.6;
+  }
+
+  /** On a bike: seated, leaning on the handlebar, pedalling. */
+  private ride(dt: number, speed: number) {
+    this.phase += speed * 1.1 * dt;
+    const p = this.phase;
+    this.body.position.y = 0.08;
+    this.torso.rotation.x = -0.45;
+    this.torso.rotation.y = 0;
+    this.head.rotation.x = 0.35;
+    for (const [leg, off] of [[this.legL, 0], [this.legR, Math.PI]] as const) {
+      leg.pivot.rotation.x = 1.15 + Math.sin(p + off) * 0.35;
+      leg.knee.rotation.x = -1.35 + Math.cos(p + off) * 0.35;
+    }
+    for (const arm of [this.armL, this.armR]) {
+      arm.pivot.rotation.x = 1.05;
+      arm.knee.rotation.x = 0.35;
+    }
+    this.armL.pivot.rotation.z = -0.1;
+    this.armR.pivot.rotation.z = 0.1;
+  }
+
+  /** Thrown off the bike: lying on the side. */
+  private fallen() {
+    this.body.rotation.z = 1.4;
+    this.body.position.y = 0.25;
+    this.body.position.x = 0.6;
+    this.torso.rotation.set(0, 0, 0);
+    this.legL.pivot.rotation.x = 0.3;
+    this.legR.pivot.rotation.x = -0.2;
+    this.legL.knee.rotation.x = -0.4;
+    this.legR.knee.rotation.x = -0.2;
+    this.armL.pivot.rotation.x = 1.4;
+    this.armR.pivot.rotation.x = 0.4;
   }
 }

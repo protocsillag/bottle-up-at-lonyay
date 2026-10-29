@@ -12,6 +12,8 @@ export interface Interactable {
   blocked?(): string | null;
   /** Real seconds to hold E; 0 = single press. */
   hold: number;
+  /** Key to use instead of E (bikes use F). */
+  key?: string;
   act(): void;
 }
 
@@ -23,8 +25,11 @@ export class Interaction {
   progress = 0; // 0–1 while holding
   prompt: string | null = null;
   promptBlocked = false;
-  /** Set by other systems (bike, mini-game) to switch interaction off. */
+  promptKey = 'E';
+  /** Set by other systems to switch interaction off. */
   disabledReason: string | null = null;
+  /** Blocks only hold-E actions (searching bins on a bike). */
+  holdDisabledReason: string | null = null;
 
   add(src: InteractableSource) { this.sources.push(src); }
 
@@ -47,7 +52,7 @@ export class Interaction {
     this.promptBlocked = false;
     if (!best) return;
 
-    const blocked = this.disabledReason ?? best.blocked?.() ?? null;
+    const blocked = this.disabledReason ?? (best.hold > 0 ? this.holdDisabledReason : null) ?? best.blocked?.() ?? null;
     if (blocked) {
       this.prompt = blocked;
       this.promptBlocked = true;
@@ -55,8 +60,9 @@ export class Interaction {
       return;
     }
     this.prompt = `${best.label()}${best.hold > 0 ? ' (hold)' : ''}`;
+    this.promptKey = best.key === 'KeyF' ? 'F' : 'E';
     if (best.hold <= 0) {
-      if (input.wasPressed('KeyE')) best.act();
+      if (input.wasPressed(best.key ?? 'KeyE')) best.act();
       return;
     }
     if (input.isDown('KeyE')) {

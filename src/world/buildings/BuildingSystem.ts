@@ -54,6 +54,8 @@ export class BuildingSystem {
   private alertEl = document.getElementById('alert')!;
   /** True while the player holds E on something (noise for the házmester). */
   searching = false;
+  /** Reason the player cannot go in right now (on a bike), or null. */
+  enterBlock: () => string | null = () => null;
 
   constructor(city: CityData, place: Placement, private state: GameState, private host: BuildingHost, private streets: StreetIndex) {
     this.gates = new GateSystem(city, place);
@@ -137,6 +139,7 @@ export class BuildingSystem {
       {
         x: g.x + g.nx * 0.6, z: g.z + g.nz * 0.6, reach: 1.8, hold: 0,
         label: () => g.open > 0.25 ? 'Slip in through the gate!' : null,
+        blocked: () => this.enterBlock(),
         act: () => this.enter(g),
       },
     ];
@@ -290,7 +293,7 @@ export class BuildingSystem {
     if (!this.current) {
       // Walking into an open gate takes you inside.
       for (const g of this.gates.near(px, pz, 2)) {
-        if (g.open > 0.3 && Math.hypot(px - g.x, pz - g.z) < 0.95) { this.enter(g); break; }
+        if (g.open > 0.3 && Math.hypot(px - g.x, pz - g.z) < 0.95 && !this.enterBlock()) { this.enter(g); break; }
       }
       return;
     }

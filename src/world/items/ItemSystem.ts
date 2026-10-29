@@ -377,7 +377,35 @@ export class ItemSystem {
 
   // ------------------------------------------------------------------ per frame
 
-  update(_dt: number, gameMinutes: number, px: number, pz: number) {
+  private nightGlints: THREE.Sprite[] = [];
+
+  /** Faint glints on the nearest loose items at night so they stay findable. */
+  private updateNightGlints(night: number, px: number, pz: number) {
+    if (!this.nightGlints.length) {
+      for (let i = 0; i < 24; i++) {
+        const s = new THREE.Sprite(this.glintMat.clone());
+        s.scale.setScalar(0.35);
+        s.visible = false;
+        this.nightGlints.push(s);
+        this.group.add(s);
+      }
+    }
+    const near = night < 0.3 ? [] : this.street
+      .map((s) => [s, (s.spot.x - px) ** 2 + (s.spot.z - pz) ** 2] as const)
+      .filter(([, d]) => d < 30 * 30)
+      .sort((a, b) => a[1] - b[1])
+      .slice(0, this.nightGlints.length);
+    this.nightGlints.forEach((g, i) => {
+      const it = near[i]?.[0];
+      g.visible = !!it;
+      if (!it) return;
+      g.position.set(it.spot.x, 0.25, it.spot.z);
+      (g.material as THREE.SpriteMaterial).opacity = night * (0.35 + 0.25 * Math.sin(performance.now() / 300 + i));
+    });
+  }
+
+  update(_dt: number, gameMinutes: number, px: number, pz: number, night = 0) {
+    this.updateNightGlints(night, px, pz);
     const minute = this.state.minute;
     // Street spawns.
     this.spawnAcc += (gameMinutes / 60) * STREET.perHour * streetRate(hourOf(minute));

@@ -9,7 +9,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M3 Core loop in grey boxes: done** (2026-10-29, built unattended overnight).
 - **M4 Buildings: done** (2026-10-29, unattended).
 - **M5 Mohu mini-game: done** (2026-10-29, unattended).
-- Next: **M6 Living city**.
+- **M6 Living city: done** (2026-10-29, unattended).
+- Next: **M7 Character creator and local scores**.
 
 ## Commands
 
@@ -26,7 +27,7 @@ Node is not installed system-wide on Alex's Mac; it lives at `~/.local/node/bin`
 
 At the bottle machine: hold Space to feed · E mash / hold to fix a refused item · A / D roll it · Space push it in · E (between items) or S walk away.
 
-WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · M large map · wheel zoom · G 20 m/s debug walk · T time ×30 (debug) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
+WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · F get on / off a bike · M large map · wheel zoom · G 20 m/s debug walk · T time ×30 (debug) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
 
 ## Conventions and decisions
 
@@ -62,6 +63,13 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Házmester (`src/npc/Hazmester.ts`): 25% of courtyards, 70% of jackpots. Patrols a 4-point loop, spots you within 8 m in a ±55° cone, within 1.6 m any direction, or within 12 m while you hold E. Then a 5 s "Get out!" countdown and a walking-speed chase; caught = half the bag (rounded down) and out. 22:00–06:00 he is asleep 70% of visits (snore subtitle).
 - Voice lines (`src/audio/lines.ts`) and `say()` (`src/audio/voice.ts`) show Hungarian text with English subtitles; `setVoicePlayer()` is the hook for M9 audio.
 - `CharacterModel` takes `CharacterOptions` (hat, prop, width, scale) for NPCs until the M7 creator generalises it. NPC colour sets in `src/npc/looks.ts`.
+- Day and night (`src/world/DayNight.ts`): sunrise ~06:00, sunset ~19:00 with twilight glow; the directional light becomes a dim blue moon at night; sky, fog and hemisphere light lerp to dark blue. Returns `{ night, lamps }` (lamps switch on before full dark).
+- Lamps (`src/world/lamps.ts`): a curly lamp every 30 m along every road, alternating sides (297), instanced; emissive heads, additive light-pool decals, and 5 real point lights that hop to the lamps nearest the player. Lit shop windows: one warm quad on the facade nearest each OSM shop. OSM benches are drawn here too. Lamp posts are colliders.
+- Crowd (`src/npc/Crowd.ts`): up to 60 NPCs drawn with one `InstancedMesh` per body part (11) and per prop (7), animated on the CPU. Walkers follow `RoadGraph` (pavement offset per edge, pulled in on narrow streets). Targets by hour (40 commuter morning … 5 at 02–05); bar groups on Ráday 18–03, picnic groups on the Nehru lawn 16–23, street people on benches. They pause in front of you, push you softly, greet you (street people), drop bottles (`items.drop`) and their dogs leave mess. Spawn 45–115 m away, despawn past 150 m.
+- Dog mess (`src/world/DogMess.ts`): 28 fixed piles per run plus dog walkers'. Stepping in one: 70% speed for 60 real seconds, brown footprints that fade after 40 s. Bikes are safe.
+- Bikes (`src/world/Bikes.ts`): 6–10 per run on pavement spots; F to mount (interactable with `key: 'KeyF'`) and F anywhere to get off. 8 m/s, turns at 3.2 rad/s, no run/jump; hold-E actions and entering gates are blocked while riding. Losing >55% of speed against a wall at >4.5 m/s, or touching a pedestrian at that speed, is a crash: 2.5 s on the ground, bike left lying there.
+- Sweeper (`src/npc/Sweeper.ts`): 02:00–07:00, starts 60–140 m from the player and drives the road graph (biased toward the player) at 3.5 m/s, clearing loose street items within 6 m. Solid.
+- Items get faint night glints (24 sprites on the nearest loose items within 30 m).
 - `CollisionWorld.addBox()` adds solid props (machines now; kiosks and gates later).
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
@@ -86,6 +94,13 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/audio/lines.ts`, `voice.ts` | Voice line catalogue, subtitles |
 | `src/minigames/mohu/MachineModel.ts` | REpont-style machine, canvas textures, live screen, receipt strip |
 | `src/minigames/mohu/MohuGame.ts` | Close-up feeding mini-game, rejects, fixes, receipt |
+| `src/world/DayNight.ts` | Sun/moon, sky, fog by clock |
+| `src/world/lamps.ts` | Street lamps, light pools, shop windows, benches |
+| `src/world/DogMess.ts` | Dog mess piles, slowdown, footprints |
+| `src/world/Bikes.ts` | Bike models, placement, mount/drop |
+| `src/npc/RoadGraph.ts` | Walking graph from OSM ways |
+| `src/npc/Crowd.ts` | Instanced pedestrians, groups, behaviour |
+| `src/npc/Sweeper.ts` | Night street sweeper |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -122,3 +137,6 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M5 queue reading.** I read "0–2 people already at the machines" as each person using one of the two machines, so you only wait when both are taken (or one is "Megtelt" and the other is busy). If you meant one shared line in front of the pair, it is a small change in `ReturnPoints.roll()`.
 - **M5 payout timing.** Money is added when the receipt prints (bag empty, walking away, closing time or end of run), with +50 Ft ticking up on the machine screen meanwhile.
 - **M5 walking away.** Releasing Space only pauses feeding; E (between items) or S walks away. Esc pauses the game as usual.
+- **M6 sun times.** Sunrise ~06:00 and sunset ~19:00 (late spring) so there is a long light evening. Real late October would be 06:30/16:45. Say if you want a specific season.
+- **M6 sweeper.** The brief says the sweeper clears street items on its route. To make it noticeable I start it near the player each night and bias its route toward you. That makes it a bit of a nemesis; it can roam freely instead.
+- **M6 NPC drops** add roughly 1–3 bottles per real minute in the evening near the player.

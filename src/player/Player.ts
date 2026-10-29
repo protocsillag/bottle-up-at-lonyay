@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import type { CollisionWorld } from '../world/collision';
 import type { Input } from './input';
 import { CharacterModel } from './CharacterModel';
+import { BIKE } from '../state/balance';
+
+const BIKE_TURN = 3.2; // rad/s
+const BIKE_ACCEL = 5; // m/s²
 
 // The player: walks the city at real speeds, runs on stamina, jumps, and collides with
 // walls as a circle (capsule seen from above).
@@ -39,11 +43,24 @@ export class Player {
   running = false;
   private shiftLatch = false;
   debugFast = false;
+  /** Speed multiplier (dog mess slows to 0.7). */
+  speedMul = 1;
+  onBike = false;
+  /** Seconds left lying on the ground after a crash. */
+  stun = 0;
+  /** Set for one frame when a bike ride ends in a wall. */
+  crashed = false;
 
   constructor(public world: CollisionWorld, x: number, z: number) {
     this.position.set(x, 0, z);
     this.mesh = this.model.root;
     this.syncMesh();
+  }
+
+  /** Knocked down: lie on the ground for `seconds`. */
+  fall(seconds: number) {
+    this.stun = seconds;
+    this.velocity.set(0, 0);
   }
 
   /** Moves the player instantly (new run, entering or leaving a building). */
@@ -63,6 +80,14 @@ export class Player {
   /** cameraYaw: the camera's heading, so W walks away from the camera. */
   update(dt: number, input: Input, cameraYaw: number) {
     if (input.wasPressed('KeyG')) this.debugFast = !this.debugFast;
+    this.crashed = false;
+    if (this.stun > 0) {
+      this.stun -= dt;
+      this.velocity.set(0, 0);
+      this.model.animate(dt, 0, false, false, 0, 'fallen');
+      this.syncMesh();
+      return;
+    }
 
     let fx = 0, fz = 0;
     if (input.isDown('KeyW')) fz -= 1;
@@ -73,7 +98,7 @@ export class Player {
 
     const wantsRun = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
     if (!wantsRun) this.shiftLatch = false;
-    this.running = len > 0 && wantsRun && !this.shiftLatch && !this.exhausted && this.grounded && !this.debugFast;
+    this.running = len > 0 && wantsRun && !this.shiftLatch && !this.exhausted && this.grounded && !this.debugFast && !this.onBike;
 
     const target = new THREE.Vector2();
     if (len > 0) {
@@ -81,19 +106,23 @@ export class Player {
       // Rotate the input from camera space into world space.
       const wx = (fx * cos + fz * sin) / len;
       const wz = (-fx * sin + fz * cos) / len;
-      const max = this.debugFast ? DEBUG_SPEED : this.running ? RUN_SPEED : WALK_SPEED;
-      target.set(wx * max, wz * max);
+      const max = this.debugFast ? DEBUG_SPEED : this.onBike ? BIKE.speed : (this.running ? RUN_SPEED : WALK_SPEED) * this.speedMul;
       const want = Math.atan2(-wx, -wz);
       let diff = want - this.heading;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-      this.heading += Math.sign(diff) * Math.min(Math.abs(diff), TURN_RATE * dt);
+      this.heading += Math.sign(diff) * Math.min(Math.abs(diff), (this.onBike ? BIKE_TURN : TURN_RATE) * dt);
+      if (this.onBike) {
+        // A bike goes where it points; sharp turns slow it down.
+        const k = Math.max(0.25, Math.cos(diff));
+        target.set(-Math.sin(this.heading) * max * k, -Math.cos(this.heading) * max * k);
+      } else target.set(wx * max, wz * max);
     } else if (!this.grounded) {
       // No input in the air: keep momentum.
       target.copy(this.velocity);
     }
 
     // Jump.
-    if (input.wasPressed('Space') && this.grounded && this.stamina >= JUMP_COST) {
+    if (input.wasPressed('Space') && this.grounded && this.stamina >= JUMP_COST && !this.onBike) {
       this.vy = JUMP_SPEED;
       this.drain(JUMP_COST);
     }
@@ -107,13 +136,16 @@ export class Player {
 
     // Ease toward the target velocity.
     const dv = target.sub(this.velocity);
-    const maxDv = (this.grounded ? ACCEL : AIR_ACCEL) * dt * (this.debugFast ? 4 : 1);
+    const maxDv = (this.onBike ? BIKE_ACCEL : this.grounded ? ACCEL : AIR_ACCEL) * dt * (this.debugFast ? 4 : 1);
     if (dv.length() > maxDv) dv.setLength(maxDv);
     this.velocity.add(dv);
 
+    const before = this.velocity.length();
     const [x, z] = this.world.move(this.position.x, this.position.z, this.velocity.x * dt, this.velocity.y * dt, RADIUS);
     // Kill velocity lost against walls so we slide instead of pushing.
     if (dt > 0) this.velocity.set((x - this.position.x) / dt, (z - this.position.z) / dt);
+    // Riding into a wall throws you off.
+    if (this.onBike && before > BIKE.crashSpeed && this.velocity.length() < before * 0.45) this.crashed = true;
 
     // Vertical: simple ballistic hop over flat ground.
     let y = this.position.y + this.vy * dt;
@@ -121,7 +153,7 @@ export class Player {
     if (y <= 0) { y = 0; this.vy = 0; }
     this.position.set(x, y, z);
 
-    this.model.animate(dt, this.speed, this.running, !this.grounded, this.vy);
+    this.model.animate(dt, this.speed, this.running, !this.grounded, this.vy, this.onBike ? 'ride' : 'normal');
     this.syncMesh();
   }
 
