@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { loadCity } from './world/cityData';
+import { loadCity, type Building } from './world/cityData';
 import { buildCity } from './world/buildCity';
 import { CollisionWorld } from './world/collision';
 import { StreetIndex } from './world/streets';
@@ -15,6 +15,7 @@ import { buildGimnaziumExtras, findGimnazium, lonyayColors } from './world/landm
 import { buildMosoda, buildWear, matyasColors, RoadWorks } from './world/landmarks/matyas';
 import { buildLot, buildRaday, prepareRaday } from './world/landmarks/raday';
 import { excludeGateAreas } from './world/buildings/gates';
+import { buildErkel, prepareErkel } from './world/landmarks/erkel';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -101,8 +102,11 @@ if (radayPrep.lot) excludeGateAreas([radayPrep.lot.b.outer]);
 const gimnazium = findGimnazium(city);
 const cityColors = matyasColors(city, lonyayColors(city, gimnazium));
 if (radayPrep.art) cityColors.set(radayPrep.art.b.id, 0xf3f0e8);
+// Erkel and Török Pál utca: the grey palace, the old low graffiti house, the ochre block.
+const erkelPrep = prepareErkel(city, cityColors, new Set([gimnazium?.b, radayPrep.art?.b].filter((b) => !!b) as Building[]));
 const cityGroup = buildCity(city, {
-  skip: new Set(hallBuilding ? [hallBuilding.id] : []),
+  skip: new Set([hallBuilding?.id, erkelPrep.house?.b.id].filter((id): id is string => !!id)),
+  palace: new Set(erkelPrep.palace ? [erkelPrep.palace.b.id] : []),
   colors: cityColors,
   noKerb: new Set(['Ráday utca']),
   brick: new Set(gimnazium ? [gimnazium.b.id] : []),
@@ -200,6 +204,9 @@ cityGroup.add(buildWear(city, placement, streets, {
   openings,
   noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
 }));
+const erkel = buildErkel(city, placement, erkelPrep);
+cityGroup.add(erkel.group);
+for (const c of erkel.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const raday = buildRaday(city, placement, radayPrep, { openings: [...openings, ...dressing.skips.map((k) => ({ x: k.x, z: k.z, r: 3 }))] });
 cityGroup.add(raday.group);
 for (const c of raday.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
@@ -285,7 +292,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');

@@ -424,7 +424,7 @@ function artNouveau(f: Facade) {
 }
 
 /** Firewall brick with patched plaster, light-shaft slits and chimney-flue marks. */
-const firewallTex = () => canvasTex(256, 256, (g) => {
+export const firewallTexture = () => canvasTex(256, 256, (g) => {
   g.fillStyle = '#8a5a44'; g.fillRect(0, 0, 256, 256);
   for (let r = 0; r < 32; r++) for (let c = -1; c < 9; c++) {
     const v = ((r * 13 + c * 7) % 9) * 5;
@@ -448,7 +448,7 @@ export function buildLot(lot: NonNullable<RadayPrep['lot']>, place: Placement) {
   const front = lot.front;
   const parts: THREE.BufferGeometry[] = [];
   // Firewalls: neighbour walls along the lot's other edges get bare brick.
-  const fire = firewallTex();
+  const fire = firewallTexture();
   for (let i = 0; i < ring.length; i++) {
     const a = ring[i], c = ring[(i + 1) % ring.length];
     if ((a === front.a && c === front.c) || (a === front.c && c === front.a)) continue;

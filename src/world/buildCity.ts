@@ -176,6 +176,7 @@ function buildingLook(b: CityData['buildings'][number], seed: number, opts: Buil
   let color = opts.colors?.get(b.id) ?? PLASTER[Math.floor(seed * PLASTER.length)];
   let kind = 1;
   if (opts.brick?.has(b.id)) { kind = 4; color = 0x9a4a35; }
+  if (opts.palace?.has(b.id)) kind = 3;
   if (/palota|Múzeum|Egyetem|Corvinus|Sóház|Bánffy|Wenckheim|Almássy|Pálffy|Zichy|Hadik|Károlyi/i.test(name)) { kind = 3; color = [0xe8dcc0, 0xd8c8a8, 0xe3d3b0][Math.floor(seed * 3)]; }
   if (/templom|plébánia|kápolna/i.test(name)) { kind = 3; color = 0xe0d6c0; }
   if (/Corvinus Egyetem$/.test(name)) color = 0xd7c9a8;
@@ -195,6 +196,8 @@ export interface BuildCityOptions {
   brick?: Set<string>;
   /** Street names paved at one level, without kerbs (Ráday utca). */
   noKerb?: Set<string>;
+  /** Buildings drawn with the palace facade (big arched windows). */
+  palace?: Set<string>;
 }
 
 export function buildCity(city: CityData, opts: BuildCityOptions = {}): THREE.Group {

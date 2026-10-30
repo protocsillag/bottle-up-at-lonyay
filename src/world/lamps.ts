@@ -63,6 +63,21 @@ function globeGeometry() {
   return new THREE.SphereGeometry(0.2, 10, 8).translate(0, 4.58, 0.9);
 }
 
+/** Hung lamp (reference/erkel-torok-pal-utca/): a round dish on a wire strung across a
+ *  narrow street at about 7.5 m. The wire is scaled per instance along local x. */
+function dishGeometry() {
+  return merge([
+    colored(new THREE.CylinderGeometry(0.42, 0.12, 0.2, 14, 1, true).translate(0, 7.25, 0), 0x2b2f30),
+    colored(new THREE.CylinderGeometry(0.1, 0.1, 0.18, 8).translate(0, 7.42, 0), 0x2b2f30),
+  ]);
+}
+function wireGeometry() {
+  return colored(new THREE.BoxGeometry(1, 0.02, 0.02).translate(0, 7.5, 0), 0x1a1a1a);
+}
+function hungHeadGeometry() {
+  return new THREE.CylinderGeometry(0.36, 0.36, 0.03, 14).translate(0, 7.15, 0);
+}
+
 const RADAY = 'Ráday utca';
 const RADAY_SPACING = 20;
 
@@ -80,7 +95,8 @@ export class Lamps {
   constructor(city: CityData, place: Placement) {
     this.group.name = 'lamps';
     let side = 1;
-    const raday: boolean[] = [];
+    const kinds: (0 | 1 | 2)[] = [];
+    const spans: [number, number][] = [];
     for (const r of city.roads) {
       if (r.kind !== 'road' || r.bridge) continue;
       const isRaday = r.name === RADAY;
@@ -97,40 +113,68 @@ export class Lamps {
           next += spacing;
           side = -side;
           // Ráday lamps stand at the edge of the drive strip, everywhere else by the kerb.
+          // Narrow side streets (facades on both sides within 6.5 m): a lamp on a wire.
+          const cx = ax + ux * t, cz = az + uz * t;
+          const wall = (s2: number) => { for (let d = 2; d <= 6.5; d += 0.5) if (place.buildings.at(cx - uz * d * s2, cz + ux * d * s2)) return d; return 0; };
+          const wl = isRaday || r.w >= 12 ? 0 : wall(-1), wr = wl ? wall(1) : 0;
+          if (wl && wr) {
+            if (this.positions.some((p) => Math.abs(p.x - cx) < 9 && Math.abs(p.z - cz) < 9)) continue;
+            this.positions.push(new THREE.Vector3(cx, Math.atan2(-ux, -uz), cz)); // local +x points across the street
+            kinds.push(2);
+            spans.push([wl, wr]);
+            continue;
+          }
           const off = isRaday ? 3.3 : r.w / 2 + 0.7;
           const x = ax + ux * t - uz * off * side, z = az + uz * t + ux * off * side;
           const gap = isRaday ? 6 : 9;
           if (!place.free(x, z, 0.6) || this.positions.some((p) => Math.abs(p.x - x) < gap && Math.abs(p.z - z) < gap)) continue;
           // y temporarily holds the angle the arm points (out over the road).
           this.positions.push(new THREE.Vector3(x, Math.atan2(uz * side, -ux * side), z));
-          raday.push(isRaday);
+          kinds.push(isRaday ? 1 : 0);
+          spans.push([0, 0]);
         }
         walked += len;
       }
     }
     const n = this.positions.length;
-    const nr = raday.filter(Boolean).length;
+    const count = (k: number) => kinds.filter((v) => v === k).length;
     const postMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const posts = new THREE.InstancedMesh(postGeometry(), postMat, n - nr);
-    const heads = new THREE.InstancedMesh(headGeometry(), this.headMat, n - nr);
-    const rPosts = new THREE.InstancedMesh(radayPostGeometry(), postMat, nr);
-    const rHeads = new THREE.InstancedMesh(globeGeometry(), this.headMat, nr);
+    const posts = new THREE.InstancedMesh(postGeometry(), postMat, count(0));
+    const heads = new THREE.InstancedMesh(headGeometry(), this.headMat, count(0));
+    const rPosts = new THREE.InstancedMesh(radayPostGeometry(), postMat, count(1));
+    const rHeads = new THREE.InstancedMesh(globeGeometry(), this.headMat, count(1));
+    const dishes = new THREE.InstancedMesh(dishGeometry(), postMat, count(2));
+    const wires = new THREE.InstancedMesh(wireGeometry(), postMat, count(2));
+    const hHeads = new THREE.InstancedMesh(hungHeadGeometry(), this.headMat, count(2));
     const poolTex = poolTexture();
     this.poolMat = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -16 });
     const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(9, 9).rotateX(-Math.PI / 2), this.poolMat, n);
     const m = new THREE.Matrix4();
-    let ci = 0, ri = 0;
+    const at = [0, 0, 0];
     this.positions.forEach((p, i) => {
-      this.posts.push([p.x, p.z]);
+      const k = kinds[i];
       m.makeRotationY(p.y).setPosition(p.x, 0, p.z);
-      if (raday[i]) { rPosts.setMatrixAt(ri, m); rHeads.setMatrixAt(ri++, m); }
-      else { posts.setMatrixAt(ci, m); heads.setMatrixAt(ci++, m); }
+      if (k === 0) { posts.setMatrixAt(at[0], m); heads.setMatrixAt(at[0]++, m); }
+      else if (k === 1) { rPosts.setMatrixAt(at[1], m); rHeads.setMatrixAt(at[1]++, m); }
+      else {
+        // p.y is the angle of the across-street axis; the wire spans wall to wall.
+        const [wl, wr] = spans[i];
+        dishes.setMatrixAt(at[2], m); hHeads.setMatrixAt(at[2], m);
+        const c = Math.cos(p.y), s2 = -Math.sin(p.y);
+        const mid = (wr - wl) / 2;
+        wires.setMatrixAt(at[2]++, new THREE.Matrix4().makeRotationY(p.y).scale(new THREE.Vector3(wl + wr, 1, 1)).setPosition(p.x + c * mid, 0, p.z + s2 * mid));
+        pools.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, 0.06, p.z));
+        p.y = 4.5;
+        return;
+      }
+      this.posts.push([p.x, p.z]);
       // Pool under the lantern head (0.9 m out along the arm).
       const hx = p.x + Math.sin(p.y) * 0.9, hz = p.z + Math.cos(p.y) * 0.9;
       pools.setMatrixAt(i, new THREE.Matrix4().makeTranslation(hx, 0.06, hz));
       p.set(hx, p.y, hz); // keep head position (y holds the angle until here)
       p.y = 4.5;
     });
+    this.group.add(dishes, wires, hHeads);
     rPosts.castShadow = true;
     this.group.add(rPosts, rHeads);
     posts.castShadow = true;
