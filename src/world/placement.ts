@@ -4,7 +4,7 @@ import { pointInPolygon } from './collision';
 // Finds walkable spots for items, bins and props: pavements beside streets, footpaths,
 // squares and parks. Spots are generated once per city load; each run samples from them.
 
-export type Zone = 'raday' | 'nehru' | 'corvinus' | 'market' | 'kalvin' | 'bakats' | 'museum' | 'lonyay' | 'street';
+export type Zone = 'raday' | 'nehru' | 'corvinus' | 'market' | 'kalvin' | 'bakats' | 'museum' | 'lonyay' | 'rakpart' | 'street';
 
 export interface Spot {
   x: number; z: number;
@@ -64,12 +64,16 @@ export class Placement {
   private water: Vec2[][];
   private greens: Vec2[][];
   private nehru: Vec2[] | null;
+  /** Centre of Bálna: the riverside pubs around it are the 'rakpart' zone. */
+  private balna: Vec2 | null;
 
   constructor(private city: CityData) {
     this.buildings = new BuildingIndex(city.buildings);
     this.water = city.areas.filter((a) => a.kind === 'water').map((a) => a.outer);
     this.greens = city.areas.filter((a) => a.kind === 'park' || a.kind === 'grass').map((a) => a.outer);
     this.nehru = city.areas.find((a) => a.name === 'Nehru part')?.outer ?? null;
+    const balna = city.buildings.filter((b) => b.name?.startsWith('Bálna'));
+    this.balna = balna.length ? balna.flatMap((b) => b.outer).reduce((a, p, _, all) => [a[0] + p[0] / all.length, a[1] + p[1] / all.length] as Vec2, [0, 0] as Vec2) : null;
     this.generate();
   }
 
@@ -102,6 +106,7 @@ export class Placement {
     if (near(L.bakatsTer, 70)) return 'bakats';
     if (near(L.museum, 90)) return 'museum';
     if (roadName === 'Lónyay utca') return 'lonyay';
+    if (near(this.balna, 150)) return 'rakpart';
     return 'street';
   }
 

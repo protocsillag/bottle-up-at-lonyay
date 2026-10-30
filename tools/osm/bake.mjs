@@ -191,7 +191,7 @@ const ROAD_WIDTH = {
   secondary_link: 8, tertiary_link: 7, primary_link: 8, service: 5, pedestrian: 7,
   footway: 3, path: 2.5, cycleway: 2.5, steps: 3, track: 3,
 };
-const SKIP_HIGHWAY = new Set(['corridor', 'elevator', 'platform', 'construction', 'proposed', 'bus_stop', 'raceway']);
+const SKIP_HIGHWAY = new Set(['corridor', 'elevator', 'platform', 'proposed', 'bus_stop', 'raceway']);
 
 const elements = await loadRaw();
 const nodes = new Map();
@@ -268,8 +268,14 @@ function addBuilding(e, outer, holes) {
 const roads = [];
 const areas = [];
 for (const w of ways.values()) {
-  const t = w.tags;
+  let t = w.tags;
   if (!t?.highway || SKIP_HIGHWAY.has(t.highway)) continue;
+  // Streets under renovation (highway=construction, construction=residential …) are still
+  // streets on the ground; bake them as their real class. Unknown classes are skipped.
+  if (t.highway === 'construction') {
+    if (!ROAD_WIDTH[t.construction]) continue;
+    w.tags = t = { ...t, highway: t.construction };
+  }
   if (t.indoor === 'yes' || t.level && parseFloat(t.level) < 0 || t.tunnel === 'yes' || t.layer && parseFloat(t.layer) < 0) continue;
   const pts = wayPts(w);
   if (pts.length < 2 || !pts.some((p) => inExtent(p) && distToPolygon(p, boundary) < MARGIN)) continue;

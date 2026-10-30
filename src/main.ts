@@ -14,10 +14,12 @@ import { buildDressing } from './world/landmarks/dressing';
 import { buildGimnaziumExtras, findGimnazium, lonyayColors } from './world/landmarks/lonyay';
 import { buildMosoda, buildWear, matyasColors, RoadWorks } from './world/landmarks/matyas';
 import { buildLot, buildRaday, prepareRaday } from './world/landmarks/raday';
+import { fixRoads } from './world/roadFix';
 import { excludeGateAreas } from './world/buildings/gates';
 import { buildErkel, prepareErkel } from './world/landmarks/erkel';
 import { buildKalvin } from './world/landmarks/kalvin';
 import { bakatsChurchId, buildBakats } from './world/landmarks/bakats';
+import { buildBalna, prepareBalna } from './world/landmarks/balna';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -98,20 +100,25 @@ addEventListener('resize', () => {
 const city = await loadCity();
 const hallBuilding = city.buildings.find((b) => b.name === 'Központi Vásárcsarnok');
 // Ráday utca from Alex's photos: car-free north stretch, the empty lot, the Art Nouveau house.
+// Streets the baked map lacks (OSM construction tags) first; everything below reads them.
+fixRoads(city);
 const radayPrep = prepareRaday(city);
-if (radayPrep.lot) excludeGateAreas([radayPrep.lot.b.outer]);
+if (radayPrep.lot) excludeGateAreas([radayPrep.lot.hull]);
 // Lónyay utca from Alex's photos: the brick school and the street's palette.
 const gimnazium = findGimnazium(city);
 const cityColors = matyasColors(city, lonyayColors(city, gimnazium));
 if (radayPrep.art) cityColors.set(radayPrep.art.b.id, 0xf3f0e8);
 // Erkel and Török Pál utca: the grey palace, the old low graffiti house, the ochre block.
 const erkelPrep = prepareErkel(city, cityColors, new Set([gimnazium?.b, radayPrep.art?.b].filter((b) => !!b) as Building[]));
+// Bálna: two brick warehouse wings under a glass whale (replaces the plain block).
+const brickSet = new Set([gimnazium?.b.id, bakatsChurchId(city)].filter((id): id is string => !!id));
+const balnaPrep = prepareBalna(city, brickSet, cityColors);
 const cityGroup = buildCity(city, {
-  skip: new Set([hallBuilding?.id, erkelPrep.house?.b.id].filter((id): id is string => !!id)),
+  skip: new Set([hallBuilding?.id, erkelPrep.house?.b.id, balnaPrep?.glassId].filter((id): id is string => !!id)),
   palace: new Set(erkelPrep.palace ? [erkelPrep.palace.b.id] : []),
   colors: cityColors,
   noKerb: new Set(['Ráday utca']),
-  brick: new Set([gimnazium?.b.id, bakatsChurchId(city)].filter((id): id is string => !!id)),
+  brick: brickSet,
 });
 if (gimnazium) cityGroup.add(buildGimnaziumExtras(gimnazium));
 cityGroup.add(buildStreetSigns(city));
@@ -212,6 +219,12 @@ cityGroup.add(buildWear(city, placement, streets, {
   openings,
   noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
 }));
+const balna = balnaPrep ? buildBalna(city, placement, balnaPrep) : null;
+if (balna) {
+  cityGroup.add(balna.group);
+  for (const c of balna.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
+  crowd.addBarSpots(balna.barSpots);
+}
 const kalvin = buildKalvin(city, placement);
 cityGroup.add(kalvin.group);
 for (const c of kalvin.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
@@ -303,7 +316,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, balna, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -517,6 +530,7 @@ function frame() {
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
   raday.update((state.minute / 60) % 24, lighting.lamps);
+  balna?.update(lighting.lamps);
   bakats.update(dt, player.position.x, player.position.z, player.speed);
   facadeUniforms.uNight.value = lighting.lamps;
   shops.updateFronts(lighting.lamps);

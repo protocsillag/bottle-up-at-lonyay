@@ -1,5 +1,13 @@
 # Changelog
 
+## World fixes from Alex's walk-through (2026-10-30)
+
+- **Missing streets.** The map export dropped streets tagged as under construction, so a stretch of Lónyay utca, Mátyás utca's continuation from Lónyay to Ráday, and Kinizsi utca across Ráday showed as bare grey ground. They are now proper streets with road, pavement, parked cars and lamps, with junctions that walkers and cars can use. The map script now keeps such streets for the next re-bake.
+- **The empty lot on Ráday** is now where it really is, at the Török Pál utca corner (from the reference photo): bare brick firewalls with chimneys, a fence of green posts and red-white tape, gravel, loose paving stones and weeds inside, the real substation covered in posters and tags, big green planters and lime bike-share bikes on the pavement. The hidden spot moved there too, tucked beside the substation. The building that had been removed for the old lot is back.
+- **The old graffiti house** is the right building now: the long single-storey house that wraps around the little park at the Ráday corner. Peeling yellow plaster with brick showing through, white-framed windows, an arched door with a lantern, a grey plinth, big colourful graffiti pieces and tags, and a steep tiled roof that follows the L-shaped footprint, with chimneys and gutters. No more giant wedge.
+- **Bálna** on the riverbank: two yellow-brick warehouse wings with a curving glass-and-steel whale arching between them, glowing at night with a lit shop row inside.
+- **Riverside pubs** by Bálna: five bar pavilions (KIKÖTŐ, SÖRKERT, HAJÓ PUB, DUNAPART, PARTI BÁR) with beer tables, parasols and festoon lights. In the evening drinkers gather there, the bins fill up and party leftovers can turn up, like on Ráday.
+
 ## Bags easier to find (2026-10-30)
 
 - Every run now has a blue bag behind one of the Nehru part kiosks and one on Ráday utca (behind the book kiosk or in the empty lot), plus a bag in about one courtyard in ten. Before, there were 3–5 bags in total, mostly in a handful of random courtyards.

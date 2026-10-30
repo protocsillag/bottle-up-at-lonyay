@@ -179,7 +179,7 @@ function buildingLook(b: CityData['buildings'][number], seed: number, opts: Buil
   if (/templom|plébánia|kápolna/i.test(name)) { kind = 3; color = 0xe0d6c0; }
   if (/Corvinus Egyetem$/.test(name)) color = 0xd7c9a8;
   // Hand-picked looks from the M11 photo passes win over the name rules.
-  if (opts.brick?.has(b.id)) { kind = 4; color = 0x9a4a35; }
+  if (opts.brick?.has(b.id)) { kind = 4; color = opts.colors?.get(b.id) ?? 0x9a4a35; }
   if (opts.palace?.has(b.id)) kind = 3;
   if (b.h < 7) kind = 0; // kiosks, sheds, garages
   const wall = new THREE.Color(color);

@@ -135,6 +135,9 @@ export class Crowd {
   private benches: Vec2[];
   private radayEdges: number[];
   private nehruSpots: Vec2[];
+  /** Extra places where evening bar groups stand (the riverside pubs). */
+  private barSpots: Vec2[] = [];
+  addBarSpots(spots: Vec2[]) { this.barSpots.push(...spots); }
   private m = Array.from({ length: 8 }, () => new THREE.Matrix4());
   private tmp = new THREE.Matrix4();
   private col = new THREE.Color();
@@ -218,7 +221,10 @@ export class Crowd {
       return;
     }
     let cx: number, cz: number;
-    if (kind === 'bar') {
+    const pubs = this.barSpots.filter(([x, z]) => { const d = Math.hypot(x - px, z - pz); return d > 25 && d < SPAWN_MAX + 30; });
+    if (kind === 'bar' && pubs.length && Math.random() < 0.5) {
+      [cx, cz] = pubs[Math.floor(Math.random() * pubs.length)];
+    } else if (kind === 'bar') {
       const edges = this.radayEdges.filter((e) => {
         const E = this.graph.edges[e], A = this.graph.nodes[E.a];
         const d = Math.hypot(A.x - px, A.z - pz);

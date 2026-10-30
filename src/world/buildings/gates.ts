@@ -40,7 +40,7 @@ export interface Gate {
 
 interface Resident { model: CharacterModel; gate: Gate; t: number; tx: number; tz: number; }
 
-const NON_RESIDENTIAL = /Vásárcsarnok|Corvinus|templom|Múzeum|plébánia|kápolna|Aldi|Klinika|Intézet|Hivatal|Egyetem|Kollégium|alállomás|áramátalakító|Kórház|Óvoda|Bölcsőde|Gimnázium|Könyvtár|Számvevőszék|laktanya|Center|mozi|Music/i;
+const NON_RESIDENTIAL = /Vásárcsarnok|Corvinus|templom|Múzeum|plébánia|kápolna|Aldi|Klinika|Intézet|Hivatal|Egyetem|Kollégium|alállomás|áramátalakító|Kórház|Óvoda|Bölcsőde|Gimnázium|Könyvtár|Számvevőszék|laktanya|Center|mozi|Music|Bálna/i;
 
 function area(ring: Vec2[]) {
   let a = 0;

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Building, CityData, Vec2 } from '../cityData';
-import type { Placement, Spot } from '../placement';
+import { BuildingIndex, type Placement, type Spot } from '../placement';
 import { pointInPolygon } from '../collision';
 import { offsetLine } from '../buildCity';
 import { colored, signTexture } from './common';
@@ -21,94 +21,105 @@ type Box = { x: number; z: number; w: number; d: number; rot: number };
 
 function hash(s: string) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
 
-export interface RadayPrep { lot: { b: Building; front: Facade } | null; art: Facade | null; }
+/** The empty lot (reference/raday-utca/firewall-empty-lot.jpg): the open ground on the east
+ *  side of Ráday just south of Török Pál utca, between bare firewalls, with the real
+ *  substation at its street corner. Found by flood-filling the open ground from a seed. */
+export interface Lot {
+  /** Ráday centreline point at the Török Pál corner; u runs along the street, n into the lot. */
+  o: Vec2; u: Vec2; n: Vec2;
+  /** Free 1 m cells of the lot ("i,j" of floor(x), floor(z)). */
+  cells: Set<string>;
+  /** Street frontage along u (from o), and the fence offset from the centreline. */
+  t0: number; t1: number; fence: number;
+  /** Convex hull of the cells (gates are kept off the walls around it). */
+  hull: Vec2[];
+  substation: Building | null;
+}
+export interface RadayPrep { lot: Lot | null; art: Facade | null; }
+
+const LOT_CORNER: Vec2 = [6.3, -294.2]; // Ráday × Török Pál
+const LOT_SEED: Vec2 = [45, -285];
+
+function findLot(city: CityData): Lot | null {
+  const road = city.roads.find((r) => r.name === RADAY && r.pts.some((p) => Math.hypot(p[0] - LOT_CORNER[0], p[1] - LOT_CORNER[1]) < 3));
+  if (!road) return null;
+  const i = road.pts.findIndex((p) => Math.hypot(p[0] - LOT_CORNER[0], p[1] - LOT_CORNER[1]) < 3);
+  const o = road.pts[i], q = road.pts[i + 1] ?? road.pts[i - 1];
+  const l = Math.hypot(q[0] - o[0], q[1] - o[1]);
+  let u: Vec2 = [(q[0] - o[0]) / l, (q[1] - o[1]) / l];
+  if (u[1] < 0) u = [-u[0], -u[1]]; // run south along the street
+  let n: Vec2 = [u[1], -u[0]];
+  if ((LOT_SEED[0] - o[0]) * n[0] + (LOT_SEED[1] - o[1]) * n[1] < 0) n = [-n[0], -n[1]];
+  const index = new BuildingIndex(city.buildings.filter((b) => !b.scenery));
+  const local = (x: number, z: number) => [(x - o[0]) * u[0] + (z - o[1]) * u[1], (x - o[0]) * n[0] + (z - o[1]) * n[1]];
+  const FRONT = 7; // pavement up to here
+  const free = (x: number, z: number) => !index.at(x + 0.5, z + 0.5) && local(x + 0.5, z + 0.5)[1] > FRONT && Math.hypot(x - LOT_SEED[0], z - LOT_SEED[1]) < 60;
+  const k = (x: number, z: number) => `${x},${z}`;
+  const sx = Math.floor(LOT_SEED[0]), sz = Math.floor(LOT_SEED[1]);
+  if (!free(sx, sz)) return null;
+  const cells = new Set([k(sx, sz)]);
+  const stack: [number, number][] = [[sx, sz]];
+  while (stack.length) {
+    const [x, z] = stack.pop()!;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, nz = z + dz;
+      if (cells.has(k(nx, nz)) || !free(nx, nz)) continue;
+      cells.add(k(nx, nz));
+      stack.push([nx, nz]);
+    }
+  }
+  if (cells.size < 200 || cells.size > 6000) return null; // not the lot we know
+  let t0 = Infinity, t1 = -Infinity;
+  const pts: Vec2[] = [];
+  for (const c of cells) {
+    const [x, z] = c.split(',').map(Number);
+    pts.push([x + 0.5, z + 0.5]);
+    const [t, off] = local(x + 0.5, z + 0.5);
+    if (off < FRONT + 1.5) { t0 = Math.min(t0, t); t1 = Math.max(t1, t); }
+  }
+  // The substation: a small low building at the lot's street corner.
+  const substation = city.buildings.find((b) => {
+    if (b.scenery || b.h > 5) return false;
+    const [t, off] = local(b.outer[0][0], b.outer[0][1]);
+    return off > 4 && off < 20 && t > t0 - 15 && t < t0 + 5;
+  }) ?? null;
+  // A tiny tall block standing inside the lot (a stair core in OSM) reads as a tower: make
+  // it a single-storey site shed.
+  for (const b of city.buildings) {
+    if (b.scenery || b.h < 8) continue;
+    const xs = b.outer.map((p) => p[0]), zs = b.outer.map((p) => p[1]);
+    if ((Math.max(...xs) - Math.min(...xs)) * (Math.max(...zs) - Math.min(...zs)) > 80) continue;
+    if (b.outer.some(([x, z]) => cells.has(k(Math.floor(x + 1), Math.floor(z))) || cells.has(k(Math.floor(x - 1), Math.floor(z))))) b.h = 3;
+  }
+  return { o, u, n, cells, t0, t1, fence: FRONT + 1, hull: convexHull(pts), substation };
+}
+
+function convexHull(p: Vec2[]): Vec2[] {
+  const s = [...p].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Vec2, a: Vec2, b: Vec2) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: Vec2[] = [], hi: Vec2[] = [];
+  for (const q of s) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], q) <= 0) lo.pop(); lo.push(q); }
+  for (const q of s.reverse()) { while (hi.length >= 2 && cross(hi[hi.length - 2], hi[hi.length - 1], q) <= 0) hi.pop(); hi.push(q); }
+  return [...lo.slice(0, -1), ...hi.slice(0, -1)];
+}
 
 /** Runtime tweaks to the baked map, before anything is built from it: the car-free
- *  stretch, one-way for the rest, the empty lot (its building is removed) and the
- *  Art Nouveau house (picked here so its colour can go into the city colour map). */
+ *  stretch, one-way for the rest, the empty lot and the Art Nouveau house (picked here so
+ *  its colour can go into the city colour map). */
 export function prepareRaday(city: CityData): RadayPrep {
-  fillRadayGaps(city);
   for (const r of city.roads) {
     if (r.name !== RADAY || r.kind !== 'road') continue;
     if (r.pts.every((p) => p[1] < CAR_FREE_NORTH_OF)) r.nocars = 1;
     else r.oneway ??= 1;
   }
+  const lot = findLot(city);
   const fronts = streetFacades(city, RADAY, 12);
-  const shopAt = (b: Building) => city.shops.some((s) => pointInPolygon(s.p[0], s.p[1], b.outer));
-  const area = (ring: Vec2[]) => Math.abs(ring.reduce((a, p, i) => { const q = ring[(i + 1) % ring.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0)) / 2;
-  const count = new Map<Building, number>();
-  for (const f of fronts) count.set(f.b, (count.get(f.b) ?? 0) + 1);
-  // The empty lot: a small mid-block building with one short Ráday front, no shop.
-  const lotFront = fronts
-    .filter((f) => f.len > 8 && f.len < 18 && count.get(f.b) === 1 && !f.b.holes?.length && area(f.b.outer) < 450 && !shopAt(f.b))
-    .filter((f) => (f.a[1] + f.c[1]) / 2 > CAR_FREE_NORTH_OF)
-    .sort((p, q) => area(p.b.outer) - area(q.b.outer))[0];
-  let lot: RadayPrep['lot'] = null;
-  if (lotFront) {
-    city.buildings.splice(city.buildings.indexOf(lotFront.b), 1);
-    lot = { b: lotFront.b, front: lotFront };
-  }
   const art = fronts
-    .filter((f) => f.len > 12 && f.len < 30 && f.b.h >= 14 && (!lot || Math.hypot(f.a[0] - lot.front.a[0], f.a[1] - lot.front.a[1]) > 40))
+    .filter((f) => f.len > 12 && f.len < 30 && f.b.h >= 14 && (!lot || Math.hypot(f.a[0] - lot.o[0], f.a[1] - lot.o[1]) > 60))
     .sort((p, q) => hash(p.b.id) - hash(q.b.id))[0] ?? null;
   return { lot, art };
 }
 
-/** The baked map misses Ráday's middle stretch (Köztelek utca to Biblia utca, ~230 m):
- *  join loose Ráday ends that face each other across open ground with a new way that runs
- *  through the cross streets' junction nodes, so walkers, cars and the dressing follow it. */
-function fillRadayGaps(city: CityData) {
-  const rs = city.roads.filter((r) => r.name === RADAY && r.kind === 'road');
-  const key = (p: Vec2) => `${p[0]},${p[1]}`;
-  const deg = new Map<string, number>();
-  for (const r of rs) for (const p of [r.pts[0], r.pts[r.pts.length - 1]]) deg.set(key(p), (deg.get(key(p)) ?? 0) + 1);
-  const ends = rs.filter((r) => deg.get(key(r.pts[r.pts.length - 1])) === 1);
-  const starts = rs.filter((r) => deg.get(key(r.pts[0])) === 1);
-  const others = city.roads.filter((r) => r.kind === 'road' && !r.bridge && r.name !== RADAY);
-  for (const e of ends) {
-    const a = e.pts[e.pts.length - 1], a0 = e.pts[e.pts.length - 2];
-    const dir: Vec2 = [a[0] - a0[0], a[1] - a0[1]];
-    const dl = Math.hypot(dir[0], dir[1]) || 1;
-    // The nearest loose start ahead of this end, roughly in line with it.
-    const next = starts.filter((s) => s !== e).map((s) => ({ s, b: s.pts[0] }))
-      .filter(({ b }) => {
-        const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
-        return d > 5 && d < 300 && ((b[0] - a[0]) * dir[0] + (b[1] - a[1]) * dir[1]) / (d * dl) > 0.97;
-      })
-      .sort((p, q) => Math.hypot(p.b[0] - a[0], p.b[1] - a[1]) - Math.hypot(q.b[0] - a[0], q.b[1] - a[1]))[0];
-    if (!next) continue;
-    const b = next.b;
-    const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz;
-    // Skip if another way already covers the line, or a building stands on it.
-    let covered = 0, blocked = false;
-    for (let t = 0.1; t < 0.95; t += 0.1) {
-      const x = a[0] + dx * t, z = a[1] + dz * t;
-      if (city.buildings.some((bd) => pointInPolygon(x, z, bd.outer))) blocked = true;
-      if ([...others, ...rs].some((r) => r.pts.some((p, i) => i > 0 && segDist(x, z, r.pts[i - 1], p) < 2))) covered++;
-    }
-    // Another stretch of Ráday already running alongside means it is no gap.
-    const parallel = rs.some((r) => r.pts.some((p) => {
-      const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2;
-      return t > 0.05 && t < 0.95 && Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dz * t) < 10;
-    }));
-    if (blocked || parallel || covered > 4) continue;
-    // Pass through junction nodes of crossing streets that touch the line.
-    const mid: { t: number; p: Vec2 }[] = [];
-    for (const r of others) for (const p of r.pts) {
-      const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2;
-      if (t <= 0.02 || t >= 0.98) continue;
-      if (Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dz * t) < 3 && !mid.some((m) => m.p === p)) mid.push({ t, p });
-    }
-    mid.sort((p, q) => p.t - q.t);
-    city.roads.push({ kind: 'road', hw: e.hw, w: e.w, name: RADAY, pts: [a, ...mid.map((m) => m.p), b] });
-  }
-}
-
-function segDist(x: number, z: number, p: Vec2, q: Vec2) {
-  const dx = q[0] - p[0], dz = q[1] - p[1], l2 = dx * dx + dz * dz || 1;
-  const t = Math.max(0, Math.min(1, ((x - p[0]) * dx + (z - p[1]) * dz) / l2));
-  return Math.hypot(x - p[0] - t * dx, z - p[1] - t * dz);
-}
 
 // ---------------------------------------------------------------- textures
 
@@ -260,7 +271,7 @@ export function buildRaday(city: CityData, place: Placement, prep: RadayPrep, op
   group.add(bollardMesh);
 
   // ---- Terraces.
-  const fronts = streetFacades(city, RADAY, 13).filter((f) => f.b !== prep.lot?.b);
+  const fronts = streetFacades(city, RADAY, 13);
   const deck: THREE.BufferGeometry[] = [], open: THREE.BufferGeometry[] = [], closed: THREE.BufferGeometry[] = [], bulbs: THREE.BufferGeometry[] = [];
   const AWNINGS = [0x3a2a22, 0x1d1d1d, 0xe6dcc2, 0xf2f1ec];
   let n = 0;
@@ -480,105 +491,186 @@ function artNouveau(f: Facade) {
 }
 
 /** Firewall brick with patched plaster, light-shaft slits and chimney-flue marks. */
-export const firewallTexture = () => canvasTex(256, 256, (g) => {
-  g.fillStyle = '#8a5a44'; g.fillRect(0, 0, 256, 256);
-  for (let r = 0; r < 32; r++) for (let c = -1; c < 9; c++) {
-    const v = ((r * 13 + c * 7) % 9) * 5;
-    g.fillStyle = `rgb(${140 + v},${82 + v / 2},${62 + v / 3})`;
+export const firewallTexture = () => canvasTex(512, 512, (g) => {
+  // One repeat = 6 m. Old brick, a few soft plaster patches, sooty flue streaks.
+  let seed = 7;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  g.fillStyle = '#8a5a44'; g.fillRect(0, 0, 512, 512);
+  for (let r = 0; r < 64; r++) for (let c = -1; c < 17; c++) {
+    const v = Math.floor(rnd() * 40);
+    g.fillStyle = `rgb(${128 + v},${80 + v / 2},${60 + v / 3})`;
     g.fillRect(c * 32 + (r % 2) * 16 + 1, r * 8 + 1, 30, 6);
   }
-  g.fillStyle = 'rgba(190,180,160,0.85)';
-  g.fillRect(30, 40, 70, 50); g.fillRect(150, 150, 60, 80); g.fillRect(10, 190, 40, 30);
-  g.fillStyle = 'rgba(60,50,45,0.6)';
-  g.fillRect(120, 0, 10, 256);
+  // Irregular plaster remains, blotchy rather than square.
+  for (let i = 0; i < 4; i++) {
+    const x = rnd() * 512, y = rnd() * 512, rx = 40 + rnd() * 70, ry = 25 + rnd() * 45;
+    g.fillStyle = `rgba(${185 + rnd() * 20},${172 + rnd() * 20},${150 + rnd() * 20},0.75)`;
+    g.beginPath();
+    for (let a = 0; a < Math.PI * 2; a += 0.5) g.lineTo(x + Math.cos(a) * rx * (0.7 + rnd() * 0.5), y + Math.sin(a) * ry * (0.7 + rnd() * 0.5));
+    g.closePath(); g.fill();
+  }
+  // Dark streaks where flues and old floors were.
+  g.fillStyle = 'rgba(50,40,35,0.35)';
+  g.fillRect(140, 0, 18, 512); g.fillRect(380, 0, 12, 512);
+  g.fillStyle = 'rgba(60,50,40,0.2)';
+  for (const y of [120, 300, 470]) g.fillRect(0, y, 512, 6);
 });
 
-/** The empty lot between firewalls: fence, gravel, the substation box and the
- *  always-stocked hidden spot behind it (`spot`). Built before the item system. */
-export function buildLot(lot: NonNullable<RadayPrep['lot']>, place: Placement) {
+/** The empty lot between firewalls: a fence of green posts and red-white tape along the
+ *  street, gravel and loose paving stones inside, bare brick firewalls with chimneys on
+ *  the neighbours, posters and tags on the substation, planters and bike-share bikes on
+ *  the pavement, and the always-stocked hidden spot tucked beside the substation.
+ *  Built before the item system. */
+export function buildLot(lot: Lot, place: Placement) {
   const group = new THREE.Group();
   group.name = 'empty lot';
   const colliders: Box[] = [];
   const lines: Vec2[][] = [];
-  const ring = lot.b.outer;
-  const front = lot.front;
   const parts: THREE.BufferGeometry[] = [];
-  // Firewalls: neighbour walls along the lot's other edges get bare brick.
+  const { o, u, n } = lot;
+  const W = (t: number, off: number): Vec2 => [o[0] + u[0] * t + n[0] * off, o[1] + u[1] * t + n[1] * off];
+  const inLot = (x: number, z: number) => lot.cells.has(`${Math.floor(x)},${Math.floor(z)}`);
+  const rot = Math.atan2(-n[0], -n[1]); // local +z faces the street
+
+  // Firewalls: every neighbour wall that faces into the lot gets bare, patched brick and
+  // chimney stacks along its top.
   const fire = firewallTexture();
-  for (let i = 0; i < ring.length; i++) {
-    const a = ring[i], c = ring[(i + 1) % ring.length];
-    if ((a === front.a && c === front.c) || (a === front.c && c === front.a)) continue;
-    const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-    if (len < 2) continue;
-    const mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
-    let nx = (c[1] - a[1]) / len, nz = -(c[0] - a[0]) / len;
-    if (!pointInPolygon(mx + nx * 0.3, mz + nz * 0.3, ring)) { nx = -nx; nz = -nz; } // into the lot
-    const nb = place.buildings.at(mx - nx * 0.5, mz - nz * 0.5);
-    if (!nb) continue;
-    const h = nb.h;
-    const tex = fire.clone();
-    tex.needsUpdate = true;
-    tex.repeat.set(len / 6, h / 6);
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(len, h), new THREE.MeshLambertMaterial({ map: tex }));
-    wall.position.set(mx + nx * 0.05, h / 2, mz + nz * 0.05);
-    wall.rotation.y = Math.atan2(nx, nz);
-    group.add(wall);
-    // Stepped chimney stacks on top of the firewall.
-    for (const s of [-0.3, 0.25]) parts.push(colored(new THREE.BoxGeometry(0.7, 1.4, 0.5).translate(mx + ((c[0] - a[0]) * s), h + 0.7, mz + ((c[1] - a[1]) * s)), 0x7a4a38));
+  const seen = new Set<Building>();
+  for (const [x, z] of lot.hull) for (const b of place.buildings.near(x, z)) seen.add(b);
+  for (const b of seen) {
+    if (b.scenery || b.h < 6) continue;
+    const ring = b.outer;
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], c = ring[(i + 1) % ring.length];
+      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (len < 2) continue;
+      const mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
+      let nx = (c[1] - a[1]) / len, nz = -(c[0] - a[0]) / len;
+      if (pointInPolygon(mx + nx * 0.3, mz + nz * 0.3, ring)) { nx = -nx; nz = -nz; } // outward
+      if (!inLot(mx + nx * 1.2, mz + nz * 1.2)) continue;
+      const tex = fire.clone();
+      tex.needsUpdate = true;
+      tex.repeat.set(len / 10, b.h / 10);
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(len, b.h), new THREE.MeshLambertMaterial({ map: tex }));
+      wall.position.set(mx + nx * 0.05, b.h / 2, mz + nz * 0.05);
+      wall.rotation.y = Math.atan2(nx, nz);
+      group.add(wall);
+      for (let s = 0.15; s < 1; s += Math.max(0.2, 5 / len)) {
+        parts.push(colored(new THREE.BoxGeometry(0.8, 1.5, 0.6).translate(a[0] + (c[0] - a[0]) * s - nx * 0.4, b.h + 0.75, a[1] + (c[1] - a[1]) * s - nz * 0.4), 0x8a4a34));
+      }
+    }
   }
-  // Fence 2.6 m back from the street, green posts with red-white tape.
-  const ux = (front.c[0] - front.a[0]) / front.len, uz = (front.c[1] - front.a[1]) / front.len;
-  const inx = -front.nx, inz = -front.nz;
-  const rot = Math.atan2(front.nx, front.nz);
-  const fa: Vec2 = [front.a[0] + inx * 2.6 + ux * 0.3, front.a[1] + inz * 2.6 + uz * 0.3];
-  const fc: Vec2 = [front.c[0] + inx * 2.6 - ux * 0.3, front.c[1] + inz * 2.6 - uz * 0.3];
-  lines.push([[front.a[0] + inx * 2.6, front.a[1] + inz * 2.6], [front.c[0] + inx * 2.6, front.c[1] + inz * 2.6]]);
-  const fl = Math.hypot(fc[0] - fa[0], fc[1] - fa[1]);
-  for (let t = 0; t <= fl + 0.01; t += 2) {
-    const x = fa[0] + ux * t, z = fa[1] + uz * t;
-    parts.push(colored(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6).translate(x, 0.6, z), 0x2f6a3a));
+
+  // Fence along the street: green posts, red-white tape, a yellow-black run at one end.
+  const f0 = W(lot.t0 + 0.4, lot.fence), f1 = W(lot.t1 - 0.4, lot.fence);
+  lines.push([f0, f1]);
+  const fl = Math.hypot(f1[0] - f0[0], f1[1] - f0[1]);
+  for (let t = 0; t <= fl + 0.01; t += 2.2) {
+    const [x, z] = [f0[0] + u[0] * t, f0[1] + u[1] * t];
+    parts.push(colored(new THREE.CylinderGeometry(0.045, 0.05, 1.3, 6).translate(x, 0.65, z), 0x2f6a3a));
   }
-  const tapeTex = canvasTex(64, 8, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? '#c8202c' : '#f4f4f4'; g.fillRect(i * 8, 0, 8, 8); } });
-  tapeTex.repeat.set(fl / 0.5, 1);
-  for (const y of [0.6, 1.05]) {
-    const tape = new THREE.Mesh(new THREE.PlaneGeometry(fl, 0.07), new THREE.MeshLambertMaterial({ map: tapeTex, side: THREE.DoubleSide }));
-    tape.position.set((fa[0] + fc[0]) / 2, y, (fa[1] + fc[1]) / 2);
+  const tapeTex = (a: string, b: string) => canvasTex(64, 8, (g) => { for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? a : b; g.fillRect(i * 8, 0, 8, 8); } });
+  const red = tapeTex('#c8202c', '#f4f4f4'), yellow = tapeTex('#141414', '#f2c418');
+  for (const [y, tex] of [[0.62, red], [1.08, red], [0.85, yellow]] as const) {
+    const len = tex === yellow ? Math.min(fl, 9) : fl;
+    const t = tex.clone(); t.needsUpdate = true; t.repeat.set(len / 0.5, 1);
+    const tape = new THREE.Mesh(new THREE.PlaneGeometry(len, 0.07), new THREE.MeshLambertMaterial({ map: t, side: THREE.DoubleSide }));
+    const m = tex === yellow ? fl - len / 2 : fl / 2;
+    tape.position.set(f0[0] + u[0] * m + n[0] * 0.03, y, f0[1] + u[1] * m + n[1] * 0.03);
     tape.rotation.y = rot;
     group.add(tape);
   }
-  // Inside: gravel heap and loose paving stones.
-  const cx = (front.a[0] + front.c[0]) / 2 + inx * 6, cz = (front.a[1] + front.c[1]) / 2 + inz * 6;
-  parts.push(colored(new THREE.ConeGeometry(2.2, 1.3, 9).translate(cx, 0.65, cz), 0x9a948a));
-  for (let i = 0; i < 10; i++) {
-    const a = i * 2.3, r = 1.5 + (i % 3) * 0.9;
-    parts.push(colored(new THREE.BoxGeometry(0.4, 0.1, 0.4).rotateY(a).translate(cx + Math.cos(a) * r + ux * 2, 0.05 + (i % 2) * 0.1, cz + Math.sin(a) * r + uz * 2), 0xb5ab98));
+
+  // Inside: a gravel heap, loose paving stones, a pile of tyres, weeds.
+  const inside = [...lot.cells].map((c) => c.split(',').map(Number) as Vec2).map(([x, z]) => [x + 0.5, z + 0.5] as Vec2)
+    .filter(([x, z]) => {
+      const off = (x - o[0]) * n[0] + (z - o[1]) * n[1];
+      return off > lot.fence + 3 && inLot(x + 2, z) && inLot(x - 2, z) && inLot(x, z + 2) && inLot(x, z - 2);
+    });
+  const pick = (f: number) => inside[Math.floor(f * (inside.length - 1))];
+  if (inside.length) {
+    const [gx, gz] = pick(0.45);
+    parts.push(colored(new THREE.ConeGeometry(2.6, 1.4, 10).translate(gx, 0.7, gz), 0x9a948a));
+    parts.push(colored(new THREE.ConeGeometry(1.4, 0.8, 8).translate(gx + 2.2, 0.4, gz + 1.2), 0xa8a296));
+    for (let i = 0; i < 18; i++) {
+      const [sx, sz] = pick((i * 0.37 + 0.11) % 1);
+      parts.push(colored(new THREE.BoxGeometry(0.4, 0.1, 0.4).rotateY(i * 1.3).translate(sx + Math.sin(i) * 0.8, 0.05 + (i % 3) * 0.1, sz + Math.cos(i) * 0.8), 0xb5ab98));
+    }
+    for (let i = 0; i < 26; i++) {
+      const [wx, wz] = pick((i * 0.53 + 0.07) % 1);
+      parts.push(colored(new THREE.IcosahedronGeometry(0.35 + (i % 3) * 0.12, 0).scale(1, 0.6, 1).translate(wx, 0.15, wz), i % 2 ? 0x5a7a3a : 0x6a8a44));
+    }
+    const [tx, tz] = pick(0.8);
+    for (let i = 0; i < 4; i++) parts.push(colored(new THREE.TorusGeometry(0.33, 0.12, 6, 12).rotateX(Math.PI / 2).translate(tx, 0.12 + i * 0.22, tz), 0x1d1d1d));
   }
-  // Street side: the substation box covered in posters and tags, two big green planters.
-  const sbx = (front.a[0] + front.c[0]) / 2 + inx * 1.2 - ux * front.len * 0.22, sbz = (front.a[1] + front.c[1]) / 2 + inz * 1.2 - uz * front.len * 0.22;
+
+  // Posters, notices and tags on the substation's street sides.
   const posterTex = canvasTex(256, 192, (g) => {
-    g.fillStyle = '#7a7a72'; g.fillRect(0, 0, 256, 192);
-    const cols = ['#e8d84a', '#f4f4f0', '#e86a3a', '#8ac8e8', '#f0a0c0'];
-    for (let i = 0; i < 9; i++) { g.fillStyle = cols[i % cols.length]; g.save(); g.translate(20 + (i % 4) * 60, 16 + Math.floor(i / 4) * 60); g.rotate((i % 3 - 1) * 0.08); g.fillRect(0, 0, 54, 70); g.fillStyle = '#222'; g.fillRect(6, 10, 40, 6); g.fillRect(6, 24, 30, 4); g.restore(); }
-    g.font = 'bold 60px Impact, sans-serif'; g.fillStyle = '#c8202c'; g.strokeStyle = '#111'; g.lineWidth = 6; g.strokeText('BUBU', 128, 170); g.fillText('BUBU', 128, 170);
+    g.fillStyle = '#d8d4c8'; g.fillRect(0, 0, 256, 192);
+    const cols = ['#e8d84a', '#f4f4f0', '#e86a3a', '#8ac8e8', '#f0a0c0', '#9ad86a'];
+    for (let i = 0; i < 14; i++) { g.fillStyle = cols[i % cols.length]; g.save(); g.translate(8 + (i % 5) * 50, 8 + Math.floor(i / 5) * 58); g.rotate((i % 3 - 1) * 0.08); g.fillRect(0, 0, 46, 62); g.fillStyle = '#222'; g.fillRect(5, 8, 34, 6); g.fillRect(5, 22, 26, 4); g.fillRect(5, 30, 30, 3); g.restore(); }
+    g.font = 'bold 54px Impact, sans-serif'; g.lineWidth = 6; g.strokeStyle = '#111';
+    g.fillStyle = '#c8202c'; g.strokeText('BUBU', 70, 178); g.fillText('BUBU', 70, 178);
+    g.fillStyle = '#2457c5'; g.strokeText('ÖZ', 200, 120); g.fillText('ÖZ', 200, 120);
   }, false);
-  const box = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.7, 0.9), [
-    new THREE.MeshLambertMaterial({ color: 0x6a6a64 }), new THREE.MeshLambertMaterial({ color: 0x6a6a64 }),
-    new THREE.MeshLambertMaterial({ color: 0x5a5a54 }), new THREE.MeshLambertMaterial({ color: 0x5a5a54 }),
-    new THREE.MeshLambertMaterial({ map: posterTex }), new THREE.MeshLambertMaterial({ map: posterTex }),
-  ]);
-  box.position.set(sbx, 0.85, sbz);
-  box.rotation.y = rot;
-  group.add(box);
-  colliders.push({ x: sbx, z: sbz, w: 2.2, d: 0.9, rot });
-  for (const s of [0.28]) {
-    const px = (front.a[0] + front.c[0]) / 2 + inx * 1.0 + ux * front.len * s, pz = (front.a[1] + front.c[1]) / 2 + inz * 1.0 + uz * front.len * s;
-    parts.push(colored(new THREE.BoxGeometry(1.8, 0.8, 0.9).rotateY(rot).translate(px, 0.4, pz), 0x24402c));
-    parts.push(colored(new THREE.IcosahedronGeometry(0.6, 0).scale(1.4, 0.8, 0.7).rotateY(rot).translate(px, 1.0, pz), 0x4f7a3a));
-    colliders.push({ x: px, z: pz, w: 1.8, d: 0.9, rot });
+  const posterMat = new THREE.MeshLambertMaterial({ map: posterTex });
+  let spot: Spot;
+  const sub = lot.substation;
+  if (sub) {
+    const ring = sub.outer;
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], c = ring[(i + 1) % ring.length];
+      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (len < 1) continue;
+      let nx = (c[1] - a[1]) / len, nz = -(c[0] - a[0]) / len;
+      const mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
+      if (pointInPolygon(mx + nx * 0.2, mz + nz * 0.2, ring)) { nx = -nx; nz = -nz; }
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(len - 0.2, Math.min(sub.h, 3) - 0.3), posterMat);
+      plane.position.set(mx + nx * 0.04, (Math.min(sub.h, 3) - 0.3) / 2 + 0.1, mz + nz * 0.04);
+      plane.rotation.y = Math.atan2(nx, nz);
+      group.add(plane);
+    }
+    // Tucked against the substation's south side, on the pavement.
+    let cx = 0, cz = 0;
+    for (const [x, z] of ring) { cx += x; cz += z; }
+    cx /= ring.length; cz /= ring.length;
+    let best: Vec2 = W(lot.t0 - 1, lot.fence - 1);
+    for (let d = 1; d < 8; d += 0.5) {
+      const p: Vec2 = [cx + u[0] * d, cz + u[1] * d];
+      const off = (p[0] - o[0]) * n[0] + (p[1] - o[1]) * n[1];
+      if (place.free(p[0], p[1], 0.5) && off < lot.fence - 0.4) { best = p; break; }
+      const q: Vec2 = [p[0] - n[0] * 2, p[1] - n[1] * 2];
+      if (place.free(q[0], q[1], 0.5)) { best = q; break; }
+    }
+    spot = { x: best[0], z: best[1], zone: 'raday', green: false, dir: rot };
+  } else {
+    const p = W(lot.t0 + 1, lot.fence - 0.8);
+    spot = { x: p[0], z: p[1], zone: 'raday', green: false, dir: rot };
   }
-  group.add(new THREE.Mesh(merge(parts), new THREE.MeshLambertMaterial({ vertexColors: true })));
-  // The hidden spot: behind the substation box, against the fence.
-  const spot: Spot = { x: sbx + inx * 0.95, z: sbz + inz * 0.95, zone: 'raday', green: false, dir: rot };
+
+  // On the pavement in front: big dark green planters and a bike-share dock with lime bikes.
+  for (const t of [lot.t0 + 3.5, lot.t0 + 7]) {
+    const [px, pz] = W(t, lot.fence - 0.9);
+    if (!place.free(px, pz, 0.6)) continue;
+    parts.push(colored(new THREE.BoxGeometry(1.4, 0.85, 1.0).rotateY(rot).translate(px, 0.425, pz), 0x24402c));
+    parts.push(colored(new THREE.IcosahedronGeometry(0.55, 0).scale(1.2, 0.9, 0.9).translate(px, 1.15, pz), 0x4f7a3a));
+    colliders.push({ x: px, z: pz, w: 1.4, d: 1.0, rot });
+  }
+  for (let i = 0; i < 3; i++) {
+    const [bx, bz] = W(lot.t0 + 10 + i * 0.9, lot.fence - 1.2);
+    if (!place.free(bx, bz, 0.4)) continue;
+    const m = new THREE.Matrix4().makeRotationY(rot + Math.PI / 2).setPosition(bx, 0, bz);
+    for (const s of [-0.5, 0.5]) {
+      const w = colored(new THREE.TorusGeometry(0.32, 0.035, 4, 14).translate(s, 0.34, 0), 0x1d1d1d); w.applyMatrix4(m); parts.push(w);
+    }
+    const fr = colored(new THREE.BoxGeometry(1.0, 0.07, 0.07).translate(0, 0.55, 0), 0x9ad82a); fr.applyMatrix4(m); parts.push(fr);
+    const bk = colored(new THREE.BoxGeometry(0.3, 0.2, 0.25).translate(0.55, 0.85, 0), 0x9ad82a); bk.applyMatrix4(m); parts.push(bk);
+    const dock = colored(new THREE.BoxGeometry(0.12, 0.9, 0.2).translate(0.8, 0.45, 0), 0x3a3a3a); dock.applyMatrix4(m); parts.push(dock);
+    colliders.push({ x: bx, z: bz, w: 0.4, d: 1.3, rot });
+  }
+
+  const mesh = new THREE.Mesh(merge(parts), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.castShadow = mesh.receiveShadow = true;
+  group.add(mesh);
   return { group, colliders, lines, spot };
 }
-

@@ -35,6 +35,7 @@ export function zoneWeight(zone: Zone, minute: number) {
   const weekday = dayIndex(minute) === 0; // Friday
   switch (zone) {
     case 'raday': return hourIn(h, 18, 3) ? 5 : 1.6;
+    case 'rakpart': return hourIn(h, 17, 3) ? 4.5 : 1.2;
     case 'nehru': return hourIn(h, 17, 24) ? 4.5 : hourIn(h, 10, 17) ? 1.6 : 0.6;
     case 'corvinus': return weekday && hourIn(h, 8, 19) ? 3.5 : 0.8;
     case 'market': return hourIn(h, 7, 18) ? 2.2 : 0.7;
@@ -136,7 +137,7 @@ export class ItemSystem {
       pts.push({ x, z });
     }
     // Top up the hot zones so each has a few bins.
-    const want: [Zone, number][] = [['raday', 8], ['nehru', 8], ['corvinus', 5], ['market', 4], ['kalvin', 3], ['bakats', 3], ['lonyay', 4]];
+    const want: [Zone, number][] = [['raday', 8], ['nehru', 8], ['corvinus', 5], ['market', 4], ['kalvin', 3], ['bakats', 3], ['lonyay', 4], ['rakpart', 5]];
     for (const [zone, n] of want) {
       const spots = this.place.spotsIn(zone);
       let have = pts.filter((p) => this.place.zoneAt(p.x, p.z) === zone).length;
@@ -373,7 +374,7 @@ export class ItemSystem {
     const weekday = dayIndex(this.state.minute) === 0;
     const [lo, hi] = BIN_TYPES[b.type].items;
     let n = rng.int(lo, hi);
-    if (b.zone === 'raday' && hourIn(h, 18, 4)) n += rng.int(1, 3);
+    if ((b.zone === 'raday' || b.zone === 'rakpart') && hourIn(h, 18, 4)) n += rng.int(1, 3);
     if (b.zone === 'corvinus' && weekday && hourIn(h, 9, 19)) n += rng.int(1, 3);
     if (b.zone === 'nehru' && hourIn(h, 17, 24)) n += rng.int(1, 3);
     if (b.zone === 'bakats' && hourIn(h, 17, 23)) n += rng.int(1, 2);
@@ -432,8 +433,11 @@ export class ItemSystem {
   private spawnParty() {
     const rng = this.state.rng;
     const raday = this.place.spotsIn('raday');
+    const rakpart = this.place.spotsIn('rakpart');
     const nehru = this.place.spots.filter((s) => s.zone === 'nehru' && s.green);
-    const pool = rng.chance(0.6) && raday.length ? raday : nehru.length ? nehru : this.place.spots;
+    // Ráday, then the riverside pubs by Bálna, then Nehru part.
+    const roll = rng.next();
+    const pool = roll < 0.45 && raday.length ? raday : roll < 0.7 && rakpart.length ? rakpart : nehru.length ? nehru : this.place.spots;
     const s = rng.pick(pool);
     const mesh = new THREE.Mesh(this.partyGeo, new THREE.MeshLambertMaterial({ vertexColors: true }));
     mesh.position.set(s.x, 0, s.z);
