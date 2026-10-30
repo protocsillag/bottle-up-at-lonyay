@@ -8,6 +8,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | --- | --- | --- |
 | `lonyay-utca/` | Lónyay utca, around the Református gimnázium and the SPAR corner | Waiting for M11 |
 | `matyas-utca/` | Mátyás utca, a quieter side street of tenements, gates and doors | Waiting for M11 |
+| `raday-utca/` | Ráday utca, the café and bar street | Waiting for M11 |
 | `../mohu-repont-machines.png` | The REpont machine pair (used in M5) | Used |
 
 ## `lonyay-utca/` — Lónyay utca
@@ -84,3 +85,44 @@ A narrow side street, quieter than Lónyay: straight, one carriageway, cars park
 - Graffiti tags on almost every ground floor and plinth, rarely higher than 2.5 m. A set of 10–15 generic tag decals (invented, not copied) on random ground-floor walls would do a lot.
 - Ground-floor plinths often painted a different colour (dark red, grey) from the facade above.
 - Pavement under repair in places: patched asphalt, plywood boards over holes, a road-works post with yellow-and-black tape. A couple of these per run would be a nice obstacle.
+
+## `raday-utca/` — Ráday utca
+
+The café and bar street, and the busiest place in the game at night. It is paved, not asphalt: this fixes the "Ráday looks all-asphalt" gap in `CLAUDE.md`.
+
+**Ground and street layout.**
+
+- The whole street is block paving at one level, no tall kerbs. Pavements are light beige square tiles laid on the diagonal; the strip where cars drive is grey concrete paving blocks; a steel drainage channel runs between them.
+- Car-free stretches (check OSM `highway=pedestrian`) and stretches where cars may drive one way, slowly, with a few parking bays (`lamp-flower-basket-bollards.jpg`, `waffle-terrace-hexagon-planters.jpg`).
+- A long row of dark green cast-iron bollards with rounded tops separates the walking strip from cars, about every 1.5 m.
+- Large square cast-iron utility covers in the pavement, round manhole covers in the middle.
+
+**Street furniture.** This is the signature of Ráday, and different from the curly lamps everywhere else.
+
+- **Lamps:** dark green cast-iron posts with a fluted base, a curly scroll arm at the top, and a copper bell-shaped shade over a glass globe. About every 20 m.
+- **Hanging flower baskets** on the lamp posts at about 3.5 m: big round baskets of dark purple and lime-green trailing leaves with red flowers.
+- Bike-share docks with lime-green bikes; small direction signs for the bike scheme on the lamp posts (use a generic "BUBI"-style green sign without the real logos).
+- Blue parking and one-way signs, a yellow sticker-covered traffic beacon on a concrete base, string lights across the street.
+
+**Terraces.** Most of the street width is restaurant terraces. Replace the current red-awning look with this mix:
+
+- Wooden deck platforms raised a step above the paving, under awnings on black steel frames: dark brown or black awnings, cream ones, a long white one with festoon bulbs hanging from its edge.
+- Furniture: folding beer tables and benches (light wood with green steel legs), café tables with wicker chairs, tall black planter pots, oleanders and small trees in pots, low green railings around each terrace, artificial grass mats.
+- One terrace divider is a wall of colourful hexagon boxes (red, yellow, blue, pink, light grey) with plants in some of them. Great as a one-off landmark.
+- **Time of day matters:** in the morning terraces are closed, with tables stacked or covered with dark green tarps and benches folded on the tables (`art-nouveau-house-beer-tables.jpg`, `pedestrian-part-terraces.jpg`). From late afternoon they open with people, and at night they are full. That is when party leftovers and bin bottles here should peak.
+- Gilded picture-frame menu boxes on the facades, A-frame chalkboards on the pavement, Hungarian flags on brackets above doorways.
+
+**Buildings.**
+
+- A mix of cream, white and pale grey eclectic tenements with balconies and rounded corner bays, a grey zinc mansard roof, and one modern 1960s block with AC units on its balconies.
+- **The Art Nouveau house** (`art-nouveau-house-beer-tables.jpg`): white secession facade with wavy bays and curving balconies, blue window frames, thin peach-and-blue tile stripes, green-and-orange ceramic fruit ornaments near the top, and a horseshoe-arched window on the ground floor. Worth hand-building as a landmark.
+- Next to it, an ornate red-brick-and-cream neo-Renaissance tenement with deep dark eaves; another with yellow stucco window frames on brick (`waffle-terrace-hexagon-planters.jpg`).
+- A building wrapped in scaffolding with green netting.
+- **Ground-floor shops** (`ground-floor-shops.jpg`): every arch on the ground floor is a small business: a 24/7 vending-machine shop with a bright green sign, a Korean street-food place with flags, menus and delivery stickers, a coffee menu board, a wine shop. Steps up to the doors, AC units above. Use invented names in the game, e.g. "AUTOMATA 0–24", "KOREAI BÜFÉ", "BOROK".
+
+**The empty lot** (`firewall-empty-lot.jpg`). A gap where a building is missing, opening onto a small paved square.
+
+- Exposed firewalls (tűzfal) of the neighbours: bare old brick, stepped gables with chimneys, narrow light shafts with tiny windows, patched in many places.
+- The lot is fenced off with green posts and red-white and yellow-black tape, with a gravel heap and loose paving stones inside.
+- A graffiti-and-poster-covered electrical substation box, a mural on a wall, big dark green planter boxes, bike-share bikes.
+- Gameplay idea: make the fenced lot a hidden spot that is always worth checking, behind the substation box.
