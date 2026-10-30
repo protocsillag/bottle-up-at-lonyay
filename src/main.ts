@@ -29,7 +29,7 @@ import { Hud, funniestStat } from './ui/Hud';
 import { GameState } from './state/GameState';
 import { newSeed } from './state/rng';
 import { GAME_MIN_PER_SEC, formatFt } from './state/time';
-import { BIKE, DOG, EXTRA_BAGS, GLASS_BREAK, HUNGER, TILL, TIPSY, TRAFFIC } from './state/balance';
+import { BIKE, DOG, GLASS_BREAK, HUNGER, TILL, TIPSY, TRAFFIC } from './state/balance';
 import { Traffic } from './npc/Traffic';
 import { Puddles } from './world/Puddles';
 import type { ShopDoor } from './world/shops/Shops';
@@ -140,7 +140,8 @@ for (const p of parking.cars) world.addBox(p.x, p.z, 1.8, 4.3, p.rot);
 const state = new GameState(newSeed());
 const items = new ItemSystem(city, placement, state, {
   hidden: dressing.hiddenSpots,
-  bagSpots: [...dressing.kioskSpots, ...dressing.hiddenSpots.map((s) => [s.x, s.z] as [number, number])],
+  // One street bag behind a Nehru part kiosk, one on Ráday (book kiosk or the empty lot).
+  bagSpots: [dressing.kioskSpots, dressing.hiddenSpots.map((s) => [s.x, s.z] as [number, number])],
   skips: dressing.skips,
 });
 scene.add(items.group);
@@ -359,11 +360,9 @@ function startRun() {
   returns.reset();
   items.reset();
   if (shops.inside) shops.leave(false);
-  // About 4 extra bags per run, a third of them on the street.
-  const extraBags = state.rng.int(EXTRA_BAGS.count[0], EXTRA_BAGS.count[1]);
-  const streetBags = Math.max(1, Math.round(extraBags * EXTRA_BAGS.streetShare));
-  items.placeBags(streetBags);
-  buildings.reset(extraBags - streetBags);
+  // Extra bags: one in Nehru part, one on Ráday, and about one courtyard in ten.
+  items.placeBags();
+  buildings.reset();
   returns.stop();
   crowd.reset();
   dogMess.reset();

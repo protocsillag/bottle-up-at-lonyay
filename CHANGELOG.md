@@ -1,5 +1,9 @@
 # Changelog
 
+## Bags easier to find (2026-10-30)
+
+- Every run now has a blue bag behind one of the Nehru part kiosks and one on Ráday utca (behind the book kiosk or in the empty lot), plus a bag in about one courtyard in ten. Before, there were 3–5 bags in total, mostly in a handful of random courtyards.
+
 ## M12 Shared high scores (2026-10-30)
 
 - A shared top 10 for everyone: a small Cloudflare Worker with a D1 database (free plan) in `server/`. The game posts each run at the end screen and shows the shared table on the title and end screens.

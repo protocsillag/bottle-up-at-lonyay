@@ -14,7 +14,7 @@ import { INTERCOM_LINES, type Line } from '../../audio/lines';
 import { say } from '../../audio/voice';
 import { hourIn } from '../../state/time';
 import { bigBagGeometry } from '../items/models';
-import { COURTYARD } from '../../state/balance';
+import { COURTYARD, EXTRA_BAGS } from '../../state/balance';
 import { sound } from '../../audio/Sfx';
 
 // Getting into buildings: gates (residents, the bell), courtyard interiors with their
@@ -43,7 +43,6 @@ export class BuildingSystem {
   readonly group = new THREE.Group();
   private courts = new Map<string, CourtState>();
   private jackpotGates = new Set<number>();
-  private bagGates = new Set<number>();
   private lastLine: Line | null = null;
   // Inside state.
   current: Gate | null = null;
@@ -76,7 +75,7 @@ export class BuildingSystem {
   }
 
   /** New run; `bags` extra bags are hidden in random courtyards. */
-  reset(bags: number) {
+  reset() {
     if (this.current) this.leave(false);
     this.gates.reset();
     this.courts.clear();
@@ -85,8 +84,6 @@ export class BuildingSystem {
     this.jackpotGates = new Set();
     const want = rng.int(COURTYARD.jackpots[0], COURTYARD.jackpots[1]);
     while (this.jackpotGates.size < Math.min(want, n)) this.jackpotGates.add(rng.int(0, n - 1));
-    this.bagGates = new Set();
-    while (this.bagGates.size < Math.min(bags, n)) this.bagGates.add(rng.int(0, n - 1));
   }
 
   /** Lazily rolls a courtyard's contents the first time you enter this run. */
@@ -103,7 +100,7 @@ export class BuildingSystem {
       }),
       jackpot: jackpot ? { kind: rng.chance(0.5) ? 'skip' : 'party', count: this.state.supply(rng.int(COURTYARD.jackpotItems[0], COURTYARD.jackpotItems[1])) } : null,
       hazmester: rng.chance(jackpot ? COURTYARD.hazmesterJackpot : COURTYARD.hazmester),
-      bigBag: this.bagGates.has(g.index),
+      bigBag: rng.chance(EXTRA_BAGS.courtyardChance),
     };
     this.courts.set(g.b.id, c);
     return c;

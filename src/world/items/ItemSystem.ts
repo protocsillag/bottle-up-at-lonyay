@@ -67,9 +67,9 @@ export class ItemSystem {
   private partyGeo = partyGeometry();
   private hiddenCandidates: Spot[];
   private noPlanter: Set<Spot>;
-  private bagSpots: [number, number][];
+  private bagSpots: [number, number][][];
 
-  constructor(private city: CityData, private place: Placement, private state: GameState, extra: { hidden?: Spot[]; bagSpots?: [number, number][]; skips?: { x: number; z: number }[] } = {}) {
+  constructor(private city: CityData, private place: Placement, private state: GameState, extra: { hidden?: Spot[]; bagSpots?: [number, number][][]; skips?: { x: number; z: number }[] } = {}) {
     this.skips = (extra.skips ?? []).map((k) => {
       const skip: { x: number; z: number; count: number; it: Interactable } = {
         x: k.x, z: k.z, count: 0,
@@ -303,18 +303,14 @@ export class ItemSystem {
     this.dirty = true;
   }
 
-  /** Hides `n` extra bags on the street: behind the Nehru part kiosks, the Ráday book
-   *  kiosk, or on a park lawn. The rest of the run's extra bags are in courtyards. */
-  placeBags(n: number) {
+  /** One bag per group of spots (Nehru part kiosks, Ráday utca), at a random spot in it. */
+  placeBags() {
     for (const b of this.bags) this.group.remove(b.mesh);
     this.bags = [];
     const rng = this.state.rng;
-    const nehru = this.place.spots.filter((s) => s.green);
-    const pool: [number, number][] = rng.shuffle([...this.bagSpots]);
-    for (let i = 0; i < n; i++) {
-      let x: number, z: number;
-      if (pool.length && rng.chance(0.75)) [x, z] = pool.pop()!;
-      else ({ x, z } = rng.pick(nehru.length ? nehru : this.place.spots));
+    for (const group of this.bagSpots) {
+      if (!group.length) continue;
+      const [x, z] = rng.pick(group);
       const mesh = new THREE.Mesh(bigBagGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
       mesh.position.set(x, 0, z);
       mesh.rotation.y = rng.range(0, Math.PI * 2);

@@ -5,7 +5,9 @@ export const ITEM_VALUE_FT = 50;
 export const BAG_SIZE = 50;
 export const MAX_BAGS = 3;
 /** Extra bags hidden per run, and the share of them on the street (rest in courtyards). */
-export const EXTRA_BAGS = { count: [3, 5] as const, streetShare: 1 / 3 };
+/** Extra bags: one behind a Nehru part kiosk and one on Ráday utca (the book kiosk or the
+ *  empty lot) every run, plus a bag in about one courtyard in ten. */
+export const EXTRA_BAGS = { courtyardChance: 0.1 };
 export const SHOP_OPEN = 6;
 export const SHOP_CLOSE = 24;
 
