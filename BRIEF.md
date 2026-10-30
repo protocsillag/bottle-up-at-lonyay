@@ -27,7 +27,7 @@ A browser game in TypeScript with Three.js and Vite, deployed to GitHub Pages. N
 | State | One `GameState` module: clock, money, bag, character, run status |
 | Save | Last character in localStorage; high scores local first (`ScoreStore` interface), moved online to Cloudflare D1 in the last milestone |
 | Audio | In `public/audio/`: SFX synthesised in code; Hungarian voice lines generated offline with Piper TTS |
-| Controls | Laptop only for now: WASD + mouse look, Shift run, Space jump, E interact, F mount/dismount bike |
+| Controls | Laptop only for now: WASD + mouse look, Shift run, Space jump, E interact (also buys at the shop till), F mount/dismount bike; when tipsy (M10): P pee on a wall, hold E on a public bin to kick it over |
 
 Proposed layout: `src/world/` (city build, doors, bins), `src/player/`, `src/npc/`, `src/minigames/mohu/`, `src/ui/` (HUD, creator, scores), `src/state/`, `tools/osm/`, `server/` (score Worker, last milestone), `reference/` (images from Alex).
 
@@ -69,7 +69,9 @@ The playable area is Belső-Ferencváros at 1 game metre = 1 real metre, built f
 | Kálvin tér | Metro exit crowds, edge of the map |
 | Nehru part, Danube bank by Boráros tér | Riverside park full of picnickers: bins and lawns rich in bottles, especially in the evening |
 
-**Visual references** (Alex puts these in `reference/`):
+**Alex's own photos come first.** From M11, Alex's photos live in `reference/<location>/`, one folder per street or place, and `reference/README.md` says what each folder shows and what to take from it. Where a photo and the descriptions below disagree, the photo wins.
+
+**Visual references** (descriptions from image searches; the original search screenshots are not in the repo):
 
 | Place | What to capture |
 | --- | --- |
@@ -93,13 +95,15 @@ The playable area is Belső-Ferencváros at 1 game metre = 1 real metre, built f
 
 **Time:** 30 real minutes = 48 game hours, so 1 real minute = 1 hour 36 minutes of game time. A full day-night cycle lasts 15 real minutes.
 
+**Countdown (M10).** The end of the run must always be obvious. The HUD shows a countdown next to the clock, in real time, e.g. "Ends in 23:41", with the game time left underneath ("Sunday 08:00 · 37 h left"). At 5 real minutes left it turns orange and a toast says "5 minutes left — empty your bags!"; in the last 60 seconds it turns red, pulses and ticks audibly. The intro card states the end time too.
+
 **Money only counts at the machine.** Items in the bag are worth 0 Ft until they go through a Mohu machine. A full bag at closing time is a race to the counter.
 
-**The bag.** The character starts with a plastic bag holding 40 items (plastic bottles, cans and glass count the same). At the limit the prompt changes to "Bag full — go to a Mohu machine". One **IKEA-style big blue bag** is hidden per run, in a random courtyard or behind the Nehru part kiosks; picking it up raises the limit to 100 for the rest of the run. Its look is a generic blue woven bag with yellow handles, no logo.
+**Bags (changed in M10).** Every bag holds 50 items (plastic bottles, cans and glass count the same). The character starts with one bag and can carry at most 3, so 150 items. Extra bags are hidden around the area, about 4 per run, mostly in courtyards (about 1 in 3 of them on the street, e.g. behind the Nehru part kiosks or the Ráday book kiosk). The old single 100-item IKEA-style bag is replaced by these; the extra bags keep its look (generic blue woven bag with yellow handles, no logo). A 4th bag found while carrying 3 shows "Can't carry more bags". The character model shows one, two or three bags in hand and on the shoulder. At the limit the prompt changes to "Bags full — go to a Mohu machine".
 
-**Score ceiling: 50 000 Ft (1 000 items).** The world spawns about 1 400 items across the run, so a near-perfect route with the big bag found early can approach 50 000 Ft. A strong run lands around 25 000–35 000 Ft, a first run around 10 000 Ft.
+**Score ceiling: 50 000 Ft (1 000 items).** The world spawns about 1 400 items across the run, so a near-perfect route with extra bags found early can approach 50 000 Ft. A strong run lands around 25 000–35 000 Ft, a first run around 10 000 Ft. From M10 the score is the money left at the end, after food and beer.
 
-**HUD:** game clock and day, money in Ft, items in bag / capacity, stamina, a small north-up minimap with the two return points, status icons (slowed, on bike).
+**HUD:** countdown and game clock, money in Ft, items carried / capacity with the number of bags (e.g. "73 / 100 · 2 bags"), stamina, hunger (M10), a small north-up minimap with the two return points, status icons (slowed, on bike, hungry, tipsy).
 
 **Shop hours.** Both return points are open 06:00–24:00 every day of the run, Sunday included. Between midnight and 06:00 the doors are shut, so a full bag at 23:50 is a sprint, and the night is for filling up and waiting for the morning.
 
@@ -165,7 +169,7 @@ Plastic bottles, aluminium cans and glass bottles all count, each worth 50 Ft at
 
 ## Mohu machine mini-game
 
-At either return point the player walks up to a pair of REpont machines and presses E. The camera cuts to a close-up and the bag empties into the machine. Most items go in automatically at about 3 per second; the player only acts when the machine rejects one. A full 100-item bag takes about 45 seconds including rejects, which keeps a 1 000-item run possible.
+At either return point the player walks up to a pair of REpont machines and presses E. The camera cuts to a close-up and the bag empties into the machine. Most items go in automatically at about 3 per second; the player only acts when the machine rejects one. A full load of 3 bags (150 items) takes about a minute including rejects, which keeps a 1 000-item run possible.
 
 ![Two REpont machines side by side](reference/mohu-repont-machines.png)
 
@@ -208,17 +212,47 @@ Each item's condition (fine, crushed, wet, no deposit) is rolled when it is pick
 
 **Dog mess.** Dog walkers leave piles on the pavement, plus a few fixed ones per run. Stepping in one slows the player to 70% speed for 1 real minute, leaves brown footprints, and plays a sound. Bikes ride over them safely.
 
-**Bikes.** 6–10 unlocked bikes are scattered at random each run, leaning on railings or lamp posts. F to mount, F to dismount. Riding is about 8 m/s, no running, no bin searching while mounted. Crash into a pedestrian or wall and you fall off and lose a few seconds. A bike left behind stays where you dropped it. No moving traffic in v1; roads are crossable anywhere.
+**Bikes.** 6–10 unlocked bikes are scattered at random each run, leaning on railings or lamp posts. F to mount, F to dismount. Riding is about 8 m/s, no running, no bin searching while mounted. Crash into a pedestrian or wall and you fall off and lose a few seconds. A bike left behind stays where you dropped it.
 
-**No death.** The only fail state is running out of time with items still in the bag.
+**No death.** Nothing kills the player, cars included. The only fail state is running out of time with items still in the bag.
+
+## Hunger, beer and traffic (M10)
+
+**Shop till.** Inside SPAR and the Aldi corner of the market hall there is a till. E at the till opens a small menu; prices come out of your money at once. If you can't afford it, the cashier says "Nincs elég pénze, kérem." (You don't have enough money.)
+
+| Item | Price | Effect |
+| --- | --- | --- |
+| Food: bread roll with párizsi | 100 Ft | Fills the hunger bar completely |
+| Beer, a.k.a. "folyékony kenyér" (liquid bread) | 200 Ft | Tipsy for 2–6 game hours |
+
+**Hunger.** A hunger bar sits under stamina and starts full. A full bar lasts about 14 game hours (about 9 real minutes), so a player gets hungry roughly 3 times in a run. At 25% the HUD warns "Getting hungry"; you can eat any time to top up, so smart players eat before the shops close at midnight. When the bar is empty:
+
+- The character walks at 60% speed and cannot run.
+- No picking up, searching bins or courtyards; the prompt says "Too hungry — buy food at SPAR or Aldi".
+- Feeding a Mohu machine and buying food still work, since both are in the shops.
+- Hungry at night with the shops shut means a slow crawl until 06:00. That is the intended lesson.
+
+**Beer and being tipsy.** One beer makes the character tipsy for a random 2–6 game hours (about 1.25–3.75 real minutes). Another beer while tipsy restarts the timer and makes the wobble stronger. While tipsy:
+
+- Walking and running are 20% faster.
+- The world sways: a gentle camera roll and bob, a slight drift in steering, a soft blur at the screen edges. Keep it mild enough to stay playable and turn it down with the graphics quality setting.
+- **Pee on buildings:** press P next to a wall for a 3-second animation, a puddle decal that fades after a minute and a relieved sigh. A pedestrian within 10 m says something like "Nem szégyelli magát?!" (Have you no shame?!). Inside a courtyard, a házmester who sees it starts a chase. Counts toward the end-screen stats ("walls watered").
+- **Smash trash cans:** hold E for 1 s on a public bin to kick it over. All its items spill at once, faster than a normal 2 s search, but the bin stays broken and never refills that run. Counts toward the end-screen stats ("bins kicked").
+- Shown as a beer-mug status icon with the time left.
+
+**Traffic.** Cars drive the OSM roads; pedestrian streets and the pedestrian part of Ráday utca stay car-free. About 15–30 cars near the player at once, at roughly 30 km/h (8 m/s), following one-way rules from OSM and slowing at junctions. Parked cars stay as they are. Cars honk and slow down when you stand in the road ahead of them, but cannot stop in time if you step out close in front.
+
+- **Hit by a car:** the character is knocked down for 2 s, loses 1–5 items (they shatter or roll away and are gone), and the driver shouts something like "Nem látsz, haver?!" (Are you blind, mate?!). On a bike you also fall off. No other damage.
+- Cars are instanced simple low-poly models in common colours, with headlights at night.
+- A yellow tram on the körút edge (Vámház körút, Ferenc körút) may be added as moving scenery; it cannot be entered and hits like a car.
 
 ## High scores
 
 The top 10 table shows rank, portrait (128 × 128), name and amount in Ft, sorted by amount, ties broken by earlier date. A run that makes the top 10 lands on the table straight from the end screen with its row highlighted. Format amounts the Hungarian way: `12 350 Ft`.
 
-**Two steps.** Milestone 7 builds the top 10 in localStorage behind a `ScoreStore` interface, so the game is complete on one laptop. The shared online board comes last, in milestone 10.
+**Two steps.** Milestone 7 builds the top 10 in localStorage behind a `ScoreStore` interface, so the game is complete on one laptop. The shared online board comes last, in milestone 12.
 
-**Online backend (milestone 10): a Cloudflare Worker with a D1 database, on the free plan.** Free, no credit card, never pauses, and a top 10 board uses a tiny fraction of the daily limits.
+**Online backend (milestone 12): a Cloudflare Worker with a D1 database, on the free plan.** Free, no credit card, never pauses, and a top 10 board uses a tiny fraction of the daily limits.
 
 - Table `scores`: id, name, amount_ft, items, portrait (128 × 128 PNG as base64, under 20 KB), created_at.
 - `GET /scores` returns the top 10. `POST /scores` adds a run and returns its rank.
@@ -229,7 +263,7 @@ The top 10 table shows rank, portrait (128 × 128), name and amount in Ft, sorte
 
 ## Build plan
 
-Ten milestones, one per Claude Code session, each ending in something Alex can open and play. M3 is the first real playtest: if collecting and returning is not fun with grey boxes, fix that before adding polish.
+Twelve milestones, one per Claude Code session, each ending in something Alex can open and play. M1–M9 are built. M10 and M11 were added after Alex's first playtest, before the shared high scores. M3 is the first real playtest: if collecting and returning is not fun with grey boxes, fix that before adding polish.
 
 1. **M1 Setup and city.** Vite + TypeScript + Three.js scaffold, `CLAUDE.md`, GitHub Pages deploy. OSM import script, baked `city.json`, extruded grey buildings, streets, the map boundary. A capsule you can walk around at real scale.
 2. **M2 Player and camera.** Third-person character with walk, run, jump, stamina, collisions against buildings, follow camera, minimap.
@@ -240,7 +274,9 @@ Ten milestones, one per Claude Code session, each ending in something Alex can o
 7. **M7 Character creator and local scores.** Four presets, accessory slots, name, portrait capture, the top 10 screen with scores saved locally behind `ScoreStore`.
 8. **M8 Looking like Budapest.** Procedural tenement facades, the hand-built landmarks, SPAR and the market hall entrance and interiors, Nehru part, trees and lamps, colour pass from `reference/`.
 9. **M9 Polish.** Synthesised SFX and Piper-generated Hungarian voice lines, title screen, settings, performance pass, balance pass (ceiling about 50 000 Ft, strong run 25 000–35 000 Ft), playtest with friends.
-10. **M10 Shared high scores.** Cloudflare Worker + D1 in `server/`, anti-cheat checks, swap the local `ScoreStore` for the online one, keep local as the offline fallback, move existing local scores up.
+10. **M10 Gameplay round 2.** Bags of 50, up to 3 carried, about 4 extra bags hidden per run (mostly courtyards) replacing the 100-item bag; the countdown and its warnings; the shop till with food (100 Ft) and beer (200 Ft); the hunger bar and its penalties; being tipsy (speed, sway, peeing, kicking bins over); moving car traffic and the hit penalty (lose 1–5 items); new HUD items and end-screen stats; rebalance so the 50 000 Ft ceiling and the strong-run range still hold with spending. See "Bags", "Countdown" and "Hunger, beer and traffic".
+11. **M11 Real streets from Alex's photos.** Go through `reference/README.md` and each `reference/<location>/` folder and rework that place to match the photos: building types and colours, ground floors, gates and gateways, street furniture, parking, planters, signs and pavement materials. Start with Lónyay utca, then each location in the order listed. Alex adds folders over time, so do whatever is there when the session starts and list in `CLAUDE.md` which folders are done. Cap each location at about an hour of work.
+12. **M12 Shared high scores.** Cloudflare Worker + D1 in `server/`, anti-cheat checks, swap the local `ScoreStore` for the online one, keep local as the offline fallback, move existing local scores up.
 
 Risks: M1, because patchy OSM data or a heavy scene hurts everything later; and M8, where "recognisable" can eat unlimited time, so cap each landmark at about an hour of work.
 
@@ -252,7 +288,12 @@ Settled by Alex:
 - English UI with Hungarian words and voice lines; audio is generated, not recorded.
 - Character creator with presets, accessories and a name before every run.
 - Plastic bottles, cans and glass all count, 50 Ft each, paid only at the machine.
-- The bag holds 40 items, or 100 after finding the hidden IKEA-style bag. Score ceiling about 50 000 Ft.
+- Each bag holds 50 items; carry up to 3; extra bags are hidden, mostly in courtyards. Score ceiling about 50 000 Ft.
+- A clear countdown to the end of the run.
+- Hunger: about 3 times per run; food is 100 Ft at SPAR or Aldi; hungry means slow and unable to collect.
+- Beer is 200 Ft and makes you tipsy for 2–6 game hours: faster, a swaying world, peeing on buildings, kicking bins over.
+- Moving cars; a hit costs 1–5 items.
+- Alex's own photos per location in `reference/<location>/` set the look of each place.
 - Items from streets, hidden spots, bins, party leftovers and building courtyards; doors by waiting for a resident or ringing (1 in 10 opens).
 - A házmester guards some courtyards.
 - Return points: SPAR at Kinizsi and Ráday utca, Aldi in the Central Market Hall at Fővám tér, both open 06:00–24:00, each with 0–2 people queuing at random.
@@ -269,5 +310,6 @@ Defaults (change only if Alex asks):
 
 Before you start, check with Alex that these exist:
 
-- [ ] `reference/mohu-repont-machines.png` and the place reference images in `reference/`.
-- [ ] A free Cloudflare account (needed only for M10).
+- [x] `reference/mohu-repont-machines.png`.
+- [ ] Alex's location photos in `reference/<location>/` (first: `lonyay-utca/`; more coming), described in `reference/README.md`.
+- [ ] A free Cloudflare account (needed only for M12).

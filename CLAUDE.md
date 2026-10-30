@@ -13,7 +13,7 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M7 Character creator and local scores: done** (2026-10-29, unattended).
 - **M8 Looking like Budapest: done** (2026-10-29, unattended).
 - **M9 Polish: done** (2026-10-29, unattended), except the Piper voice files (generate locally, see `tools/voice/README.md`) and the playtest with friends.
-- Next: **M10 Shared high scores** (needs Alex's Cloudflare account).
+- Next: **M10 Gameplay round 2**, then **M11 Real streets from Alex's photos**, then **M12 Shared high scores** (needs Alex's Cloudflare account). Milestones re-planned by Alex on 2026-10-30; see the Build plan in `BRIEF.md`.
 
 ## Commands
 
