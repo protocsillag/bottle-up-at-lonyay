@@ -16,6 +16,7 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M10 Gameplay round 2: done** (2026-10-30).
 - **M11 Real streets from Alex's photos: done** (2026-10-30). Reference folders done: `bins/`, `lonyay-utca/`, `matyas-utca/`, `raday-utca/`, `erkel-torok-pal-utca/`, `kalvin-ter/`, `bakats-ter/` (status column in `reference/README.md`).
 - **M12 Shared high scores: done** (2026-10-30). Alex deployed the Worker from his Mac at `https://bottle-up-scores.protocsillag.workers.dev` (D1 `d3adc35d-…`); the URL is in `.env.production`. Redeploy the Worker from his Mac with `npm run deploy` in `server/` (the sandbox cannot reach Cloudflare or workers.dev).
+- Next: **M13 The fire barrel fight**, then **M14 Phones** (added by Alex on 2026-10-30, meant to run unattended overnight; see the Build plan in `BRIEF.md`).
 
 ## Commands
 

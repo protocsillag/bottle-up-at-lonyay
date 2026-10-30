@@ -246,6 +246,88 @@ Each item's condition (fine, crushed, wet, no deposit) is rolled when it is pick
 - Cars are instanced simple low-poly models in common colours, with headlights at night.
 - A yellow tram on the körút edge (Vámház körút, Ferenc körút) may be added as moving scenery; it cannot be entered and hits like a car.
 
+## The fire barrel fight (M13)
+
+A once-per-run gamble: win a street fight and double what you are carrying, lose it and lose your haul.
+
+**Where and when.**
+
+- A group of 4 street people stands around a rusty barrel bin with a fire burning in it, on the Nehru part, at the point nearest to where Kinizsi utca reaches the riverside. Find the spot from `city.json` (the Kinizsi utca way's end nearest the river, projected onto the Nehru part zone) and keep it on open ground, not on a path.
+- **They only exist while the player is tipsy.** When tipsy starts, the group and the fire spawn; when tipsy ends, they are gone (fade out if the player is not looking, otherwise they "walk off" toward the river). At night the fire glow and a column of smoke are visible from about 150 m; the minimap shows no marker, so finding them is the reward for drinking.
+- Fire: flickering flame sprites in the barrel, an orange point light (reuse one of the pooled lamp lights, so the light count does not change), sparks, smoke, a crackle sound that fades with distance. The group warm their hands, pass a bottle, sway, laugh.
+- Once the fight has happened in a run (win, lose or draw), the group still appears when tipsy but only chats; no second fight.
+
+**Talking to them.** E on any of them opens a short dialogue with the leader, **Zsiga, a Bajnok** (Zsiga the Champion): a big man in an olive army parka, a black beanie, fingerless gloves and a scarred nose. Hungarian lines with English subtitles, e.g.:
+
+- "Na, haver! Látom, jól megy a gyűjtés." (Well, mate! Collecting's going well, I see.)
+- "Egy menet. Ha nyersz, duplázom a zsákmányodat. Ha veszítesz, az enyém minden, ami nálad van." (One round. Win and I double your haul. Lose and everything you carry is mine.)
+- Choice: **1 "Benne vagyok!"** (I'm in!) or **2 "Majd máskor."** (Another time.)
+- The choice panel also states the stakes in English with the real numbers, e.g. "Now: 20 items · Win: 40 · Lose: 0".
+- If the player carries nothing: "Üres zsákkal nem bunyózunk." (We don't fight over an empty bag.) No fight offered until they carry at least 1 item.
+- Walking away and coming back later (still tipsy) offers the fight again, until it has been fought once.
+
+**The stakes.**
+
+- **Win:** items carried become `min(items × 2, capacity)`, where capacity is bags × 50. Examples: 1 bag with 20 → 40; 1 bag with 40 → 50; 3 bags with 90 → 150. New items are fine-condition cans and PET bottles in a random mix.
+- **Lose:** every item in every bag is gone (Zsiga's friends tip the bags into their shopping trolley). The bags themselves stay with the player.
+- **Draw:** nothing changes. A draw is a double KO, or the 3-minute timer running out before anyone is knocked out.
+- Money already earned is never at stake.
+
+**The fight itself: a 2D side-view brawler in the style of classic arcade fighting games.** It is entirely original: no characters, sprites, sounds, fonts, names or logos from any existing game.
+
+- It replaces the 3D view with a full-screen 2D canvas (keep the 3D scene loaded but stop rendering it). Background: Nehru part at night, painted in layers: the river and the lit green Szabadság híd behind, plane trees, the fire barrel at the side, and the other three street people at the back cheering and swaying (simple 2–3 frame loops).
+- **Fighters:** the player's own character, drawn in 2D from the creator look (preset, hat, hair, top, bottoms, shoes and colours, as layered shapes), and Zsiga. Draw both as procedural shapes or code-generated sprite frames, around 40% of screen height, with animation frames for idle, walk, jump, crouch, punch, kick, special, block, hit and KO.
+- **HUD:** a health bar for each at the top (player left, Zsiga right) with names under them, and a **3:00 countdown in the middle** in real seconds. "HARC!" (FIGHT!) at the start, "K.O." or "DÖNTETLEN" (DRAW) at the end.
+- **Laptop controls:** A / D walk, W jump, S crouch, J punch, K kick, J + K together = special. Holding the direction away from the opponent blocks.
+
+| Move | Damage | Notes |
+| --- | --- | --- |
+| Punch | 6 | Fast, short reach |
+| Kick | 9 | Slower, longer reach; low kick while crouching |
+| Jump kick | 12 | Only in the air |
+| Special: bag swing ("Zsákos csapás") | 18 | Player only. 0.6 s wind-up, knocks the opponent down; usable once every 10 s |
+| Zsiga's special: belly punch ("Gyomros") | 16 | Short charge with a tell (he pulls his arm back and grunts) |
+| Blocked hit | 1 | Chip damage only |
+
+- Health 100 each. Hit stun, knockback, a knockdown on specials, a short invulnerability when getting up. Comic, no blood: stars and a tweeting bird on KO, dust puffs, cans flying out of the background crowd.
+- **Zsiga's AI** should be beatable on the first try about half the time: he walks in, mixes punches and kicks, blocks about 30% of attacks he can see coming, uses his special every 8–12 s, and reacts in 350–500 ms. Put all fight numbers in `balance.ts`.
+- **Being tipsy shows in the fight:** the background and the player sway slightly (stronger at higher tipsy levels), and the player's punches do +1 damage per tipsy level. Keep it fair.
+- Sounds synthesised like the rest: thuds, whooshes, grunts, a crowd cheering, the fire crackling.
+
+**Time stops during the fight.** From the moment the fight screen opens until the result card closes, the game clock, the end-of-run countdown, the tipsy timer, hunger, traffic, NPCs and all world timers are paused, exactly like the Esc pause. Esc during the fight pauses the fight itself.
+
+**After the fight.** A result card with the numbers ("40 items → 80", or "Elvitték a zsákmányt" — they took the haul), Zsiga's line ("Szép volt, haver!" — Nice one, mate! / "Holnap is itt leszek." — I'll be here tomorrow too), then back to the 3D view next to the barrel. The end screen gets a stat for it ("Beat Zsiga the Champion" / "Lost to Zsiga"). The fight is once per run; the flag lives in `GameState`.
+
+## Phones (M14)
+
+Make the whole game playable in phone browsers, the same way as in Kiruna: The Game (`protocsillag/kiruna-the-game`, see `src/ui/touch.ts`, its CSS and the "Mobile" note in its `CLAUDE.md`). Desktop must stay exactly as it is.
+
+**Detection.** `matchMedia('(hover: none) and (pointer: coarse)')` sets `body.touch`; all touch UI is hidden otherwise. A laptop with a touchscreen stays a desktop.
+
+**Quality.** Phones start on **Medium** quality (the existing Medium preset: pixel ratio ≤ 1.5, 1024 shadow map, 45 NPCs). A quality setting the player saved still wins. If the frame rate stays under 25 fps for 10 seconds, show a toast once suggesting Low quality, with a button that switches it.
+
+**Screen.** Landscape only: in portrait show a "Turn your phone sideways" card over the game. Respect safe areas (`env(safe-area-inset-*)`) for the notch and home bar, `touch-action: none`, no text selection, no double-tap zoom, no pull-to-refresh. Android: go fullscreen on the first tap. iPhone has no pointer lock; guard every pointer-lock call. Start audio and speech on the first touch.
+
+**Controls on the street.**
+
+- **Left thumb:** a floating joystick wherever the thumb lands on the left 45% of the screen; analog walking, and steering on a bike.
+- **Right thumb:** drag to look; pinch to zoom.
+- **Interaction:** the prompt itself is a big button above the right thumb. Tap for press actions; press and hold for the hold actions (bins, courtyards, kicking a bin over).
+- Buttons on the right: **Run** (toggle, like Kiruna's Jog), **Jump**, **Bike** (shows only when a bike is in reach or you are riding), **Pee** (only while tipsy and facing a wall). Top bar: **❚❚** pause, **Map** (large map), and the countdown stays visible.
+- Till: the two items become tappable buttons ("Food 100 Ft", "Beer 200 Ft") and a Close button.
+- Intercom choice and the fight offer: tappable answer buttons.
+
+**Controls in the mini-games.**
+
+- **Mohu machine:** a big hold-to-feed button; when an item is rejected, a Fix button (tap repeatedly for crushed, hold for wet), ◀ ▶ buttons to turn it, a Push button and a Walk away button.
+- **Fight (M13):** the left joystick moves (up = jump, down = crouch, away from the opponent = block); Punch, Kick and Special buttons on the right in an arc.
+
+**Menus.** Title, character creator (tap the slot arrows, swipe the turntable to rotate, the native keyboard for the name), intro card, pause card, settings, end screen and top 10 all fit a phone in landscape (about 844 × 390 CSS px) without scrolling, with tap targets of at least 44 px.
+
+**HUD layout.** Compact on phones: countdown and clock top centre, money and bags top left under the pause/map buttons, stamina and hunger as thin bars under them, a smaller minimap top right, toasts and subtitles above the joystick area so thumbs don't cover them.
+
+**Testing.** Without a real phone in the sandbox, test with Playwright's device emulation (iPhone 14 and Pixel 7 in landscape, `hasTouch: true`), driving touch events through a full run: title → creator → walk → pick up → bin → gate → courtyard → shop till → Mohu machine → beer → fight → end screen → top 10. Write in `CLAUDE.md` what still needs a real phone to check.
+
 ## High scores
 
 The top 10 table shows rank, portrait (128 × 128), name and amount in Ft, sorted by amount, ties broken by earlier date. A run that makes the top 10 lands on the table straight from the end screen with its row highlighted. Format amounts the Hungarian way: `12 350 Ft`.
@@ -263,7 +345,7 @@ The top 10 table shows rank, portrait (128 × 128), name and amount in Ft, sorte
 
 ## Build plan
 
-Twelve milestones, one per Claude Code session, each ending in something Alex can open and play. M1–M9 are built. M10 and M11 were added after Alex's first playtest, before the shared high scores. M3 is the first real playtest: if collecting and returning is not fun with grey boxes, fix that before adding polish.
+Fourteen milestones, each ending in something Alex can open and play. M1–M12 are built. M10 and M11 were added after Alex's first playtest, before the shared high scores; M13 and M14 were added once the game was complete. M3 is the first real playtest: if collecting and returning is not fun with grey boxes, fix that before adding polish.
 
 1. **M1 Setup and city.** Vite + TypeScript + Three.js scaffold, `CLAUDE.md`, GitHub Pages deploy. OSM import script, baked `city.json`, extruded grey buildings, streets, the map boundary. A capsule you can walk around at real scale.
 2. **M2 Player and camera.** Third-person character with walk, run, jump, stamina, collisions against buildings, follow camera, minimap.
@@ -277,6 +359,10 @@ Twelve milestones, one per Claude Code session, each ending in something Alex ca
 10. **M10 Gameplay round 2.** Bags of 50, up to 3 carried, about 4 extra bags hidden per run (mostly courtyards) replacing the 100-item bag; the countdown and its warnings; the shop till with food (100 Ft) and beer (200 Ft); the hunger bar and its penalties; being tipsy (speed, sway, peeing, kicking bins over); moving car traffic and the hit penalty (lose 1–5 items); new HUD items and end-screen stats; rebalance so the 50 000 Ft ceiling and the strong-run range still hold with spending. See "Bags", "Countdown" and "Hunger, beer and traffic".
 11. **M11 Real streets from Alex's photos.** Go through `reference/README.md` and each `reference/<location>/` folder and rework that place to match the photos: building types and colours, ground floors, gates and gateways, street furniture, parking, planters, signs and pavement materials. Start with Lónyay utca, then each location in the order listed. Alex adds folders over time, so do whatever is there when the session starts and list in `CLAUDE.md` which folders are done. Cap each location at about an hour of work.
 12. **M12 Shared high scores.** Cloudflare Worker + D1 in `server/`, anti-cheat checks, swap the local `ScoreStore` for the online one, keep local as the offline fallback, move existing local scores up.
+13. **M13 The fire barrel fight.** The street-people group around a burning barrel on the Nehru part at the end of Kinizsi utca, only while tipsy; the dialogue with Zsiga and the stakes; the 2D one-round fight with health bars and a 3-minute timer; the world paused during it; the result applied to the bags; once per run. See "The fire barrel fight".
+14. **M14 Phones.** Touch controls for the street, the till, the Mohu machine and the fight; phone layouts for the HUD and every menu; landscape only; Medium quality by default; Playwright device-emulation testing. Desktop unchanged. See "Phones".
+
+**Unattended overnight run (M13 + M14).** Alex will start both in one session and sleep. Do M13 first, then M14, each ending with `npm run build` passing, a `CHANGELOG.md` entry, `CLAUDE.md` updated, a commit and a push to `main`. Don't stop to ask; make the most reasonable choice and add it to "Questions for Alex" in `CLAUDE.md`. If M13 runs long, finish it properly before starting M14 rather than leaving both half done.
 
 Risks: M1, because patchy OSM data or a heavy scene hurts everything later; and M8, where "recognisable" can eat unlimited time, so cap each landmark at about an hour of work.
 
@@ -284,7 +370,7 @@ Risks: M1, because patchy OSM data or a heavy scene hurts everything later; and 
 
 Settled by Alex:
 
-- 3D third-person, GTA-style, walkable Belső-Ferencváros at realistic distances, in the browser, laptop only for now.
+- 3D third-person, GTA-style, walkable Belső-Ferencváros at realistic distances, in the browser, on laptops and (from M14) phones.
 - English UI with Hungarian words and voice lines; audio is generated, not recorded.
 - Character creator with presets, accessories and a name before every run.
 - Plastic bottles, cans and glass all count, 50 Ft each, paid only at the machine.
@@ -299,6 +385,8 @@ Settled by Alex:
 - Return points: SPAR at Kinizsi and Ráday utca, Aldi in the Central Market Hall at Fővám tér, both open 06:00–24:00, each with 0–2 people queuing at random.
 - 48 game hours in 30 real minutes, then a top 10 with name, portrait and amount: local first, shared online (Cloudflare Worker + D1, free) as the very last milestone.
 - Dog mess slows for a minute; bikes make you faster; NPCs fill the streets, including street people; no rivals.
+- M13: while tipsy, a group around a burning bin on the Nehru part near the end of Kinizsi utca offers one fight per run. Win doubles the items you carry (up to your capacity), lose loses them, a draw changes nothing. 2D side-view fight, one round, health bars, a 3-minute timer; the game clock and countdown are paused while it lasts.
+- M14: playable in phone browsers like the Kiruna game; phones start on Medium quality.
 
 Defaults (change only if Alex asks):
 
