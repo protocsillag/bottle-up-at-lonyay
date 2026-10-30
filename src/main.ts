@@ -12,7 +12,9 @@ import { Shops, doorOnFacade } from './world/shops/Shops';
 import { buildMarketHall, mostNorthWestEdge } from './world/landmarks/marketHall';
 import { buildDressing } from './world/landmarks/dressing';
 import { buildGimnaziumExtras, findGimnazium, lonyayColors } from './world/landmarks/lonyay';
+import { buildMosoda, buildWear, matyasColors, RoadWorks } from './world/landmarks/matyas';
 import { buildParking } from './world/landmarks/parking';
+import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
 import { Player } from './player/Player';
 import { FollowCamera } from './player/FollowCamera';
@@ -94,10 +96,13 @@ const hallBuilding = city.buildings.find((b) => b.name === 'Központi Vásárcsa
 const gimnazium = findGimnazium(city);
 const cityGroup = buildCity(city, {
   skip: new Set(hallBuilding ? [hallBuilding.id] : []),
-  colors: lonyayColors(city, gimnazium),
+  colors: matyasColors(city, lonyayColors(city, gimnazium)),
   brick: new Set(gimnazium ? [gimnazium.b.id] : []),
 });
 if (gimnazium) cityGroup.add(buildGimnaziumExtras(gimnazium));
+cityGroup.add(buildStreetSigns(city));
+const mosoda = buildMosoda(city);
+if (mosoda) cityGroup.add(mosoda);
 scene.add(cityGroup);
 const hall = hallBuilding ? buildMarketHall(hallBuilding, mostNorthWestEdge(hallBuilding.outer)) : null;
 if (hall) cityGroup.add(hall.group);
@@ -171,6 +176,17 @@ scene.add(buildings.group);
 const shops = new Shops(city, state, host, hall?.door ?? null);
 scene.add(shops.group, shops.street, shops.lights);
 if (lonyaySparDoor) shops.addDecorativeFront(lonyaySparDoor);
+// Mátyás utca wear and tear (reference/matyas-utca/): plinths, graffiti, road works.
+const openings = [
+  ...buildings.gates.gates.map((g) => ({ x: g.x, z: g.z, r: 1.9 })),
+  ...shopDoorSpots.map(([x, z]) => ({ x, z, r: 3.5 })),
+];
+cityGroup.add(buildWear(city, placement, streets, {
+  openings,
+  noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
+}));
+const roadWorks = new RoadWorks(placement, world, (x, z) => openings.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + 4));
+cityGroup.add(roadWorks.group);
 for (const f of shops.fronts) for (const c of f.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const returns = new ReturnPoints(state, shops.doors.map((d) => ({ id: d.id, name: d.name, ...d.interior.machines })));
 scene.add(returns.group);
@@ -251,7 +267,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -321,6 +337,7 @@ function startRun() {
   player.freeze = 0;
   traffic.reset();
   puddles.reset();
+  roadWorks.reset(state.rng);
   closeTill();
   hungerWarned = false;
   player.teleport(sx, sz, 0);

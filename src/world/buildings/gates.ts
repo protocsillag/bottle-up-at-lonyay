@@ -35,6 +35,7 @@ export interface Gate {
   /** Real seconds until the next resident leaves. */
   nextExit: number;
   bellCooldown: number;
+  variant: GateVariant;
 }
 
 interface Resident { model: CharacterModel; gate: Gate; t: number; tx: number; tz: number; }
@@ -48,8 +49,8 @@ function area(ring: Vec2[]) {
 }
 
 /** Finds a gate position for every residential building. */
-export function placeGates(city: CityData, place: Placement, avoid: Vec2[] = []): Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown'>[] {
-  const out: Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown'>[] = [];
+export function placeGates(city: CityData, place: Placement, avoid: Vec2[] = []): Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown' | 'variant'>[] {
+  const out: Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown' | 'variant'>[] = [];
   for (const b of city.buildings) {
     if (b.scenery || b.h < 8 || area(b.outer) < 150 || (b.name && NON_RESIDENTIAL.test(b.name))) continue;
     let best: { score: number; x: number; z: number; nx: number; nz: number } | null = null;
@@ -91,34 +92,88 @@ function colored(g: THREE.BufferGeometry, color: number) {
   return g;
 }
 
-/** Stone surround, dark passage behind, intercom panel. Local: wall plane z = 0, street side −z. */
-function frameGeometry() {
+/** Gate variants from reference/matyas-utca/: no two gates look the same.
+ *  0 carved brown double gate in an arch with a fanlight, a dentil cornice and wreath medallions;
+ *  1 brown double gate with oval windows in a stone frame with console brackets and urn finials;
+ *  2 tall dark green panelled gate with a glazed transom and a modern intercom keypad. */
+export type GateVariant = 0 | 1 | 2;
+const VARIANTS = 3;
+
+/** Surround, dark passage behind, intercom, house-number plate. Local: wall plane z = 0, street side −z. */
+function frameGeometry(v: GateVariant) {
   const p = 0.35;
-  return merge([
-    colored(new THREE.BoxGeometry(p, GATE_H + 0.3, 0.2).translate(-GATE_W / 2 - p / 2, (GATE_H + 0.3) / 2, -0.08), 0xcfc4ad),
-    colored(new THREE.BoxGeometry(p, GATE_H + 0.3, 0.2).translate(GATE_W / 2 + p / 2, (GATE_H + 0.3) / 2, -0.08), 0xcfc4ad),
-    colored(new THREE.BoxGeometry(GATE_W + 2 * p, 0.45, 0.24).translate(0, GATE_H + 0.2, -0.1), 0xc4b89f),
+  const stone = v === 2 ? 0x8a8f86 : 0xcfc4ad;
+  const parts = [
+    colored(new THREE.BoxGeometry(p, GATE_H + 0.3, 0.2).translate(-GATE_W / 2 - p / 2, (GATE_H + 0.3) / 2, -0.08), stone),
+    colored(new THREE.BoxGeometry(p, GATE_H + 0.3, 0.2).translate(GATE_W / 2 + p / 2, (GATE_H + 0.3) / 2, -0.08), stone),
     colored(new THREE.BoxGeometry(GATE_W, GATE_H, 0.02).translate(0, GATE_H / 2, 0.02), 0x121212),
-    // Intercom panel to the right of the gate (as seen from the street).
-    colored(new THREE.BoxGeometry(0.2, 0.34, 0.05).translate(-(GATE_W / 2 + p + 0.25), 1.35, -0.03), 0xb59a5a),
-    colored(new THREE.BoxGeometry(0.14, 0.2, 0.02).translate(-(GATE_W / 2 + p + 0.25), 1.38, -0.06), 0x2b2b2b),
-  ]);
+    // House-number plate (small enamel) to the left as seen from the street.
+    colored(new THREE.BoxGeometry(0.22, 0.16, 0.02).translate(GATE_W / 2 + p + 0.3, 2.4, -0.02), 0x2a4a8a),
+    colored(new THREE.BoxGeometry(0.12, 0.08, 0.025).translate(GATE_W / 2 + p + 0.3, 2.4, -0.025), 0xf2f2ee),
+  ];
+  if (v === 0) {
+    // Semicircular fanlight above a dentil cornice.
+    parts.push(colored(new THREE.BoxGeometry(GATE_W + 0.2, 0.3, 0.2).translate(0, GATE_H + 0.15, -0.1), 0x4a3020));
+    for (let i = 0; i < 10; i++) parts.push(colored(new THREE.BoxGeometry(0.08, 0.08, 0.06).translate(-GATE_W / 2 + 0.12 + i * 0.24, GATE_H + 0.02, -0.22), 0x3a2416));
+    parts.push(colored(new THREE.CircleGeometry(GATE_W / 2, 16, 0, Math.PI).translate(0, GATE_H + 0.3, -0.01).rotateY(Math.PI).translate(0, 0, 0), 0x2a3440));
+    parts.push(colored(new THREE.TorusGeometry(GATE_W / 2 + 0.15, 0.18, 4, 16, Math.PI).translate(0, GATE_H + 0.3, -0.08), stone));
+  } else if (v === 1) {
+    parts.push(colored(new THREE.BoxGeometry(GATE_W + 1.0, 0.35, 0.36).translate(0, GATE_H + 0.25, -0.16), stone));
+    for (const sx of [-1, 1]) {
+      parts.push(colored(new THREE.BoxGeometry(0.3, 0.5, 0.3).translate(sx * (GATE_W / 2 + 0.2), GATE_H - 0.1, -0.2), stone)); // console brackets
+      parts.push(colored(new THREE.SphereGeometry(0.2, 8, 6).scale(1, 1.4, 1).translate(sx * (GATE_W / 2 + 0.3), GATE_H + 0.75, -0.16), stone)); // urns
+    }
+    parts.push(colored(new THREE.BoxGeometry(GATE_W - 0.2, 0.6, 0.02).translate(0, GATE_H + 0.95, 0.0), 0x2a3440)); // glazed transom
+  } else {
+    parts.push(colored(new THREE.BoxGeometry(GATE_W + 2 * p, 0.3, 0.24).translate(0, GATE_H + 0.15, -0.1), stone));
+    parts.push(colored(new THREE.BoxGeometry(GATE_W - 0.1, 0.55, 0.02).translate(0, GATE_H + 0.6, 0.0), 0x2a3440));
+    parts.push(colored(new THREE.BoxGeometry(0.2, 0.12, 0.1).translate(0, GATE_H + 1.0, -0.08), 0xd8d8d0)); // security light
+  }
+  // Intercom to the right of the gate (as seen from the street): brass box, or a modern keypad.
+  const ix = -(GATE_W / 2 + p + 0.25);
+  if (v === 2) {
+    parts.push(colored(new THREE.BoxGeometry(0.22, 0.42, 0.04).translate(ix, 1.35, -0.03), 0x9aa0a6));
+    for (let i = 0; i < 6; i++) parts.push(colored(new THREE.BoxGeometry(0.16, 0.035, 0.01).translate(ix, 1.48 - i * 0.05, -0.055), 0xf2f2ee));
+  } else {
+    parts.push(colored(new THREE.BoxGeometry(0.2, 0.34, 0.05).translate(ix, 1.35, -0.03), 0xb59a5a));
+    parts.push(colored(new THREE.BoxGeometry(0.14, 0.2, 0.02).translate(ix, 1.38, -0.06), 0x2b2b2b));
+  }
+  return merge(parts);
 }
 
 /** One gate leaf with the hinge at the origin, spanning +x. */
-function leafGeometry() {
+function leafGeometry(v: GateVariant) {
   const w = GATE_W / 2;
-  const parts = [colored(new THREE.BoxGeometry(w, GATE_H, 0.08).translate(w / 2, GATE_H / 2, 0), 0x5a3a22)];
-  // Raised panels.
-  for (const y of [0.9, 2.3]) parts.push(colored(new THREE.BoxGeometry(w * 0.7, 1.0, 0.04).translate(w / 2, y, -0.05), 0x6b4529));
-  parts.push(colored(new THREE.BoxGeometry(0.05, 0.25, 0.06).translate(w - 0.12, 1.15, -0.07), 0xb59a5a));
+  const wood = v === 2 ? 0x24402f : v === 0 ? 0x3e281a : 0x5a3a22;
+  const raised = v === 2 ? 0x2f5240 : v === 0 ? 0x4a3020 : 0x6b4529;
+  const parts = [colored(new THREE.BoxGeometry(w, GATE_H, 0.08).translate(w / 2, GATE_H / 2, 0), wood)];
+  if (v === 0) {
+    // Wreath medallion up top, a small window with an iron scroll grille, a lion-head medallion low down.
+    parts.push(colored(new THREE.TorusGeometry(0.22, 0.04, 5, 14).translate(w / 2, 2.9, -0.06), raised));
+    parts.push(colored(new THREE.BoxGeometry(0.42, 0.75, 0.02).translate(w / 2, 1.85, -0.045), 0x1e2830));
+    parts.push(colored(new THREE.TorusGeometry(0.12, 0.02, 4, 10).translate(w / 2, 1.95, -0.06), 0x1b1b1b));
+    parts.push(colored(new THREE.CylinderGeometry(0.17, 0.17, 0.04, 12).rotateX(Math.PI / 2).translate(w / 2, 0.65, -0.06), raised));
+    parts.push(colored(new THREE.SphereGeometry(0.1, 8, 6).translate(w / 2, 0.65, -0.09), 0x2e1e14));
+  } else if (v === 1) {
+    for (const y of [0.8, 2.75]) parts.push(colored(new THREE.BoxGeometry(w * 0.7, 0.8, 0.04).translate(w / 2, y, -0.05), raised));
+    parts.push(colored(new THREE.SphereGeometry(0.22, 12, 8).scale(0.8, 1.2, 0.1).translate(w / 2, 1.8, -0.05), 0x1e2830)); // oval window
+  } else {
+    // Stepped geometric panels.
+    for (const [y, h] of [[0.7, 1.0], [2.0, 1.2], [3.0, 0.5]] as const) {
+      parts.push(colored(new THREE.BoxGeometry(w * 0.75, h, 0.04).translate(w / 2, y, -0.05), raised));
+      parts.push(colored(new THREE.BoxGeometry(w * 0.5, h * 0.6, 0.03).translate(w / 2, y, -0.075), wood));
+    }
+  }
+  parts.push(colored(new THREE.BoxGeometry(0.05, 0.25, 0.06).translate(w - 0.12, 1.15, -0.07), v === 0 ? 0xe8e4dc : 0xb59a5a));
   return merge(parts);
 }
 
 export class GateSystem {
   readonly group = new THREE.Group();
   readonly gates: Gate[];
-  private leaves: THREE.InstancedMesh;
+  private leaves: THREE.InstancedMesh[] = [];
+  /** Per gate: its index within its variant's instanced meshes. */
+  private slot: number[] = [];
   private residents: Resident[] = [];
   private pool: CharacterModel[] = [];
   /** Called when a gate clicks shut right in front of the player. */
@@ -126,18 +181,21 @@ export class GateSystem {
 
   constructor(city: CityData, place: Placement, avoid: Vec2[] = []) {
     this.group.name = 'gates';
-    this.gates = placeGates(city, place, avoid).map((g, index) => ({ ...g, index, open: 0, state: 'closed' as GateState, timer: 0, nextExit: 5 + Math.random() * 60, bellCooldown: 0 }));
+    this.gates = placeGates(city, place, avoid).map((g, index) => ({ ...g, index, open: 0, state: 'closed' as GateState, timer: 0, nextExit: 5 + Math.random() * 60, bellCooldown: 0, variant: 0 as GateVariant }));
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
-    const frames = new THREE.InstancedMesh(frameGeometry(), mat, this.gates.length);
-    this.leaves = new THREE.InstancedMesh(leafGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide }), this.gates.length * 2);
+    const leafMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+    const counts = [0, 0, 0];
+    for (const g of this.gates) { g.variant = (hashId(g.b.id) % VARIANTS) as GateVariant; this.slot[g.index] = counts[g.variant]++; }
+    const frames = ([0, 1, 2] as GateVariant[]).map((v) => new THREE.InstancedMesh(frameGeometry(v), mat, Math.max(1, counts[v])));
+    this.leaves = ([0, 1, 2] as GateVariant[]).map((v) => new THREE.InstancedMesh(leafGeometry(v), leafMat, Math.max(1, counts[v] * 2)));
     const m = new THREE.Matrix4();
     for (const g of this.gates) {
-      frames.setMatrixAt(g.index, m.makeRotationY(g.facing).setPosition(g.x, 0, g.z));
+      frames[g.variant].setMatrixAt(this.slot[g.index], m.makeRotationY(g.facing).setPosition(g.x, 0, g.z));
       this.setLeaves(g);
     }
-    frames.receiveShadow = true;
-    this.leaves.castShadow = true;
-    this.group.add(frames, this.leaves);
+    frames.forEach((f, v) => { f.count = counts[v]; f.receiveShadow = true; });
+    this.leaves.forEach((l, v) => { l.count = counts[v] * 2; l.castShadow = true; });
+    this.group.add(...frames, ...this.leaves);
   }
 
   private setLeaves(g: Gate) {
@@ -145,9 +203,11 @@ export class GateSystem {
     const a = g.open * 1.45;
     const l = new THREE.Matrix4().makeTranslation(-GATE_W / 2, 0, -0.06).multiply(new THREE.Matrix4().makeRotationY(a));
     const r = new THREE.Matrix4().makeTranslation(GATE_W / 2, 0, -0.06).multiply(new THREE.Matrix4().makeRotationY(-a)).multiply(new THREE.Matrix4().makeScale(-1, 1, 1));
-    this.leaves.setMatrixAt(g.index * 2, base.clone().multiply(l));
-    this.leaves.setMatrixAt(g.index * 2 + 1, base.clone().multiply(r));
-    this.leaves.instanceMatrix.needsUpdate = true;
+    const leaves = this.leaves[g.variant];
+    const i = this.slot[g.index];
+    leaves.setMatrixAt(i * 2, base.clone().multiply(l));
+    leaves.setMatrixAt(i * 2 + 1, base.clone().multiply(r));
+    leaves.instanceMatrix.needsUpdate = true;
   }
 
   reset() {
@@ -259,3 +319,5 @@ export class GateSystem {
     return this.gates.filter((g) => Math.abs(g.x - x) < r && Math.abs(g.z - z) < r);
   }
 }
+
+function hashId(s: string) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }

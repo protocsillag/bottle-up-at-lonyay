@@ -3,7 +3,7 @@ import type { CityData, Vec2 } from './cityData';
 // 2D collision world: building walls and the map boundary as line segments in a
 // uniform grid. The player is a circle (capsule seen from above) pushed out of walls.
 
-interface Segment { ax: number; az: number; bx: number; bz: number; }
+interface Segment { ax: number; az: number; bx: number; bz: number; off?: boolean; }
 
 const CELL = 16;
 
@@ -38,7 +38,7 @@ export class CollisionWorld {
     for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) this.addSegment(ring[j], ring[i]);
   }
 
-  private addSegment(a: Vec2, b: Vec2) {
+  private addSegment(a: Vec2, b: Vec2): Segment {
     const s: Segment = { ax: a[0], az: a[1], bx: b[0], bz: b[1] };
     const x0 = Math.floor(Math.min(s.ax, s.bx) / CELL), x1 = Math.floor(Math.max(s.ax, s.bx) / CELL);
     const z0 = Math.floor(Math.min(s.az, s.bz) / CELL), z1 = Math.floor(Math.max(s.az, s.bz) / CELL);
@@ -50,6 +50,15 @@ export class CollisionWorld {
         list.push(s);
       }
     }
+    return s;
+  }
+
+  /** A box that can be switched on and off per run (road works). */
+  addToggleBox(x: number, z: number, w: number, d: number, rot = 0) {
+    const c = Math.cos(rot), sn = Math.sin(rot);
+    const pts: Vec2[] = [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(([px, pz]) => [x + px * c + pz * sn, z - px * sn + pz * c] as Vec2);
+    const segs = pts.map((p, i) => this.addSegment(pts[(i + 3) % 4], p));
+    return { set(on: boolean) { for (const s of segs) s.off = !on; } };
   }
 
   /** Adds a solid rotated rectangle (props: machines, kiosks). rot: radians around y. */
@@ -74,6 +83,7 @@ export class CollisionWorld {
     for (let iter = 0; iter < 4; iter++) {
       let moved = false;
       for (const s of this.nearby(x, z, radius)) {
+        if (s.off) continue;
         const dx = s.bx - s.ax, dz = s.bz - s.az;
         const len2 = dx * dx + dz * dz || 1;
         const t = Math.max(0, Math.min(1, ((x - s.ax) * dx + (z - s.az) * dz) / len2));
@@ -108,7 +118,7 @@ export class CollisionWorld {
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
       for (const s of this.nearby(ax + (bx - ax) * t, az + (bz - az) * t, CELL * 0.75)) {
-        if (seen.has(s)) continue;
+        if (seen.has(s) || s.off) continue;
         seen.add(s);
         const hit = segmentIntersect(ax, az, bx, bz, s);
         if (hit !== null && hit < best) best = hit;
