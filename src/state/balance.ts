@@ -22,6 +22,20 @@ export const HIDDEN = {
   showWithin: 6, // metres: the glint only appears up close
 };
 
+/** Public bin types (reference/bins/): green mesh hoop bins in side streets, Ráday and
+ *  Bakáts tér; lime-green post bins on main streets, the körút and Kálvin tér. */
+export const BIN_TYPES = {
+  hoop: { items: [1, 5] as const },
+  lime: { items: [1, 4] as const },
+};
+
+/** Wheelie bins put out on the pavement for collection on the run's mornings, until the
+ *  garbage truck takes them in between 08:00 and 10:00. */
+export const WHEELIES = { groups: 6, perGroup: [3, 5] as const, items: [4, 12] as const, hold: 3, out: [5, 6] as const, truck: [8, 10] as const };
+
+/** Renovation skips: one-off street jackpots. */
+export const SKIP = { items: [10, 25] as const, hold: 5 };
+
 export const BINS = {
   count: 70, // public bins used per run (from OSM, topped up where sparse)
   items: [2, 8] as const,
@@ -58,6 +72,10 @@ export const GLASS_BREAK = { minFill: 0.8, perSecond: 1 / 25 };
 export const COURTYARD = {
   bellOdds: 0.1, // 1 in 10 rings buzzes the door open
   binItems: [5, 20] as const,
+  /** Courtyard bins by lid colour (reference/bins/): yellow-lid recycling holds the bottles,
+   *  green mixed waste a few (often crushed or wet), blue-lid paper nothing. */
+  binKinds: { recycling: [8, 20] as const, mixed: [0, 5] as const, paper: [0, 0] as const },
+  binKindOdds: { recycling: 0.45, mixed: 0.35, paper: 0.2 },
   binHold: 4,
   binRefill: 12 * 60,
   jackpots: [3, 4] as const,

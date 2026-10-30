@@ -103,6 +103,7 @@ const state = new GameState(newSeed());
 const items = new ItemSystem(city, placement, state, {
   hidden: dressing.hiddenSpots,
   bagSpots: [...dressing.kioskSpots, ...dressing.hiddenSpots.map((s) => [s.x, s.z] as [number, number])],
+  skips: dressing.skips,
 });
 scene.add(items.group);
 for (const c of hall?.colliders ?? []) world.addBox(c.x, c.z, c.w, c.d, c.rot);
@@ -124,6 +125,10 @@ scene.add(crowd.group);
 const sweeper = new Sweeper(graph);
 sweeper.onSweep = (x, z, r) => items.sweep(x, z, r);
 scene.add(sweeper.group);
+// The garbage truck takes in the wheelie bins put out on the pavement, 08:00–10:00.
+const garbage: Sweeper = new Sweeper(graph, { from: 8, to: 10, hopper: 0xd8742a, brushes: false, target: (): [number, number] | null => items.wheelieTarget(garbage.x, garbage.z) });
+garbage.onSweep = (x, z) => items.collectWheelies(x, z, 9);
+scene.add(garbage.group);
 
 const traffic = new Traffic(city);
 scene.add(traffic.group);
@@ -138,7 +143,7 @@ const follow = new FollowCamera(camera, world);
 const host = {
   player, follow, cityWorld: world,
   setOutsideVisible(v: boolean) {
-    for (const g of [cityGroup, items.group, buildings.gates.group, lamps.group, dogMess.group, bikes.group, sweeper.group, shops.street]) g.visible = v;
+    for (const g of [cityGroup, items.group, buildings.gates.group, lamps.group, dogMess.group, bikes.group, sweeper.group, garbage.group, shops.street]) g.visible = v;
   },
 };
 // No street gates on top of the shop doors.
@@ -291,6 +296,7 @@ function startRun() {
   dogMess.reset();
   bikes.reset();
   sweeper.reset();
+  garbage.reset();
   player.onBike = false;
   player.stun = 0;
   player.freeze = 0;
@@ -494,6 +500,7 @@ function frame() {
       if (fast && crowd.hit(player.position.x, player.position.z, 0.35)) player.crashed = true;
       let [nx, nz] = crowd.pushOut(player.position.x, player.position.z, 0.35);
       [nx, nz] = sweeper.pushOut(nx, nz, 0.35);
+      [nx, nz] = garbage.pushOut(nx, nz, 0.35);
       [nx, nz] = world.resolve(nx, nz, 0.35);
       player.position.x = nx; player.position.z = nz;
       player.mesh.position.copy(player.position);
@@ -531,6 +538,7 @@ function frame() {
     items.update(dt, gameMinutes, player.position.x, player.position.z, lighting.night);
     crowd.update(dt, state.minute, player.position.x, player.position.z, !inside());
     sweeper.update(dt, state.minute, player.position.x, player.position.z);
+    garbage.update(dt, state.minute, player.position.x, player.position.z);
     traffic.update(dt, state.minute, inside() ? null : { x: player.position.x, z: player.position.z }, lighting.lamps, !inside());
     if (!inside()) {
       const [cx, cz] = traffic.pushOut(player.position.x, player.position.z, 0.35);

@@ -8,7 +8,7 @@ import type { FollowCamera } from '../../player/FollowCamera';
 import type { CollisionWorld } from '../collision';
 import type { StreetIndex } from '../streets';
 import { GateSystem, type Gate } from './gates';
-import { buildInterior, containerMesh, interiorLayout, jackpotMesh, type Interior } from './interior';
+import { buildInterior, containerMesh, interiorLayout, jackpotMesh, type CourtBinKind, type Interior } from './interior';
 import { Hazmester } from '../../npc/Hazmester';
 import { INTERCOM_LINES, type Line } from '../../audio/lines';
 import { say } from '../../audio/voice';
@@ -20,7 +20,7 @@ import { sound } from '../../audio/Sfx';
 // Getting into buildings: gates (residents, the bell), courtyard interiors with their
 // bins, jackpots and the big bag, and the házmester.
 
-interface CourtBin { count: number; readyAt: number; lid: number; }
+interface CourtBin { count: number; readyAt: number; kind: CourtBinKind; paperSeen?: boolean; }
 interface CourtState {
   bins: CourtBin[];
   jackpot: { kind: 'skip' | 'party'; count: number } | null;
@@ -97,16 +97,21 @@ export class BuildingSystem {
     const nBins = Math.min(3, 1 + Math.floor(rng.next() * (g.b.h > 18 ? 3 : 2)));
     const jackpot = this.jackpotGates.has(g.index);
     c = {
-      bins: Array.from({ length: nBins }, (_, i) => ({
-        count: this.state.supply(rng.int(COURTYARD.binItems[0], COURTYARD.binItems[1])), readyAt: 0,
-        lid: i === 0 ? 0xf2c418 : rng.pick([0x4d5a52, 0x2f63b8, 0xf2c418]),
-      })),
+      bins: Array.from({ length: nBins }, () => {
+        const kind = rng.weighted(COURTYARD.binKindOdds);
+        return { kind, count: this.rollCourtBin(kind), readyAt: 0 };
+      }),
       jackpot: jackpot ? { kind: rng.chance(0.5) ? 'skip' : 'party', count: this.state.supply(rng.int(COURTYARD.jackpotItems[0], COURTYARD.jackpotItems[1])) } : null,
       hazmester: rng.chance(jackpot ? COURTYARD.hazmesterJackpot : COURTYARD.hazmester),
       bigBag: this.bagGates.has(g.index),
     };
     this.courts.set(g.b.id, c);
     return c;
+  }
+
+  private rollCourtBin(kind: CourtBinKind) {
+    const [lo, hi] = COURTYARD.binKinds[kind];
+    return hi > 0 ? this.state.supply(this.state.rng.int(lo, hi)) : 0;
   }
 
   // ---------------------------------------------------------------- street side
@@ -183,21 +188,29 @@ export class BuildingSystem {
     this.interactables = [];
     c.bins.forEach((bin, i) => {
       const [x, z] = layout.bins[i];
-      const mesh = containerMesh(bin.lid);
+      const mesh = containerMesh(bin.kind);
       mesh.position.set(x, 0, z);
       interior.group.attach(mesh);
       interior.world.addBox(x, z, 1.3, 1.0);
       this.interactables.push({
         x, z, reach: 1.7, hold: COURTYARD.binHold, collect: true,
-        label: () => this.state.minute >= bin.readyAt ? (bin.lid === 0xf2c418 ? 'Search the yellow recycling bin' : 'Search the courtyard bin') : 'Bin already searched',
+        label: () => this.state.minute >= bin.readyAt
+          ? ({ recycling: 'Search the yellow-lid recycling bin', mixed: 'Search the green bin', paper: 'Search the blue-lid paper bin' } as const)[bin.kind]
+          : 'Bin already searched',
         blocked: () => this.state.minute < bin.readyAt ? 'Searched — refills in 12 h' : this.state.bagFull ? 'Bag full — go to a Mohu machine' : null,
         act: () => {
           this.state.stats.binsSearched++;
-          const got = this.state.pickup(bin.count, 'courtyard');
-          bin.count -= got;
+          if (bin.kind === 'paper' || bin.count <= 0) {
+            // Paper bins only ever hold newspapers.
+            if (bin.kind === 'paper') say('paper_only', 2);
+            else this.state.toast('Nothing but rubbish', 'info');
+          } else {
+            const got = this.state.pickup(bin.count, bin.kind === 'mixed' ? 'bin' : 'courtyard');
+            bin.count -= got;
+          }
           if (bin.count <= 0) {
             bin.readyAt = this.state.minute + COURTYARD.binRefill;
-            bin.count = this.state.supply(this.state.rng.int(COURTYARD.binItems[0], COURTYARD.binItems[1]));
+            bin.count = this.rollCourtBin(bin.kind);
           }
         },
       });

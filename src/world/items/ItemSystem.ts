@@ -1,20 +1,22 @@
 import * as THREE from 'three';
 import type { GameState, ItemKind } from '../../state/GameState';
-import { BINS, HIDDEN, PARTY, STREET, TIPSY } from '../../state/balance';
+import { BIN_TYPES, BINS, HIDDEN, PARTY, SKIP, STREET, TIPSY, WHEELIES } from '../../state/balance';
 import { sound } from '../../audio/Sfx';
 import { dayIndex, hourIn, hourOf, minutesUntilHour } from '../../state/time';
 import type { Interactable } from '../../player/Interaction';
 import type { Placement, Spot, Zone } from '../placement';
 import type { CityData } from '../cityData';
 import { pointInPolygon } from '../collision';
-import { bigBagGeometry, binGeometry, glintTexture, itemGeometry, partyGeometry, planterGeometry } from './models';
+import { limePostBinGeometry, meshHoopBinGeometry, wheelieGeometry } from './models';
+import { bigBagGeometry, glintTexture, itemGeometry, partyGeometry, planterGeometry } from './models';
 
 // Everything collectable in the streets: loose items, hidden spots, public bins,
 // party leftovers and the hidden big blue bag. Courtyards (M4) add their own sources.
 
 interface StreetItem { spot: Spot; kinds: ItemKind[]; yaw: number[]; off: [number, number][]; it: Interactable; }
 interface Hidden { spot: Spot; count: number; refillAt: number; it: Interactable; glint: THREE.Sprite; planter: number; }
-interface Bin { x: number; z: number; zone: Zone; readyAt: number; it: Interactable; index: number; broken: boolean; }
+interface Bin { x: number; z: number; zone: Zone; readyAt: number; it: Interactable; index: number; broken: boolean; type: 'hoop' | 'lime'; dir: number; }
+interface Wheelie { x: number; z: number; dir: number; count: number; outAt: number; gone: boolean; rolled?: boolean; group: number; it: Interactable; }
 interface Party { x: number; z: number; count: number; clearAt: number; mesh: THREE.Mesh; it: Interactable; }
 
 const KINDS: ItemKind[] = ['pet', 'can', 'glass'];
@@ -56,14 +58,30 @@ export class ItemSystem {
   private itemMeshes: Record<ItemKind, THREE.InstancedMesh>;
   private planters: THREE.InstancedMesh;
   private dirty = true;
-  private binMesh!: THREE.InstancedMesh;
+  private binMeshes!: Record<'hoop' | 'lime', THREE.InstancedMesh>;
+  private wheelies: Wheelie[] = [];
+  private skips: { x: number; z: number; count: number; it: Interactable }[] = [];
+  private wheelieMesh = new THREE.InstancedMesh(wheelieGeometry(0x2f5a3a, 0x2f5a3a), new THREE.MeshLambertMaterial({ vertexColors: true }), 40);
+  private wheelieDirty = true;
   private glintMat: THREE.SpriteMaterial;
   private partyGeo = partyGeometry();
   private hiddenCandidates: Spot[];
   private noPlanter: Set<Spot>;
   private bagSpots: [number, number][];
 
-  constructor(private city: CityData, private place: Placement, private state: GameState, extra: { hidden?: Spot[]; bagSpots?: [number, number][] } = {}) {
+  constructor(private city: CityData, private place: Placement, private state: GameState, extra: { hidden?: Spot[]; bagSpots?: [number, number][]; skips?: { x: number; z: number }[] } = {}) {
+    this.skips = (extra.skips ?? []).map((k) => {
+      const skip: { x: number; z: number; count: number; it: Interactable } = {
+        x: k.x, z: k.z, count: 0,
+        it: {
+          x: k.x, z: k.z, reach: 2.2, hold: SKIP.hold,
+          label: () => (skip.count > 0 ? `Renovation skip — cans on top (${skip.count})` : 'Empty skip'),
+          blocked: () => (skip.count > 0 ? this.fullText() : 'Only rubble left'),
+          act: () => { skip.count -= this.pickup(skip.count, 'jackpot'); },
+        } as Interactable,
+      };
+      return skip;
+    });
     this.bagSpots = extra.bagSpots ?? [];
     this.group.name = 'items';
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
@@ -129,14 +147,36 @@ export class ItemSystem {
         have++;
       }
     }
-    const mesh = new THREE.InstancedMesh(binGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }), pts.length);
-    const m = new THREE.Matrix4();
+    // Bin type from the street: lime post bins by wide roads (≥ 13 m) and on Kálvin tér,
+    // green mesh hoop bins everywhere else. Each faces the nearest road.
+    const roadSegs = this.city.roads.filter((r) => r.kind === 'road' && !r.bridge).flatMap((r) => r.pts.slice(1).map((q, j) => [r.pts[j], q, r.w] as const));
+    const nearestRoad = (x: number, z: number) => {
+      let best = { d: Infinity, w: 0, dir: 0 };
+      for (const [a, b, w] of roadSegs) {
+        const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz || 1;
+        const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / l2));
+        const px = a[0] + dx * t, pz = a[1] + dz * t;
+        const d = Math.hypot(x - px, z - pz);
+        if (d < best.d) best = { d, w, dir: Math.atan2(x - px, z - pz) };
+      }
+      return best;
+    };
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const types = pts.map((p) => {
+      const r = nearestRoad(p.x, p.z);
+      return { type: (r.w >= 13 || this.place.zoneAt(p.x, p.z) === 'kalvin' ? 'lime' : 'hoop') as Bin['type'], dir: r.dir };
+    });
+    this.binMeshes = {
+      hoop: new THREE.InstancedMesh(meshHoopBinGeometry(), mat, pts.length),
+      lime: new THREE.InstancedMesh(limePostBinGeometry(), mat, pts.length),
+    };
+    const counts = { hoop: 0, lime: 0 };
     const state = this.state;
     pts.forEach((p, i) => {
-      m.makeTranslation(p.x, 0, p.z);
-      mesh.setMatrixAt(i, m);
+      const { type, dir } = types[i];
+      const index = counts[type]++;
       const bin: Bin = {
-        x: p.x, z: p.z, zone: this.place.zoneAt(p.x, p.z), readyAt: 0, index: i, broken: false,
+        x: p.x, z: p.z, zone: this.place.zoneAt(p.x, p.z), readyAt: 0, index, broken: false, type, dir,
         it: {
           x: p.x, z: p.z, reach: 1.6,
           get hold() { return state.tipsy ? TIPSY.kickHold : BINS.hold; },
@@ -146,10 +186,14 @@ export class ItemSystem {
         },
       };
       this.bins.push(bin);
+      this.setBinTilt(bin, false);
     });
-    mesh.castShadow = true;
-    this.group.add(mesh);
-    this.binMesh = mesh;
+    for (const k of ['hoop', 'lime'] as const) {
+      const mesh = this.binMeshes[k];
+      mesh.count = counts[k];
+      mesh.castShadow = true;
+      this.group.add(mesh);
+    }
   }
 
   /** Tipsy: kick a public bin over. Everything spills at once, but it never refills. */
@@ -166,10 +210,12 @@ export class ItemSystem {
   }
 
   private setBinTilt(b: Bin, down: boolean) {
-    const m = new THREE.Matrix4().makeTranslation(b.x, 0, b.z);
-    if (down) m.multiply(new THREE.Matrix4().makeRotationY(b.index * 1.7)).multiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2)).multiply(new THREE.Matrix4().makeTranslation(0.3, 0, 0));
-    this.binMesh.setMatrixAt(b.index, m);
-    this.binMesh.instanceMatrix.needsUpdate = true;
+    // The opening faces the road (models face −z).
+    const m = new THREE.Matrix4().makeTranslation(b.x, 0, b.z).multiply(new THREE.Matrix4().makeRotationY(b.dir + Math.PI));
+    if (down) m.multiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2)).multiply(new THREE.Matrix4().makeTranslation(0.3, 0, 0));
+    const mesh = this.binMeshes[b.type];
+    mesh.setMatrixAt(b.index, m);
+    mesh.instanceMatrix.needsUpdate = true;
   }
 
   /** New run: clears and rolls everything. */
@@ -223,6 +269,36 @@ export class ItemSystem {
       }
     }
     this.partyTimes.sort((a, b) => a - b);
+
+    for (const k of this.skips) k.count = this.state.supply(rng.int(SKIP.items[0], SKIP.items[1]));
+
+    // Wheelie bins put out on the pavement on Saturday and Sunday mornings.
+    this.wheelies = [];
+    const curb = this.place.spots.filter((s) => !s.green && (s.zone === 'raday' || s.zone === 'lonyay' || s.zone === 'street' || s.zone === 'market' || s.zone === 'bakats'));
+    let group = 0;
+    for (const day of [1, 2]) {
+      for (let g = 0; g < WHEELIES.groups; g++, group++) {
+        const s = rng.pick(curb);
+        const n = rng.int(WHEELIES.perGroup[0], WHEELIES.perGroup[1]);
+        const outAt = day * 1440 + rng.range(WHEELIES.out[0], WHEELIES.out[1]) * 60;
+        const ux = -Math.sin(s.dir), uz = -Math.cos(s.dir);
+        for (let k = 0; k < n; k++) {
+          const x = s.x + ux * (k - n / 2) * 0.8, z = s.z + uz * (k - n / 2) * 0.8;
+          if (!this.place.free(x, z, 0.3)) continue;
+          const w: Wheelie = {
+            x, z, dir: s.dir, count: 0, outAt, gone: false, group,
+            it: {
+              x, z, reach: 1.4, hold: WHEELIES.hold,
+              label: () => (w.count > 0 ? 'Search the wheelie bin' : 'Empty wheelie bin'),
+              blocked: () => (w.count > 0 ? this.fullText() : 'Nothing left in it'),
+              act: () => { w.count -= this.pickup(w.count, 'courtyard'); this.state.stats.binsSearched++; },
+            },
+          };
+          this.wheelies.push(w);
+        }
+      }
+    }
+    this.wheelieDirty = true;
 
     this.dirty = true;
   }
@@ -299,12 +375,14 @@ export class ItemSystem {
     const rng = this.state.rng;
     const h = this.state.hour;
     const weekday = dayIndex(this.state.minute) === 0;
-    let n = rng.int(BINS.items[0], 5);
-    if (b.zone === 'raday' && hourIn(h, 18, 4)) n += rng.int(2, 3);
-    if (b.zone === 'corvinus' && weekday && hourIn(h, 9, 19)) n += rng.int(2, 3);
-    if (b.zone === 'nehru' && hourIn(h, 17, 24)) n += rng.int(2, 3);
+    const [lo, hi] = BIN_TYPES[b.type].items;
+    let n = rng.int(lo, hi);
+    if (b.zone === 'raday' && hourIn(h, 18, 4)) n += rng.int(1, 3);
+    if (b.zone === 'corvinus' && weekday && hourIn(h, 9, 19)) n += rng.int(1, 3);
+    if (b.zone === 'nehru' && hourIn(h, 17, 24)) n += rng.int(1, 3);
+    if (b.zone === 'bakats' && hourIn(h, 17, 23)) n += rng.int(1, 2);
     if (b.zone === 'market' && hourIn(h, 8, 18)) n += rng.int(0, 2);
-    n = this.state.supply(Math.min(BINS.items[1], n));
+    n = this.state.supply(Math.min(hi + 3, n));
     this.state.stats.binsSearched++;
     const got = this.pickup(n, 'bin');
     // Whatever did not fit stays for next time: the bin is ready again sooner.
@@ -475,7 +553,48 @@ export class ItemSystem {
       }
     }
 
+    // Wheelie bins come out at dawn (contents roll then) and go when the truck passes.
+    for (const w of this.wheelies) {
+      if (!w.gone && minute >= w.outAt && !w.rolled) {
+        w.rolled = true;
+        w.count = this.state.supply(this.state.rng.int(WHEELIES.items[0], WHEELIES.items[1]));
+        this.wheelieDirty = true;
+      }
+      if (!w.gone && hourOf(minute) >= WHEELIES.truck[1] && minute > w.outAt + 60) { w.gone = true; this.wheelieDirty = true; }
+    }
+    if (this.wheelieDirty) this.rebuildWheelies(minute);
     if (this.dirty) this.rebuildInstances();
+  }
+
+  private rebuildWheelies(minute: number) {
+    this.wheelieDirty = false;
+    const m = new THREE.Matrix4();
+    let i = 0;
+    for (const w of this.wheelies) {
+      if (w.gone || minute < w.outAt || i >= 40) continue;
+      this.wheelieMesh.setMatrixAt(i++, m.makeRotationY(w.dir + Math.PI / 2).setPosition(w.x, 0, w.z));
+    }
+    this.wheelieMesh.count = i;
+    this.wheelieMesh.instanceMatrix.needsUpdate = true;
+    if (!this.wheelieMesh.parent) { this.wheelieMesh.castShadow = true; this.wheelieMesh.frustumCulled = false; this.group.add(this.wheelieMesh); }
+  }
+
+  /** Where the garbage truck should head: the nearest group of bins still out. */
+  wheelieTarget(x: number, z: number): [number, number] | null {
+    let best: Wheelie | null = null, bd = Infinity;
+    for (const w of this.wheelies) {
+      if (w.gone || this.state.minute < w.outAt) continue;
+      const d = Math.hypot(w.x - x, w.z - z);
+      if (d < bd) { bd = d; best = w; }
+    }
+    return best ? [best.x, best.z] : null;
+  }
+
+  /** The garbage truck takes in every bin within r of (x, z). */
+  collectWheelies(x: number, z: number, r: number) {
+    for (const w of this.wheelies) {
+      if (!w.gone && this.state.minute >= w.outAt && Math.hypot(w.x - x, w.z - z) < r) { w.gone = true; this.wheelieDirty = true; }
+    }
   }
 
   private rebuildInstances() {
@@ -508,6 +627,8 @@ export class ItemSystem {
     for (const b of this.bins) if (near(b.x, b.z)) yield b.it;
     for (const p of this.party) if (near(p.x, p.z)) yield p.it;
     for (const b of this.bags) if (!b.taken && near(b.x, b.z)) yield b.it;
+    for (const w of this.wheelies) if (!w.gone && this.state.minute >= w.outAt && near(w.x, w.z)) yield w.it;
+    for (const k of this.skips) if (near(k.x, k.z)) yield k.it;
   }
 
   /** For the minimap / debugging. */

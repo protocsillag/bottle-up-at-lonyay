@@ -18,6 +18,8 @@ export interface Dressing {
   hiddenSpots: Spot[];
   /** Where the big bag may hide on the Nehru part (behind the kiosks). */
   kioskSpots: Vec2[];
+  /** Renovation skips in front of scaffolded buildings (one-off jackpots). */
+  skips: { x: number; z: number; dir: number }[];
 }
 
 type Part = THREE.BufferGeometry;
@@ -365,8 +367,76 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
     colliders.push({ x: s[0], z: s[1], w: 0.3, d: 0.3, rot: 0 });
   }
 
+  // ---------------------------------------------------------------- renovation sites
+  const skips: Dressing['skips'] = [];
+  for (const street of ['Ráday utca', 'Erkel utca', 'Lónyay utca', 'Mátyás utca']) {
+    const f = facadesAlong(city, street, 14).filter((e) => e.b0.h > 12).sort((p, q) => Math.hypot(q.b[0] - q.a[0], q.b[1] - q.a[1]) - Math.hypot(p.b[0] - p.a[0], p.b[1] - p.a[1]))[street === 'Ráday utca' ? 2 : 0];
+    if (!f) continue;
+    const site = scaffoldSite(f.a, f.b, f.nx, f.nz, f.b0.h, place);
+    if (!site) continue;
+    group.add(site.group);
+    colliders.push(...site.colliders);
+    skips.push(site.skip);
+  }
+
   group.add(farBank(city));
-  return { group, colliders, hiddenSpots, kioskSpots };
+  return { group, colliders, hiddenSpots, kioskSpots, skips };
+}
+
+/** A building under renovation (reference/bins/wheelie-bins-out-and-skip.jpg): scaffolding
+ *  wrapped in green netting over the facade, and on the street a red skip, a yellow and
+ *  white site office, a blue portable toilet and a run of steel crowd barriers. */
+function scaffoldSite(a: Vec2, b: Vec2, nx: number, nz: number, h: number, place: Placement) {
+  const len = Math.min(24, Math.hypot(b[0] - a[0], b[1] - a[1]) - 2);
+  if (len < 8) return null;
+  const ux = (b[0] - a[0]) / Math.hypot(b[0] - a[0], b[1] - a[1]), uz = (b[1] - a[1]) / Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+  const g = new THREE.Group();
+  g.position.set(mx, 0, mz);
+  // Local frame: +x along the facade, −z out to the street.
+  g.rotation.y = Math.atan2(-nx, -nz);
+  const parts: Part[] = [];
+  const H = Math.min(h, 22);
+  for (let x = -len / 2; x <= len / 2 + 0.01; x += 2.5) for (const z of [-0.3, -1.4]) bx(parts, 0.06, H, 0.06, x, H / 2, z, 0x9aa0a6);
+  for (let y = 2; y < H; y += 2) for (const z of [-0.3, -1.4]) bx(parts, len, 0.05, 0.05, 0, y, z, 0x9aa0a6);
+  for (let y = 2; y < H; y += 2) bx(parts, len, 0.04, 1.2, 0, y - 0.05, -0.85, 0xb8a27a); // boards
+  g.add(new THREE.Mesh(merge(parts), new THREE.MeshLambertMaterial({ vertexColors: true })));
+  const net = new THREE.Mesh(new THREE.PlaneGeometry(len, H), new THREE.MeshLambertMaterial({ color: 0x2f6a45, transparent: true, opacity: 0.72, side: THREE.DoubleSide }));
+  net.position.set(0, H / 2, -1.5);
+  g.add(net);
+  // Street furniture in front of it: skip, site office, toilet, barriers.
+  const st: Part[] = [];
+  const out = -4.6;
+  bx(st, 3.6, 1.2, 1.8, -len / 4, 0.7, out, 0xb8262c); // skip
+  bx(st, 3.2, 0.08, 1.5, -len / 4, 1.32, out, 0x5a4a3a); // rubble top
+  for (let i = 0; i < 12; i++) bx(st, 0.12, 0.22, 0.12, -len / 4 - 1.3 + (i % 6) * 0.5, 1.45, out - 0.4 + Math.floor(i / 6) * 0.7, i % 3 ? 0xc23b32 : 0x8fd0e8);
+  bx(st, 2.4, 2.5, 2.4, len / 4, 1.25, out + 0.6, 0xe8e2d6); // site office
+  bx(st, 2.42, 0.3, 2.42, len / 4, 2.5, out + 0.6, 0xf2c418);
+  bx(st, 2.42, 0.3, 2.42, len / 4, 0.15, out + 0.6, 0xf2c418);
+  bx(st, 1.1, 2.3, 1.1, len / 4 + 2.0, 1.15, out + 0.6, 0x1f5fa8); // portable toilet
+  for (let x = -len / 2; x < len / 2; x += 2.2) {
+    bx(st, 2.0, 0.05, 0.05, x + 1.1, 1.05, -2.4, 0xb8bcc0);
+    bx(st, 2.0, 0.05, 0.05, x + 1.1, 0.25, -2.4, 0xb8bcc0);
+    bx(st, 0.05, 1.1, 0.05, x + 0.1, 0.55, -2.4, 0xb8bcc0);
+  }
+  const sm = new THREE.Mesh(merge(st), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  sm.castShadow = true;
+  g.add(sm);
+  const ry = g.rotation.y;
+  const toW = (lx: number, lz: number): Vec2 => [mx + lx * Math.cos(ry) + lz * Math.sin(ry), mz - lx * Math.sin(ry) + lz * Math.cos(ry)];
+  const [kx, kz] = toW(-len / 4, out);
+  if (!place.free(kx, kz, 0.2)) return null;
+  const [ox2, oz2] = toW(len / 4, out + 0.6);
+  const [tx, tz] = toW(len / 4 + 2.0, out + 0.6);
+  const [bx2, bz2] = toW(0, -2.4);
+  void ux; void uz;
+  const colliders: Collider[] = [
+    { x: kx, z: kz, w: 3.6, d: 1.8, rot: ry }, { x: ox2, z: oz2, w: 2.4, d: 2.4, rot: ry }, { x: tx, z: tz, w: 1.1, d: 1.1, rot: ry },
+    { x: bx2, z: bz2, w: len, d: 0.1, rot: ry },
+  ];
+  // The skip is searched from its street side.
+  const [sx2, sz2] = toW(-len / 4, out - 1.4);
+  return { group: g, colliders, skip: { x: sx2, z: sz2, dir: ry } };
 }
 
 /** Across the river: Gellért Hill with the Liberty Statue and the citadel walls, the

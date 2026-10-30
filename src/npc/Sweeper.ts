@@ -9,7 +9,7 @@ import { hourIn, hourOf } from '../state/time';
 const SPEED = 3.5; // m/s
 const SWEEP_R = 6;
 
-function truckMesh() {
+function truckMesh(hopper = 0xe0702a, brushes = true) {
   const g = new THREE.Group();
   const m = (geo: THREE.BufferGeometry, color: number, emissive = 0) => {
     const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color, emissive, emissiveIntensity: emissive ? 1 : 0 }));
@@ -19,11 +19,12 @@ function truckMesh() {
   };
   m(new THREE.BoxGeometry(1.7, 1.6, 1.6).translate(0, 1.3, -1.4), 0xe8e2d6); // cab
   m(new THREE.BoxGeometry(1.5, 0.6, 1.0).translate(0, 1.6, -2.2), 0x2b3a4a); // windscreen
-  m(new THREE.BoxGeometry(1.8, 1.9, 2.6).translate(0, 1.45, 0.8), 0xe0702a); // hopper
+  m(new THREE.BoxGeometry(1.8, 1.9, 2.6).translate(0, 1.45, 0.8), hopper); // hopper
   m(new THREE.BoxGeometry(1.82, 0.2, 2.62).translate(0, 1.6, 0.8), 0xe8e2d6); // stripe
   for (const [x, z] of [[-0.8, -1.4], [0.8, -1.4], [-0.8, 1.4], [0.8, 1.4]]) {
     m(new THREE.CylinderGeometry(0.38, 0.38, 0.25, 12).rotateZ(Math.PI / 2).translate(x, 0.38, z), 0x1b1b1b);
   }
+  if (!brushes) g.add(new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.2, 0.4).translate(0, 1.0, 2.25), new THREE.MeshLambertMaterial({ color: 0x5a5a5a }))); // bin lift
   const brushL = m(new THREE.CylinderGeometry(0.35, 0.35, 0.12, 10).translate(-0.9, 0.08, -2.1), 0x3a3a3a);
   const brushR = m(new THREE.CylinderGeometry(0.35, 0.35, 0.12, 10).translate(0.9, 0.08, -2.1), 0x3a3a3a);
   const beacon = m(new THREE.BoxGeometry(0.3, 0.2, 0.3).translate(0, 2.2, -1.4), 0xffa000, 0xff8a00);
@@ -32,7 +33,7 @@ function truckMesh() {
 
 export class Sweeper {
   readonly group = new THREE.Group();
-  private truck = truckMesh();
+  private truck: ReturnType<typeof truckMesh>;
   private edge = -1;
   private from = -1;
   private t = 0;
@@ -43,7 +44,10 @@ export class Sweeper {
   /** Clears items around a point; set by main. */
   onSweep: (x: number, z: number, r: number) => void = () => {};
 
-  constructor(private graph: RoadGraph) {
+  /** hours: active window; target: where to head (else toward the player). */
+  constructor(private graph: RoadGraph, private opts: { from: number; to: number; hopper?: number; brushes?: boolean; target?: () => [number, number] | null } = { from: 2, to: 7 }) {
+    this.truck = truckMesh(opts.hopper, opts.brushes ?? true);
+    this.truck.brushL.visible = this.truck.brushR.visible = opts.brushes ?? true;
     this.group.add(this.truck.g);
     this.group.visible = false;
   }
@@ -51,7 +55,7 @@ export class Sweeper {
   reset() { this.active = false; this.group.visible = false; this.edge = -1; }
 
   update(dt: number, minute: number, px: number, pz: number) {
-    const night = hourIn(hourOf(minute), 2, 7);
+    const night = hourIn(hourOf(minute), this.opts.from, this.opts.to);
     if (!night) {
       if (this.active) this.reset();
       return;
@@ -71,8 +75,9 @@ export class Sweeper {
     if (this.t >= E.len) {
       const node = this.graph.other(this.edge, this.from);
       const opts = this.graph.nodes[node].edges.filter((e) => e !== this.edge && this.graph.edges[e].road);
-      // Prefer roads that lead toward the player so the sweeper stays in the neighbourhood.
-      opts.sort((a, b) => this.distTo(a, node, px, pz) - this.distTo(b, node, px, pz));
+      // Prefer roads that lead toward the target (or the player) so it stays in the neighbourhood.
+      const [tx, tz] = this.opts.target?.() ?? [px, pz];
+      opts.sort((a, b) => this.distTo(a, node, tx, tz) - this.distTo(b, node, tx, tz));
       const next = opts.length ? (Math.random() < 0.6 ? opts[0] : opts[Math.floor(Math.random() * opts.length)]) : this.edge;
       this.t -= E.len;
       this.from = node;

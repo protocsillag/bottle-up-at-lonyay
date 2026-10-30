@@ -77,10 +77,18 @@ function bx(parts: Part[], w: number, h: number, d: number, x: number, y: number
   parts.push(g);
 }
 
-/** Wheelie container (1100 l). Yellow lid = plastic and metal recycling. */
-export function containerMesh(lid: number) {
+export type CourtBinKind = 'recycling' | 'mixed' | 'paper';
+export const COURT_BIN_COLORS: Record<CourtBinKind, [number, number]> = {
+  recycling: [0x1f2f5a, 0xf2c418], // dark blue, yellow lid
+  mixed: [0x2f5a3a, 0x2f5a3a], // green
+  paper: [0x1f2f5a, 0x2f63b8], // dark blue, blue lid
+};
+
+/** Wheelie container (1100 l), coloured by what goes in it. */
+export function containerMesh(kind: CourtBinKind) {
+  const [body, lid] = COURT_BIN_COLORS[kind];
   const parts: Part[] = [];
-  bx(parts, 1.3, 1.1, 1.0, 0, 0.65, 0, 0x4d5a52);
+  bx(parts, 1.3, 1.1, 1.0, 0, 0.65, 0, body);
   bx(parts, 1.36, 0.1, 1.06, 0, 1.25, 0, lid);
   for (const sx of [-0.5, 0.5]) for (const sz of [-0.35, 0.35]) bx(parts, 0.12, 0.14, 0.12, sx, 0.07, sz, 0x1b1b1b);
   const m = new THREE.Mesh(merge(parts), new THREE.MeshLambertMaterial({ vertexColors: true }));
