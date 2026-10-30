@@ -15,11 +15,12 @@ import { buildGimnaziumExtras, findGimnazium, lonyayColors } from './world/landm
 import { buildMosoda, buildWear, matyasColors, RoadWorks } from './world/landmarks/matyas';
 import { buildLot, buildRaday, prepareRaday } from './world/landmarks/raday';
 import { fixRoads } from './world/roadFix';
-import { excludeGateAreas } from './world/buildings/gates';
+import { excludeGateAreas, excludeGateBuildings } from './world/buildings/gates';
 import { buildErkel, prepareErkel } from './world/landmarks/erkel';
 import { buildKalvin } from './world/landmarks/kalvin';
 import { bakatsChurchId, buildBakats } from './world/landmarks/bakats';
 import { buildBalna, prepareBalna } from './world/landmarks/balna';
+import { buildSparBranding, sparBuilding } from './world/shops/sparFront';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -113,6 +114,9 @@ const erkelPrep = prepareErkel(city, cityColors, new Set([gimnazium?.b, radayPre
 // Bálna: two brick warehouse wings under a glass whale (replaces the plain block).
 const brickSet = new Set([gimnazium?.b.id, bakatsChurchId(city)].filter((id): id is string => !!id));
 const balnaPrep = prepareBalna(city, brickSet, cityColors);
+// The City Spar building is white with SPAR branding on every street side.
+const sparB = sparBuilding(city);
+if (sparB) { cityColors.set(sparB.id, 0xf0efe9); excludeGateBuildings([sparB.id]); }
 const cityGroup = buildCity(city, {
   skip: new Set([hallBuilding?.id, erkelPrep.house?.b.id, balnaPrep?.glassId].filter((id): id is string => !!id)),
   palace: new Set(erkelPrep.palace ? [erkelPrep.palace.b.id] : []),
@@ -141,9 +145,6 @@ if (radayPrep.lot) {
   dressing.hiddenSpots.push(lot.spot);
 }
 for (const c of dressing.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
-const parking = buildParking(city, placement);
-cityGroup.add(parking.mesh);
-for (const p of parking.cars) world.addBox(p.x, p.z, 1.8, 4.3, p.rot);
 const state = new GameState(newSeed());
 const items = new ItemSystem(city, placement, state, {
   hidden: dressing.hiddenSpots,
@@ -162,6 +163,11 @@ const lamps = new Lamps(city, placement, bakats.lamps);
 city.benches.push(...bakats.benches);
 scene.add(lamps.group);
 for (const [x, z] of lamps.posts) world.addBox(x, z, 0.3, 0.3);
+// Parked cars, with a gap wherever a lamp post, bin, planter or kerb tree stands, so the
+// pavement is never blocked.
+const parking = buildParking(city, placement, [...lamps.posts, ...items.binSpots, ...dressing.colliders.map((c) => [c.x, c.z] as [number, number])]);
+cityGroup.add(parking.mesh);
+for (const p of parking.cars) world.addBox(p.x, p.z, 1.8, 4.3, p.rot);
 const dogMess = new DogMess(placement, state);
 scene.add(dogMess.group);
 const bikes = new Bikes(placement, state);
@@ -210,6 +216,7 @@ scene.add(buildings.group);
 const shops = new Shops(city, state, host, hall?.door ?? null);
 scene.add(shops.group, shops.street, shops.lights);
 if (lonyaySparDoor) shops.addDecorativeFront(lonyaySparDoor);
+if (sparB && city.landmarks.spar) cityGroup.add(buildSparBranding(sparB, doorOnFacade(city, city.landmarks.spar), (x, z) => placement.free(x, z, 0.5)));
 // Mátyás utca wear and tear (reference/matyas-utca/): plinths, graffiti, road works.
 const openings = [
   ...buildings.gates.gates.map((g) => ({ x: g.x, z: g.z, r: 1.9 })),
@@ -217,7 +224,7 @@ const openings = [
 ];
 cityGroup.add(buildWear(city, placement, streets, {
   openings,
-  noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
+  noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, sparB?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
 }));
 const balna = balnaPrep ? buildBalna(city, placement, balnaPrep) : null;
 if (balna) {
@@ -248,8 +255,9 @@ returns.onUse = (p, m) => {
   mohu.start({ machine: p.machines[m], name: p.name, onEnd: () => returns.stop() });
 };
 const inside = () => buildings.inside || shops.inside;
-buildings.enterBlock = () => player.onBike ? 'Get off the bike first (F)' : null;
-shops.enterBlock = buildings.enterBlock;
+shops.enterBlock = () => player.onBike ? 'Get off the bike first (F)' : null;
+// Starving: too weak to search bins or go into courtyards, but street items and shops are fine.
+buildings.enterBlock = () => shops.enterBlock() ?? (state.starving ? 'Too weak — eat first (SPAR or Aldi)' : null);
 const interaction = new Interaction();
 interaction.add((x, z) => bikes.interactables(x, z));
 interaction.add((x, z) => buildings.getInteractables(x, z));
@@ -297,8 +305,8 @@ function buy(what: 'food' | 'beer') {
     state.drinkBeer();
     say('till_beer', 2.2);
     setTimeout(() => sound.play('gulp'), 400);
-    const h = Math.round((state.tipsyUntil - state.minute) / 60);
-    state.toast(`Beer: −${price} Ft. Tipsy for ${h} h${state.tipsyLevel > 1 ? ` (level ${state.tipsyLevel})` : ''}.`, 'good');
+    const min = Math.round((state.tipsyUntil - state.minute) / GAME_MIN_PER_SEC / 60);
+    state.toast(`Beer: −${price} Ft. Tipsy for ${min} min${state.tipsyLevel > 1 ? ` (level ${state.tipsyLevel})` : ''}.`, 'good');
   }
 }
 player.allowDebug = DEBUG;
@@ -390,13 +398,26 @@ function startRun() {
   roadWorks.reset(state.rng);
   closeTill();
   hungerWarned = false;
-  player.teleport(sx, sz, 0);
+  const [px, pz] = startSpot();
+  player.teleport(px, pz, 0);
   player.stamina = 100;
   // Start looking up Lónyay utca toward Kálvin tér.
   const kalvin = city.landmarks.kalvinTer;
-  if (kalvin) follow.yaw = Math.atan2(sx - kalvin[0], sz - kalvin[1]);
+  if (kalvin) follow.yaw = Math.atan2(px - kalvin[0], pz - kalvin[1]);
   follow.pitch = 0.3;
   show('run');
+}
+
+/** The drop-off: the nearest pavement spot to the Lónyay utca landmark with room around it
+ *  (no parked car, lamp, planter or this run's road works), so a run never starts in the road. */
+function startSpot(): [number, number] {
+  const clear = (x: number, z: number) => {
+    const [rx, rz] = world.resolve(x, z, 0.9);
+    return Math.hypot(rx - x, rz - z) < 1e-3;
+  };
+  const spots = placement.spots.filter((p) => !p.green).sort((a, b) => Math.hypot(a.x - sx, a.z - sz) - Math.hypot(b.x - sx, b.z - sz));
+  const s = spots.find((p) => clear(p.x, p.z));
+  return s ? [s.x, s.z] : [sx, sz];
 }
 
 async function endRun() {
@@ -640,7 +661,7 @@ function frame() {
     puddles.update(dt);
     returns.update(dt, player.position.x, player.position.z);
     interaction.holdDisabledReason = player.onBike ? 'Get off the bike first (F)' : null;
-    interaction.collectBlockedReason = state.starving ? 'Too hungry — buy food at SPAR or Aldi' : null;
+    interaction.collectBlockedReason = state.starving ? 'Too weak to search — eat first (SPAR or Aldi)' : null;
     if (tillOpen) interaction.prompt = null;
     else if (!mohu.active) interaction.update(dt, input, player.position.x, player.position.z, player.facing);
     else interaction.prompt = null;

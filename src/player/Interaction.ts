@@ -53,7 +53,7 @@ export class Interaction {
         // Prefer things in front of the player.
         const front = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
         const score = d * (1.4 - 0.4 * front);
-        if (score < bestScore) { bestScore = score; best = it; bestCollect = collect || !!it.collect; }
+        if (score < bestScore) { bestScore = score; best = it; bestCollect = it.collect ?? collect; } // an item can opt out of its source flag
       }
     }
     if (best !== this.target) { this.target = best; this.progress = 0; }

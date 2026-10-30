@@ -39,10 +39,12 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fc3e0; fon
 }
 #minimap.large { width: min(80vh, 80vw); height: min(80vh, 80vw); right: 50%; bottom: 50%; transform: translate(50%, 50%); }
 .card .controls {
-  list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px;
-  text-align: left; font-size: 14px;
+  list-style: none; padding: 0; margin: 14px auto 0; display: grid; grid-template-columns: repeat(2, max-content); gap: 5px 36px;
+  justify-content: center; text-align: left; font-size: 14px;
 }
-.card .controls b { display: inline-block; min-width: 52px; }
+/* Key and description side by side, each on one line. */
+.card .controls li { display: grid; grid-template-columns: 54px max-content; align-items: baseline; white-space: nowrap; }
+#intro .card { max-width: 620px; }
 
 /* ---- M3 HUD ---- */
 #hud .clock { font-size: 26px; font-weight: 800; color: var(--mohu-yellow); letter-spacing: 0.5px; }

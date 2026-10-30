@@ -13,7 +13,18 @@ const NO_PARK = new Set(['Ráday utca']);
 
 export interface Parked { x: number; z: number; rot: number; }
 
-export function buildParking(city: CityData, place: Placement) {
+/** avoid: kerbside things (lamp posts, bins, planters, trees). No car is parked beside
+ *  one, so there is always a way round it on a narrow pavement. */
+export function buildParking(city: CityData, place: Placement, avoid: [number, number][] = []) {
+  const grid = new Map<string, [number, number][]>();
+  for (const p of avoid) { const k = `${Math.floor(p[0] / 8)},${Math.floor(p[1] / 8)}`; (grid.get(k) ?? grid.set(k, []).get(k)!).push(p); }
+  const blockedBy = (x: number, z: number) => {
+    const cx = Math.floor(x / 8), cz = Math.floor(z / 8);
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+      for (const [ax, az] of grid.get(`${cx + i},${cz + j}`) ?? []) if (Math.hypot(ax - x, az - z) < 3.8) return true;
+    }
+    return false;
+  };
   const cars: Parked[] = [];
   const nodeDeg = new Map<string, number>();
   for (const r of city.roads) {
@@ -39,7 +50,7 @@ export function buildParking(city: CityData, place: Placement) {
           if (rnd() < 0.1) continue; // the odd gap
           const off = r.w / 2 - (angled ? 0.55 : 1.0);
           const x = ax + ux * t - uz * off * side, z = az + uz * t + ux * off * side;
-          if (!pointInPolygon(x, z, city.boundary) || nearJunction(x, z) || place.buildings.blocked(x, z, 1.0)) continue;
+          if (!pointInPolygon(x, z, city.boundary) || nearJunction(x, z) || place.buildings.blocked(x, z, 1.0) || blockedBy(x, z)) continue;
           // Heading along the street; angled bays point the nose 35° in toward the kerb.
           let rot = Math.atan2(-ux, -uz) + (rnd() < 0.5 ? Math.PI : 0);
           if (angled) rot = Math.atan2(-ux, -uz) + side * 0.6;

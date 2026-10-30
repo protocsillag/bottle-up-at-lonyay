@@ -114,9 +114,10 @@ export class GameState {
   eat() { this.hunger = 1; this.stats.foodBought++; }
 
   drinkBeer() {
-    const hours = this.rng.range(TIPSY.hours[0], TIPSY.hours[1]);
+    // 3 real minutes, then 4, then 5 while still tipsy; further beers restart the 5.
     this.tipsyLevel = this.tipsy ? Math.min(TIPSY.maxLevel, this.tipsyLevel + 1) : 1;
-    this.tipsyUntil = this.minute + hours * 60;
+    const realMin = TIPSY.realMinutes[Math.min(this.tipsyLevel, TIPSY.realMinutes.length) - 1];
+    this.tipsyUntil = this.minute + realMin * 60 * GAME_MIN_PER_SEC;
     this.stats.beersBought++;
   }
 

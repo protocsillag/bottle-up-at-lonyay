@@ -126,7 +126,8 @@ export const HUNGER = {
 };
 export const TILL = { food: 100, beer: 200 };
 export const TIPSY = {
-  hours: [2, 6] as const, // game hours per beer
+  /** Real minutes tipsy after the 1st, 2nd and 3rd beer in a row; more beers keep the last. */
+  realMinutes: [3, 4, 5] as const,
   speed: 1.2,
   maxLevel: 3, // wobble strength stacks with each beer while tipsy
   peeSeconds: 3,

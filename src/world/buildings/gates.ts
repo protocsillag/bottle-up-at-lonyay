@@ -52,11 +52,14 @@ function area(ring: Vec2[]) {
 /** Areas no gate may open onto (the Ráday empty lot: its neighbours' walls are firewalls). */
 const excluded: Vec2[][] = [];
 export function excludeGateAreas(rings: Vec2[][]) { excluded.push(...rings); }
+/** Buildings that get no residential gate at all (the City Spar). */
+const noGate = new Set<string>();
+export function excludeGateBuildings(ids: string[]) { for (const id of ids) noGate.add(id); }
 
 export function placeGates(city: CityData, place: Placement, avoid: Vec2[] = []): Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown' | 'variant'>[] {
   const out: Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown' | 'variant'>[] = [];
   for (const b of city.buildings) {
-    if (b.scenery || b.h < 8 || area(b.outer) < 150 || (b.name && NON_RESIDENTIAL.test(b.name))) continue;
+    if (b.scenery || b.h < 8 || area(b.outer) < 150 || (b.name && NON_RESIDENTIAL.test(b.name)) || noGate.has(b.id)) continue;
     let best: { score: number; x: number; z: number; nx: number; nz: number } | null = null;
     const ring = b.outer;
     for (let i = 0; i < ring.length; i++) {

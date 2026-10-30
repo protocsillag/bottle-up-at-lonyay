@@ -1,5 +1,16 @@
 # Changelog
 
+## Playtest tweaks (2026-10-30)
+
+- The intro card is wider and every control sits on one line.
+- A run now starts on the pavement of Lónyay utca, not in the middle of the road.
+- Bins that start a run already empty now say "Someone got here first — refills in …" instead of "Searched", so it no longer looks as if kicking one bin used up another.
+- Pavements are never blocked: parked cars leave a gap at every lamp post, bin, planter and kerb tree, so you can always step round.
+- The City Spar on Kinizsi utca is SPAR from every side: a white building with the green-and-red SPAR band, boards and blade signs on every street side, and a big sign on the roof. No residential gate on it any more.
+- Beer: tipsy for 3 real minutes, a second beer while tipsy makes it 4, a third 5; more beers just restart the 5.
+- Starving: you can still pick up loose bottles and cans from the street (and take blue bags), but you are too weak to search bins, stashes and party leftovers or to go into courtyards. Shops stay open to you, so you can go and eat.
+- The end screen's "Title" button is now "Home" (and the pause card says "Quit to home").
+
 ## World fixes from Alex's walk-through (2026-10-30)
 
 - **Missing streets.** The map export dropped streets tagged as under construction, so a stretch of Lónyay utca, Mátyás utca's continuation from Lónyay to Ráday, and Kinizsi utca across Ráday showed as bare grey ground. They are now proper streets with road, pavement, parked cars and lamps, with junctions that walkers and cars can use. The map script now keeps such streets for the next re-bake.

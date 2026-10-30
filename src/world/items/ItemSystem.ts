@@ -15,7 +15,11 @@ import { bigBagGeometry, glintTexture, itemGeometry, partyGeometry, planterGeome
 
 interface StreetItem { spot: Spot; kinds: ItemKind[]; yaw: number[]; off: [number, number][]; it: Interactable; }
 interface Hidden { spot: Spot; count: number; refillAt: number; it: Interactable; glint: THREE.Sprite; planter: number; }
-interface Bin { x: number; z: number; zone: Zone; readyAt: number; it: Interactable; index: number; broken: boolean; type: 'hoop' | 'lime'; dir: number; }
+interface Bin {
+  x: number; z: number; zone: Zone; readyAt: number; it: Interactable; index: number; broken: boolean; type: 'hoop' | 'lime'; dir: number;
+  /** The player searched it (else it was found empty: someone got there first). */
+  mine: boolean;
+}
 interface Wheelie { x: number; z: number; dir: number; count: number; outAt: number; gone: boolean; rolled?: boolean; group: number; it: Interactable; }
 interface Party { x: number; z: number; count: number; clearAt: number; mesh: THREE.Mesh; it: Interactable; }
 
@@ -177,12 +181,14 @@ export class ItemSystem {
       const { type, dir } = types[i];
       const index = counts[type]++;
       const bin: Bin = {
-        x: p.x, z: p.z, zone: this.place.zoneAt(p.x, p.z), readyAt: 0, index, broken: false, type, dir,
+        x: p.x, z: p.z, zone: this.place.zoneAt(p.x, p.z), readyAt: 0, index, broken: false, type, dir, mine: false,
         it: {
           x: p.x, z: p.z, reach: 1.6,
           get hold() { return state.tipsy ? TIPSY.kickHold : BINS.hold; },
-          label: () => bin.broken ? 'Kicked-over bin' : state.tipsy ? 'Kick the bin over' : state.minute >= bin.readyAt ? 'Search the bin' : 'Bin already searched',
-          blocked: () => bin.broken ? 'Broken — nothing left' : state.tipsy ? this.fullText() : state.minute < bin.readyAt ? `Searched — refills in ${hoursText(bin.readyAt - state.minute)}` : this.fullText(),
+          label: () => bin.broken ? 'Kicked-over bin' : state.tipsy ? 'Kick the bin over' : state.minute >= bin.readyAt ? 'Search the bin' : bin.mine ? 'Bin already searched' : 'Empty bin',
+          blocked: () => bin.broken ? 'Broken — nothing left' : state.tipsy ? this.fullText() : state.minute < bin.readyAt
+            ? (bin.mine ? `Searched — refills in ${hoursText(bin.readyAt - state.minute)}` : `Someone got here first — refills in ${hoursText(bin.readyAt - state.minute)}`)
+            : this.fullText(),
           act: () => state.tipsy ? this.kickBin(bin) : this.searchBin(bin),
         },
       };
@@ -218,6 +224,9 @@ export class ItemSystem {
     mesh.setMatrixAt(b.index, m);
     mesh.instanceMatrix.needsUpdate = true;
   }
+
+  /** Where the public bins stand (kept clear of parked cars). */
+  get binSpots(): [number, number][] { return this.bins.map((b) => [b.x, b.z]); }
 
   /** New run: clears and rolls everything. */
   reset() {
@@ -258,7 +267,8 @@ export class ItemSystem {
 
     // Bins: most start with something in them; kicked bins stand up again.
     for (const b of this.bins) { if (b.broken) { b.broken = false; this.setBinTilt(b, false); } }
-    for (const b of this.bins) b.readyAt = rng.chance(0.75) ? 0 : rng.range(60, BINS.refill) + this.state.minute;
+    // A quarter start empty: someone else got there first (said so on the prompt).
+    for (const b of this.bins) { b.mine = false; b.readyAt = rng.chance(0.75) ? 0 : rng.range(60, BINS.refill) + this.state.minute; }
 
     // Party leftovers: a few random times each night.
     this.partyTimes = [];
@@ -321,6 +331,7 @@ export class ItemSystem {
         x, z, mesh, taken: false,
         it: {
           x, z, reach: 1.6, hold: 0,
+          collect: false,
           label: () => bag.taken ? null : 'Take the blue bag',
           act: () => {
             if (!this.state.takeBag()) return;
@@ -384,6 +395,7 @@ export class ItemSystem {
     const got = this.pickup(n, 'bin');
     // Whatever did not fit stays for next time: the bin is ready again sooner.
     b.readyAt = this.state.minute + (got < n ? 30 : BINS.refill);
+    b.mine = true;
   }
 
   private takeParty(p: Party) {
@@ -419,6 +431,7 @@ export class ItemSystem {
         spot: s, kinds, yaw, off,
         it: {
           x: s.x, z: s.z, reach: 1.5, hold: 0,
+          collect: false, // loose on the street: allowed even when starving
           label: () => `Pick up ${item.kinds.length === 1 ? (item.kinds[0] === 'can' ? 'the can' : 'the bottle') : `${item.kinds.length} items`}`,
           blocked: () => this.fullText(),
           act: () => this.takeStreet(item),
@@ -479,6 +492,7 @@ export class ItemSystem {
       spot, kinds: [kind], yaw: [Math.random() * 6.28], off: [[0, 0]],
       it: {
         x, z, reach: 1.5, hold: 0,
+        collect: false,
         label: () => `Pick up ${kind === 'can' ? 'the can' : 'the bottle'}`,
         blocked: () => this.fullText(),
         act: () => this.takeStreet(item),
