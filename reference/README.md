@@ -10,6 +10,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | `matyas-utca/` | Mátyás utca, a quieter side street of tenements, gates and doors | Waiting for M11 |
 | `raday-utca/` | Ráday utca, the café and bar street | Waiting for M11 |
 | `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Waiting for M11 |
+| `kalvin-ter/` | Kálvin tér, the big square and junction at the north corner | Waiting for M11 |
 | `../mohu-repont-machines.png` | The REpont machine pair (used in M5) | Used |
 
 ## `lonyay-utca/` — Lónyay utca
@@ -130,7 +131,7 @@ The café and bar street, and the busiest place in the game at night. It is pave
 
 ## `erkel-torok-pal-utca/` — Erkel utca and Török Pál utca
 
-Two side streets photographed together. Alex hasn't said which photo is which street yet; match them with OSM (the old low house is a single-storey building, and in `street-toward-market-hall.jpg` the far end of the street looks straight at the market hall). Apply the general findings to both streets.
+Two side streets photographed together; Alex is fine with not labelling which photo is which. Apply the findings to both streets.
 
 **A new public bin design** (`old-low-house-graffiti.jpg`). This is what a Budapest public bin looks like, and the game's public bins should copy it: a dark green perforated steel basket hanging in a green steel hoop frame fixed to the ground, with a mint-green bin bag folded over the rim. Use it for every public bin.
 
@@ -150,3 +151,43 @@ Two side streets photographed together. Alex hasn't said which photo is which st
 - `street-toward-market-hall.jpg`: an older, plainer pale yellow neoclassical block, 3–4 storeys, with arched niches over the ground-floor windows; a red-orange facade further down. Left: a blue-grey painted shopfront with dark wooden windows and a "KIADÓ" (for rent) banner. **Keep this sightline:** the yellow-brick gable of the market hall, with trees in front, closes the view at the end of the street.
 - `old-low-house-graffiti.jpg`: a rare survivor, an old single-storey house with peeling yellow plaster, a steep brown tiled roof, a brick chimney, small windows and arched doors, covered in big colourful graffiti pieces from the pavement up to the eaves. A small restaurant terrace in front: tables with red-and-white checked cloths, black bistro chairs, green artificial grass, a closed parasol, wall lanterns. Behind it a tall bare firewall rises. Make this house a landmark; it reads instantly as "not a tenement".
 - Opposite it: a long ochre building with arched ground-floor openings and an octagonal restaurant sign (invent the name).
+
+## `kalvin-ter/` — Kálvin tér
+
+The busy square and junction at the north corner of the map, where the Kiskörút meets Ráday, Kinizsi and Üllői út. It has a metro station, trams and the Reformed church. It is also the edge of the map, so a lot of what is here is seen across the road rather than walked through.
+
+**The square.**
+
+- Paving: grey concrete slabs in irregular, interlocking arrow and hexagon shapes, laid in a zigzag pattern. Tactile guide strips (ribbed lines) run across it to the crossings; a steel drainage channel crosses it.
+- **Stone balls:** white terrazzo spheres about 60–80 cm across, scattered as bollards across the whole square in loose rows. This is the most recognisable thing about Kálvin tér; put dozens of them here. They are solid obstacles you have to weave around.
+- Raised planting beds with low curved walls of white granite (people sit on them), filled with low hedges and dark red barberry.
+- Big round concrete planter tubs with young trees in them.
+- Galvanised steel hoop bike racks, one with a blue road bike locked to it (a prop, not a rideable bike), and a bike-share dock with a green round sign.
+- An old green wooden market barrow on big spoked wheels, used as a sign stand.
+- A café terrace by the church with tall cream parasols folded up in the morning and chairs stacked against the trees.
+
+**Metro entrance.** A low dome of curved glass on swooping dark grey steel ribs, like a ribbed shell, over the stairs down to the station; an "M" sign on a post next to it. Nearby stand two or three tall cylindrical ventilation towers made of green glass strips in a steel frame. The stairs can't be entered (or lead to a "Closed" prompt). Commuter NPCs should come up out of it in the morning rush.
+
+**Bins.** Two kinds here:
+
+- Lime-green plastic bins on a single post, with a pictogram of someone throwing rubbish in. This is the bin for squares and main streets (the green mesh bin from `erkel-torok-pal-utca/` is for side streets).
+- A row of four green wheelie bins put out on the square for collection. A good "jackpot on the street" spot: wheelie bins left out on certain mornings.
+
+**The Reformed church** (`reformed-church.jpg`). White neoclassical, with a portico of four Corinthian columns under a triangular pediment, a large half-moon window above, balustrades along the roof, and a tall square clock tower topped by a green copper onion-shaped spire. An iron fence across the portico and a bronze statue of a standing man in a long coat in front. It is already in the game; check the proportions and add the spire shape, the clock faces and the statue.
+
+**The körút and traffic** (`korut-tram-lamp-toward-bridge.jpg`, `junction-tram-wires-taxi.jpg`).
+
+- A wide boulevard with tram tracks in the middle, a red-painted bus and bike lane, zebra crossings with tactile paving, and short black bollards on the kerb.
+- **Trams:** yellow trams under a web of overhead wires hung from span wires between the lamp posts and the buildings. M10's optional tram should look like this.
+- **Main-street lamps:** tall dark grey cast-iron candelabra posts with an ornate fluted base, scroll ironwork at the top and two or three bell-shaped lanterns hanging from curly arms. Many also carry traffic lights, loudspeakers and tram wires. Use these on the körút and big streets.
+- **Taxis are yellow**, all of them, with a checkered stripe. Make some of M10's traffic yellow taxis.
+- Blue city buses, a bus stop with a long curved glass canopy on steel arches.
+- **Sightline:** looking down Vámház körút, the green Szabadság híd closes the view. Keep it visible from the square.
+
+**Buildings around the square.**
+
+- Pinkish-beige 4-storey neoclassical blocks with round-arched top-floor windows, small balconies, red tiled roofs with chimneys, and arcaded ground floors full of cafés and shops.
+- A cream corner building with a rounded corner bay, balustraded balconies and a domed bronze canopy over its entrance (an office front; invent the name).
+- Big modern glass office buildings with sharp, angled glass prows.
+- A large beige hotel with a dark mansard roof full of dormers and green-glass bay windows.
+- Billboards: on the building next to the church, and on the rooftops. Use invented adverts, or adverts for the game itself ("Mohu: minden üveg számít" — every bottle counts).
