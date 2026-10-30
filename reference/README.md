@@ -9,6 +9,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | `lonyay-utca/` | Lónyay utca, around the Református gimnázium and the SPAR corner | Waiting for M11 |
 | `matyas-utca/` | Mátyás utca, a quieter side street of tenements, gates and doors | Waiting for M11 |
 | `raday-utca/` | Ráday utca, the café and bar street | Waiting for M11 |
+| `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Waiting for M11 |
 | `../mohu-repont-machines.png` | The REpont machine pair (used in M5) | Used |
 
 ## `lonyay-utca/` — Lónyay utca
@@ -126,3 +127,26 @@ The café and bar street, and the busiest place in the game at night. It is pave
 - The lot is fenced off with green posts and red-white and yellow-black tape, with a gravel heap and loose paving stones inside.
 - A graffiti-and-poster-covered electrical substation box, a mural on a wall, big dark green planter boxes, bike-share bikes.
 - Gameplay idea: make the fenced lot a hidden spot that is always worth checking, behind the substation box.
+
+## `erkel-torok-pal-utca/` — Erkel utca and Török Pál utca
+
+Two side streets photographed together. Alex hasn't said which photo is which street yet; match them with OSM (the old low house is a single-storey building, and in `street-toward-market-hall.jpg` the far end of the street looks straight at the market hall). Apply the general findings to both streets.
+
+**A new public bin design** (`old-low-house-graffiti.jpg`). This is what a Budapest public bin looks like, and the game's public bins should copy it: a dark green perforated steel basket hanging in a green steel hoop frame fixed to the ground, with a mint-green bin bag folded over the rim. Use it for every public bin.
+
+**Lamps hung over the street.** In these side streets there are no lamp posts: round dish lamps hang on wires stretched across the street between the facades, at about 7–8 m. Use this instead of posts in narrow side streets (roughly under 12 m between facades), and keep posts for the main streets and Ráday.
+
+**The street.**
+
+- Patched asphalt road with yellow cycle-lane markings: a bike symbol with double chevrons painted on the road in each direction (shared lane).
+- A white hatched parking box, a blue "P" sign, a no-stopping sign with a tow-away plate under it, yellow paint on the kerb where you can't stop.
+- Kerbs edged with granite setts; pavements of plain asphalt or grey slabs, with beige tiles at the corners.
+- Rows of black bollards with ball tops along the kerb.
+- Parked cars plus delivery vans and a small flatbed truck; a block of construction fence on the road.
+
+**Buildings.**
+
+- `grey-palace-street.jpg`: a long, grand grey-beige neo-Renaissance block, 4 storeys. Strongly rusticated ground floor with tall round-arched windows under heavy stone arches, a dark red service door, a granite plinth with graffiti. Above: windows with triangular and segmental pediments on consoles, a deep dentil cornice. Opposite, a whole building under scaffolding wrapped in green netting.
+- `street-toward-market-hall.jpg`: an older, plainer pale yellow neoclassical block, 3–4 storeys, with arched niches over the ground-floor windows; a red-orange facade further down. Left: a blue-grey painted shopfront with dark wooden windows and a "KIADÓ" (for rent) banner. **Keep this sightline:** the yellow-brick gable of the market hall, with trees in front, closes the view at the end of the street.
+- `old-low-house-graffiti.jpg`: a rare survivor, an old single-storey house with peeling yellow plaster, a steep brown tiled roof, a brick chimney, small windows and arched doors, covered in big colourful graffiti pieces from the pavement up to the eaves. A small restaurant terrace in front: tables with red-and-white checked cloths, black bistro chairs, green artificial grass, a closed parasol, wall lanterns. Behind it a tall bare firewall rises. Make this house a landmark; it reads instantly as "not a tenement".
+- Opposite it: a long ochre building with arched ground-floor openings and an octagonal restaurant sign (invent the name).
