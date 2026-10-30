@@ -3,7 +3,7 @@ import type { Building, CityData, Vec2 } from '../cityData';
 import type { Placement, Spot } from '../placement';
 import { pointInPolygon } from '../collision';
 import { merge } from '../items/models';
-import { colored, obb, pyramid, signTexture, zsolnayTexture } from './common';
+import { colored, obb, signTexture, zsolnayTexture } from './common';
 import { buildTrees } from '../buildCity';
 
 // Street dressing and the smaller landmarks: Ráday utca's café terraces, Lónyay utca's
@@ -315,8 +315,32 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
     const t = new THREE.Group();
     const stone = new THREE.MeshLambertMaterial({ color: 0xe8e0cc });
     t.add(new THREE.Mesh(new THREE.BoxGeometry(6, 34, 6).translate(0, 17, 0), stone));
-    t.add(new THREE.Mesh(pyramid(6.4, 8), new THREE.MeshLambertMaterial({ color: 0x5a6a5a })));
-    t.children[1].position.y = 34;
+    // Green copper onion spire (reference/kalvin-ter/reformed-church.jpg) on a balustrade.
+    const copper = new THREE.MeshLambertMaterial({ color: 0x5f9a82 });
+    const onion = [[0, 0], [3.0, 0], [3.0, 0.6], [2.2, 1.0], [3.1, 2.6], [3.2, 4.0], [2.4, 5.6], [1.0, 6.6], [0.5, 7.6], [0.9, 8.4], [0.4, 9.4], [0.15, 11.5], [0, 12]].map(([r, y]) => new THREE.Vector2(r, y));
+    const spire = new THREE.Mesh(new THREE.LatheGeometry(onion, 12), copper);
+    spire.position.y = 34.6;
+    t.add(spire);
+    t.add(new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.6, 6.6).translate(0, 34.3, 0), stone));
+    t.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 6).translate(0, 46.8, 0), new THREE.MeshLambertMaterial({ color: 0xd8b040 })));
+    // Clock faces on all four sides.
+    const clockTex = (() => {
+      const c = document.createElement('canvas'); c.width = c.height = 128;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#f2efe6'; g.beginPath(); g.arc(64, 64, 62, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#1d1d1d'; g.lineWidth = 6; g.stroke();
+      g.lineWidth = 4; for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(64 + Math.cos(a) * 50, 64 + Math.sin(a) * 50); g.lineTo(64 + Math.cos(a) * 58, 64 + Math.sin(a) * 58); g.stroke(); }
+      g.lineWidth = 6; g.beginPath(); g.moveTo(64, 64); g.lineTo(64, 24); g.moveTo(64, 64); g.lineTo(92, 72); g.stroke();
+      const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
+    })();
+    const clockMat = new THREE.MeshLambertMaterial({ map: clockTex, transparent: true });
+    for (let i = 0; i < 4; i++) {
+      const face = new THREE.Mesh(new THREE.CircleGeometry(1.6, 20), clockMat);
+      const a = (i * Math.PI) / 2;
+      face.position.set(Math.sin(a) * 3.02, 29, Math.cos(a) * 3.02);
+      face.rotation.y = a;
+      t.add(face);
+    }
     const end = o.cz + o.uz * o.hl < o.cz - o.uz * o.hl ? 1 : -1; // tower at the north end
     t.position.set(o.cx + o.ux * (o.hl - 3) * end, 0, o.cz + o.uz * (o.hl - 3) * end);
     group.add(t);
@@ -329,12 +353,30 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
     pm.position.set(0, 9.5, -1);
     port.add(pm, new THREE.Mesh(new THREE.BoxGeometry(13.4, 0.8, 2.4).translate(0, 9.3, 0), stone));
     port.position.set(px, 0, pz);
-    port.rotation.y = -Math.atan2(o.uz, o.ux) + Math.PI / 2;
+    port.rotation.y = -Math.atan2(o.uz, o.ux) + Math.PI / 2 + (end < 0 ? Math.PI : 0); // local +z out to the square
     group.add(port);
     for (let i = 0; i < 4; i++) {
       const c = new THREE.Vector3(-4.5 + i * 3, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), port.rotation.y);
       colliders.push({ x: px + c.x, z: pz + c.z, w: 1, d: 1, rot: 0 });
     }
+    // A half-moon window over the portico, an iron fence across it and a bronze statue
+    // of a standing man in a long coat in front.
+    const lunette = new THREE.Mesh(new THREE.CircleGeometry(2.4, 16, 0, Math.PI), new THREE.MeshLambertMaterial({ color: 0x2a3440 }));
+    lunette.position.set(0, 13.4, -2.95);
+    port.add(lunette);
+    const iron = new THREE.MeshLambertMaterial({ color: 0x1d1d1d });
+    port.add(new THREE.Mesh(new THREE.BoxGeometry(12, 0.06, 0.06).translate(0, 1.6, 1.4), iron));
+    for (let x = -6; x <= 6; x += 0.25) port.add(new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.7, 0.03).translate(x, 0.85, 1.4), iron));
+    const bronze = new THREE.MeshLambertMaterial({ color: 0x4a3a28 });
+    const statue = new THREE.Group();
+    statue.add(new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.6, 1.4).translate(0, 0.8, 0), stone));
+    statue.add(new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.45, 1.5, 10).translate(0, 2.35, 0), bronze));
+    statue.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.26, 0.7, 10).translate(0, 3.4, 0), bronze));
+    statue.add(new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8).translate(0, 3.95, 0), bronze));
+    statue.position.set(0, 0, 5.5);
+    port.add(statue);
+    const sp = new THREE.Vector3(0, 0, 5.5).applyAxisAngle(new THREE.Vector3(0, 1, 0), port.rotation.y);
+    colliders.push({ x: px + sp.x, z: pz + sp.z, w: 1.5, d: 1.5, rot: 0 });
   }
   const kt = city.landmarks.kalvinTer;
   if (kt) {

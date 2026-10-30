@@ -16,6 +16,7 @@ import { buildMosoda, buildWear, matyasColors, RoadWorks } from './world/landmar
 import { buildLot, buildRaday, prepareRaday } from './world/landmarks/raday';
 import { excludeGateAreas } from './world/buildings/gates';
 import { buildErkel, prepareErkel } from './world/landmarks/erkel';
+import { buildKalvin } from './world/landmarks/kalvin';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -204,6 +205,9 @@ cityGroup.add(buildWear(city, placement, streets, {
   openings,
   noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
 }));
+const kalvin = buildKalvin(city, placement);
+cityGroup.add(kalvin.group);
+for (const c of kalvin.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const erkel = buildErkel(city, placement, erkelPrep);
 cityGroup.add(erkel.group);
 for (const c of erkel.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);

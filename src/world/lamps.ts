@@ -78,6 +78,27 @@ function hungHeadGeometry() {
   return new THREE.CylinderGeometry(0.36, 0.36, 0.03, 14).translate(0, 7.15, 0);
 }
 
+/** Main-street candelabra (reference/kalvin-ter/): tall dark grey cast iron with a fluted
+ *  base, scroll ironwork and two bell lanterns hanging from curly arms. */
+function candelabraGeometry() {
+  const grey = 0x34383a;
+  const parts = [
+    colored(new THREE.CylinderGeometry(0.26, 0.34, 1.2, 12).translate(0, 0.6, 0), grey),
+    colored(new THREE.CylinderGeometry(0.2, 0.26, 0.2, 12).translate(0, 1.3, 0), grey),
+    colored(new THREE.CylinderGeometry(0.09, 0.13, 5.6, 10).translate(0, 4.2, 0), grey),
+    colored(new THREE.SphereGeometry(0.14, 8, 6).translate(0, 7.1, 0), grey),
+  ];
+  for (const s of [-1, 1]) {
+    parts.push(colored(new THREE.TorusGeometry(0.42, 0.035, 5, 12, Math.PI).rotateY(s > 0 ? 0 : Math.PI).translate(s * 0.42, 6.6, 0), grey));
+    parts.push(colored(new THREE.TorusGeometry(0.16, 0.025, 4, 10).translate(s * 0.35, 6.25, 0), grey));
+    parts.push(colored(new THREE.CylinderGeometry(0.05, 0.24, 0.26, 8).translate(s * 0.84, 6.38, 0), grey));
+  }
+  return merge(parts);
+}
+function candelabraHeadGeometry() {
+  return merge([-1, 1].map((s) => new THREE.CylinderGeometry(0.17, 0.12, 0.34, 8).translate(s * 0.84, 6.1, 0).toNonIndexed()));
+}
+
 const RADAY = 'Ráday utca';
 const RADAY_SPACING = 20;
 
@@ -95,7 +116,7 @@ export class Lamps {
   constructor(city: CityData, place: Placement) {
     this.group.name = 'lamps';
     let side = 1;
-    const kinds: (0 | 1 | 2)[] = [];
+    const kinds: (0 | 1 | 2 | 3)[] = [];
     const spans: [number, number][] = [];
     for (const r of city.roads) {
       if (r.kind !== 'road' || r.bridge) continue;
@@ -130,7 +151,7 @@ export class Lamps {
           if (!place.free(x, z, 0.6) || this.positions.some((p) => Math.abs(p.x - x) < gap && Math.abs(p.z - z) < gap)) continue;
           // y temporarily holds the angle the arm points (out over the road).
           this.positions.push(new THREE.Vector3(x, Math.atan2(uz * side, -ux * side), z));
-          kinds.push(isRaday ? 1 : 0);
+          kinds.push(isRaday ? 1 : r.w >= 14 ? 3 : 0);
           spans.push([0, 0]);
         }
         walked += len;
@@ -143,6 +164,8 @@ export class Lamps {
     const heads = new THREE.InstancedMesh(headGeometry(), this.headMat, count(0));
     const rPosts = new THREE.InstancedMesh(radayPostGeometry(), postMat, count(1));
     const rHeads = new THREE.InstancedMesh(globeGeometry(), this.headMat, count(1));
+    const cPosts = new THREE.InstancedMesh(candelabraGeometry(), postMat, count(3));
+    const cHeads = new THREE.InstancedMesh(candelabraHeadGeometry(), this.headMat, count(3));
     const dishes = new THREE.InstancedMesh(dishGeometry(), postMat, count(2));
     const wires = new THREE.InstancedMesh(wireGeometry(), postMat, count(2));
     const hHeads = new THREE.InstancedMesh(hungHeadGeometry(), this.headMat, count(2));
@@ -150,12 +173,19 @@ export class Lamps {
     this.poolMat = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -16 });
     const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(9, 9).rotateX(-Math.PI / 2), this.poolMat, n);
     const m = new THREE.Matrix4();
-    const at = [0, 0, 0];
+    const at = [0, 0, 0, 0];
     this.positions.forEach((p, i) => {
       const k = kinds[i];
       m.makeRotationY(p.y).setPosition(p.x, 0, p.z);
       if (k === 0) { posts.setMatrixAt(at[0], m); heads.setMatrixAt(at[0]++, m); }
       else if (k === 1) { rPosts.setMatrixAt(at[1], m); rHeads.setMatrixAt(at[1]++, m); }
+      else if (k === 3) {
+        cPosts.setMatrixAt(at[3], m); cHeads.setMatrixAt(at[3]++, m);
+        this.posts.push([p.x, p.z]);
+        pools.setMatrixAt(i, new THREE.Matrix4().makeTranslation(p.x, 0.06, p.z));
+        p.y = 5.5;
+        return;
+      }
       else {
         // p.y is the angle of the across-street axis; the wire spans wall to wall.
         const [wl, wr] = spans[i];
@@ -174,7 +204,8 @@ export class Lamps {
       p.set(hx, p.y, hz); // keep head position (y holds the angle until here)
       p.y = 4.5;
     });
-    this.group.add(dishes, wires, hHeads);
+    cPosts.castShadow = true;
+    this.group.add(dishes, wires, hHeads, cPosts, cHeads);
     rPosts.castShadow = true;
     this.group.add(rPosts, rHeads);
     posts.castShadow = true;
