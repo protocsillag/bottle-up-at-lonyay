@@ -1,0 +1,17 @@
+{
+  "name": "bottle-up-scores",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "db:init:local": "wrangler d1 execute bottle-up-scores --local --file schema.sql",
+    "db:init": "wrangler d1 execute bottle-up-scores --remote --file schema.sql",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241106.0",
+    "typescript": "^5.7.2",
+    "wrangler": "^3.90.0"
+  }
+}

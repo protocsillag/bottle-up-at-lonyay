@@ -1,0 +1,13 @@
+name = "bottle-up-scores"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Origins allowed to call the board (the GitHub Pages game and local dev).
+[vars]
+ALLOWED_ORIGINS = "https://protocsillag.github.io,http://localhost:5173,http://127.0.0.1:5173"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bottle-up-scores"
+# Filled in by `npx wrangler d1 create bottle-up-scores` (see README.md).
+database_id = "00000000-0000-0000-0000-000000000000"

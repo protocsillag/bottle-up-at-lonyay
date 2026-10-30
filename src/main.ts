@@ -44,7 +44,7 @@ import { Sweeper } from './npc/Sweeper';
 import { say } from './audio/voice';
 import { Creator } from './ui/Creator';
 import { loadLook, saveLook, type CharacterLook } from './player/look';
-import { LocalScoreStore, type ScoreStore } from './state/scores';
+import { OnlineScoreStore, createScoreStore, type ScoreStore } from './state/scores';
 import { renderScores } from './ui/Scores';
 import { sound } from './audio/Sfx';
 import { loadSettings, saveSettings, type Settings } from './state/settings';
@@ -322,7 +322,10 @@ function dismount(crashed: boolean) {
 bikes.onToggle = (b) => mount(b);
 
 const creator = new Creator(renderer);
-const scoreStore: ScoreStore = new LocalScoreStore();
+const scoreStore: ScoreStore = createScoreStore();
+// Upload anything that waited while offline (and move the old local scores up once).
+if (scoreStore instanceof OnlineScoreStore) void scoreStore.sync();
+if (import.meta.env.DEV) Object.assign((window as unknown as { game: object }).game, { scoreStore });
 let look: CharacterLook = loadLook();
 let portrait = '';
 player.setLook(look.colors, look.opts);

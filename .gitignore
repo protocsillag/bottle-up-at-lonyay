@@ -4,3 +4,5 @@ tools/osm/raw/
 .DS_Store
 *.log
 tools/voice/models/
+server/node_modules/
+server/.wrangler/

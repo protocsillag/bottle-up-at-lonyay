@@ -1,5 +1,12 @@
 # Changelog
 
+## M12 Shared high scores (2026-10-30, waiting for deploy)
+
+- A shared top 10 for everyone: a small Cloudflare Worker with a D1 database (free plan) in `server/`. The game posts each run at the end screen and shows the shared table on the title and end screens.
+- Light anti-cheat on the server, with the same rules the game uses: at most 50 000 Ft, no more than 50 Ft per returned item, names of up to 16 characters (same blocklist as the creator), portraits under 20 KB, one post per minute per player, and only the game's own web address may post.
+- Every run is still saved in the browser too. If the board can't be reached, the table says "Offline", shows the last board seen plus your new runs, and uploads them when it's back. Scores saved before M12 move up to the shared board the first time the game reaches it.
+- Not live yet: the Worker needs a one-time deploy from Alex's Cloudflare account (`server/README.md`). Until then the game keeps scores locally, exactly as before.
+
 ## M11 follow-up: Alex's tweaks (2026-10-30)
 
 - Ráday utca is paved the whole way: the map data was missing its middle stretch (Köztelek utca to Biblia utca, about 230 m), which showed as plain grey. It is now filled in at load time, with the beige tiles from wall to wall, the grey drive strip, bollards, Ráday lamps and terraces. Cars still drive it one way.

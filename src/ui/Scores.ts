@@ -8,7 +8,7 @@ export async function renderScores(el: HTMLElement, store: ScoreStore, highlight
   const table = document.createElement('table');
   table.className = 'scores';
   if (!list.length) {
-    el.replaceChildren(Object.assign(document.createElement('p'), { className: 'muted', textContent: 'No scores yet. Be the first on the wall of fame!' }));
+    el.replaceChildren(Object.assign(document.createElement('p'), { className: 'muted', textContent: store.offline ? 'Offline: the score board cannot be reached right now.' : 'No scores yet. Be the first on the wall of fame!' }));
     return;
   }
   list.forEach((e: ScoreEntry, i) => {
@@ -28,5 +28,5 @@ export async function renderScores(el: HTMLElement, store: ScoreStore, highlight
     table.appendChild(tr);
   });
   el.replaceChildren(table);
-  if (store.offline) el.appendChild(Object.assign(document.createElement('p'), { className: 'muted', textContent: 'offline' }));
+  if (store.offline) el.appendChild(Object.assign(document.createElement('p'), { className: 'muted', textContent: 'Offline: showing the last board seen. Your runs go up when it is back.' }));
 }

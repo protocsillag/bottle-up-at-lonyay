@@ -92,20 +92,5 @@ export function saveLook(l: CharacterLook) {
 
 // A short blocklist for slurs and the worst words (Hungarian and English), matched on
 // letters only so "c.i.g.a.n.y" style tricks still hit. Kept deliberately small.
-const BLOCK = ['cigany', 'buzi', 'nigger', 'nigga', 'faggot', 'fagot', 'retard', 'kurva', 'geci', 'fasz', 'picsa', 'zsido', 'nazi', 'hitler', 'cunt', 'whore'];
-
-function fold(s: string) {
-  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '')
-    .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's');
-}
-
-/** Returns an error message, or null if the name is fine. Accents allowed, 1–16 characters. */
-export function checkName(name: string): string | null {
-  const n = name.trim();
-  if (n.length < 1) return 'Type a name';
-  if ([...n].length > 16) return 'Max 16 characters';
-  if (!/^[\p{L}\p{N} .'\-_!?]+$/u.test(n)) return 'Letters, numbers and spaces only';
-  const f = fold(n.replace(/[0-9]/g, (d) => ({ '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's' }[d] ?? '')));
-  if (BLOCK.some((w) => f.includes(w))) return 'Pick a friendlier name';
-  return null;
-}
+// Name rules are shared with the score server.
+export { checkName } from '../state/scoreRules';
