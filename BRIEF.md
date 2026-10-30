@@ -306,7 +306,7 @@ Make the whole game playable in phone browsers, the same way as in Kiruna: The G
 
 **Quality.** Phones start on **Medium** quality (the existing Medium preset: pixel ratio ≤ 1.5, 1024 shadow map, 45 NPCs). A quality setting the player saved still wins. If the frame rate stays under 25 fps for 10 seconds, show a toast once suggesting Low quality, with a button that switches it.
 
-**Screen.** Landscape only: in portrait show a "Turn your phone sideways" card over the game. Respect safe areas (`env(safe-area-inset-*)`) for the notch and home bar, `touch-action: none`, no text selection, no double-tap zoom, no pull-to-refresh. Android: go fullscreen on the first tap. iPhone has no pointer lock; guard every pointer-lock call. Start audio and speech on the first touch.
+**Screen.** Landscape is the main target and gets the careful layout. Portrait is allowed too, as in Kiruna: the game runs and stays playable (nothing cut off or overlapping, controls reachable), but it doesn't need its own polish. No rotate-your-phone block. Respect safe areas (`env(safe-area-inset-*)`) for the notch and home bar, `touch-action: none`, no text selection, no double-tap zoom, no pull-to-refresh. Android: go fullscreen on the first tap. iPhone has no pointer lock; guard every pointer-lock call. Start audio and speech on the first touch.
 
 **Controls on the street.**
 
@@ -360,7 +360,7 @@ Fourteen milestones, each ending in something Alex can open and play. M1–M12 a
 11. **M11 Real streets from Alex's photos.** Go through `reference/README.md` and each `reference/<location>/` folder and rework that place to match the photos: building types and colours, ground floors, gates and gateways, street furniture, parking, planters, signs and pavement materials. Start with Lónyay utca, then each location in the order listed. Alex adds folders over time, so do whatever is there when the session starts and list in `CLAUDE.md` which folders are done. Cap each location at about an hour of work.
 12. **M12 Shared high scores.** Cloudflare Worker + D1 in `server/`, anti-cheat checks, swap the local `ScoreStore` for the online one, keep local as the offline fallback, move existing local scores up.
 13. **M13 The fire barrel fight.** The street-people group around a burning barrel on the Nehru part at the end of Kinizsi utca, only while tipsy; the dialogue with Zsiga and the stakes; the 2D one-round fight with health bars and a 3-minute timer; the world paused during it; the result applied to the bags; once per run. See "The fire barrel fight".
-14. **M14 Phones.** Touch controls for the street, the till, the Mohu machine and the fight; phone layouts for the HUD and every menu; landscape only; Medium quality by default; Playwright device-emulation testing. Desktop unchanged. See "Phones".
+14. **M14 Phones.** Touch controls for the street, the till, the Mohu machine and the fight; phone layouts for the HUD and every menu, designed for landscape and still usable in portrait; Medium quality by default; Playwright device-emulation testing. Desktop unchanged. See "Phones".
 
 **Unattended overnight run (M13 + M14).** Alex will start both in one session and sleep. Do M13 first, then M14, each ending with `npm run build` passing, a `CHANGELOG.md` entry, `CLAUDE.md` updated, a commit and a push to `main`. Don't stop to ask; make the most reasonable choice and add it to "Questions for Alex" in `CLAUDE.md`. If M13 runs long, finish it properly before starting M14 rather than leaving both half done.
 
