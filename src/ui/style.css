@@ -190,3 +190,29 @@ body.in-menu #hud, body.in-menu #wallet, body.in-menu #stamina, body.in-menu #mi
 .settings label { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 10px; text-align: left; margin: 8px 0; font-weight: 600; }
 .settings input[type=range] { width: 100%; accent-color: var(--ink); }
 .settings select { width: 100%; min-width: 0; font: inherit; padding: 4px 6px; border-radius: 6px; border: 2px solid var(--ink); background: #fff8d0; }
+
+/* ---- M10 countdown, hunger, tipsy, till ---- */
+#countdown { font-size: 22px; font-weight: 900; color: #fff; }
+#countdown.warn { color: #ff9f3a; }
+#countdown.final { color: #ff5a4a; animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+#timeleft { font-size: 12px; color: #ccc; margin-bottom: 4px; }
+.card .endtime { font-size: 14px; }
+#till { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); width: 380px; padding: 12px 16px;
+  border-radius: 10px; background: rgba(20, 20, 20, 0.88); color: #fff; border-top: 4px solid #2b8a3e; pointer-events: none; }
+#till.hidden { display: none; }
+.till-title { font-size: 12px; color: #bbb; text-transform: uppercase; letter-spacing: 1px; }
+.till-row { display: flex; gap: 10px; align-items: center; font-size: 17px; font-weight: 700; margin-top: 8px; }
+.till-row b { background: var(--mohu-yellow); color: var(--ink); border-radius: 4px; padding: 0 7px; }
+.till-row span { margin-left: auto; color: var(--mohu-yellow); }
+.till-sub { font-size: 12px; color: #bbb; margin-left: 30px; }
+.till-foot { font-size: 12px; color: #999; margin-top: 8px; }
+#tipsy-fx { position: fixed; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1.5s;
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  -webkit-mask-image: radial-gradient(ellipse at center, transparent 50%, black 100%); mask-image: radial-gradient(ellipse at center, transparent 50%, black 100%);
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(120, 70, 20, 0.25) 100%); }
+#tipsy-fx.on { opacity: 1; }
+#tipsy-fx.lite { -webkit-backdrop-filter: none; backdrop-filter: none; }
+#hunger { margin-top: 6px; }
+#hunger .bar div { height: 100%; background: #e0a83d; }
+#hunger.low .bar div { background: #e0523d; }

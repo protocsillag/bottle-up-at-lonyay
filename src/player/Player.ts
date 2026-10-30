@@ -51,6 +51,10 @@ export class Player {
   onBike = false;
   /** Seconds left lying on the ground after a crash. */
   stun = 0;
+  /** Seconds left standing still (peeing). */
+  freeze = 0;
+  /** False while starving. */
+  canRun = true;
   /** Set for one frame when a bike ride ends in a wall. */
   crashed = false;
 
@@ -66,6 +70,14 @@ export class Player {
     this.holder.remove(this.model.root);
     this.model = new CharacterModel(colors, opts);
     this.holder.add(this.model.root);
+    this.model.setBags(this.bagsShown);
+  }
+
+  private bagsShown = -1;
+  setBags(n: number) {
+    if (n === this.bagsShown) return;
+    this.bagsShown = n;
+    this.model.setBags(n);
   }
 
   /** Knocked down: lie on the ground for `seconds`. */
@@ -99,6 +111,13 @@ export class Player {
       this.syncMesh();
       return;
     }
+    if (this.freeze > 0) {
+      this.freeze -= dt;
+      this.velocity.set(0, 0);
+      this.model.animate(dt, 0, false, false, 0);
+      this.syncMesh();
+      return;
+    }
 
     let fx = 0, fz = 0;
     if (input.isDown('KeyW')) fz -= 1;
@@ -109,7 +128,7 @@ export class Player {
 
     const wantsRun = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
     if (!wantsRun) this.shiftLatch = false;
-    this.running = len > 0 && wantsRun && !this.shiftLatch && !this.exhausted && this.grounded && !this.debugFast && !this.onBike;
+    this.running = len > 0 && wantsRun && !this.shiftLatch && !this.exhausted && this.grounded && !this.debugFast && !this.onBike && this.canRun;
 
     const target = new THREE.Vector2();
     if (len > 0) {

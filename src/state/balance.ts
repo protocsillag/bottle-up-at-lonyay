@@ -2,8 +2,10 @@
 // Target (BRIEF): ~1 400 items spawn per run, ceiling ~50 000 Ft, strong run 25–35k.
 
 export const ITEM_VALUE_FT = 50;
-export const BAG_SMALL = 40;
-export const BAG_BIG = 100;
+export const BAG_SIZE = 50;
+export const MAX_BAGS = 3;
+/** Extra bags hidden per run, and the share of them on the street (rest in courtyards). */
+export const EXTRA_BAGS = { count: [3, 5] as const, streetShare: 1 / 3 };
 export const SHOP_OPEN = 6;
 export const SHOP_CLOSE = 24;
 
@@ -95,3 +97,24 @@ export const BIKE = {
  *  through GameState.supply(): full amounts until SOFT of the budget is used, then
  *  thinning out to MIN_FACTOR, so a perfect run tops out near the 50 000 Ft ceiling. */
 export const SUPPLY = { budget: 1400, soft: 0.35, minFactor: 0.12 };
+
+// ---- M10: hunger, the till, beer, traffic
+export const HUNGER = {
+  lasts: 14 * 60, // game minutes from full to empty (~9 real minutes, ~3 times a run)
+  warnAt: 0.25,
+  speed: 0.6, // walking speed multiplier when starving (and no running)
+};
+export const TILL = { food: 100, beer: 200 };
+export const TIPSY = {
+  hours: [2, 6] as const, // game hours per beer
+  speed: 1.2,
+  maxLevel: 3, // wobble strength stacks with each beer while tipsy
+  peeSeconds: 3,
+  kickHold: 1, // hold E on a public bin to kick it over
+};
+export const TRAFFIC = {
+  speed: 8, // m/s (~30 km/h)
+  near: [22, 12, 6] as const, // cars around the player: day, evening/night, 02–06
+  lostItems: [1, 5] as const, // items lost when hit
+  knockdown: 2, // real seconds on the ground
+};

@@ -13,7 +13,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M7 Character creator and local scores: done** (2026-10-29, unattended).
 - **M8 Looking like Budapest: done** (2026-10-29, unattended).
 - **M9 Polish: done** (2026-10-29, unattended), except the Piper voice files (generate locally, see `tools/voice/README.md`) and the playtest with friends.
-- Next: **M10 Gameplay round 2**, then **M11 Real streets from Alex's photos**, then **M12 Shared high scores** (needs Alex's Cloudflare account). Milestones re-planned by Alex on 2026-10-30; see the Build plan in `BRIEF.md`.
+- **M10 Gameplay round 2: done** (2026-10-30).
+- Next: **M11 Real streets from Alex's photos**, then **M12 Shared high scores** (needs Alex's Cloudflare account). Milestones re-planned by Alex on 2026-10-30; see the Build plan in `BRIEF.md`.
 
 ## Commands
 
@@ -30,7 +31,7 @@ Node is not installed system-wide on Alex's Mac; it lives at `~/.local/node/bin`
 
 At the bottle machine: hold Space to feed · E mash / hold to fix a refused item · A / D roll it · Space push it in · E (between items) or S walk away.
 
-WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · F get on / off a bike · M large map · wheel zoom · G 20 m/s debug walk and T time ×30 (only with `?debug` or in dev) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
+WASD move (relative to camera) · mouse look (click to lock pointer) · Shift run · Space jump · E interact (press, or hold for bins and party leftovers) · F get on / off a bike · at a till: 1 food, 2 beer, E closes · P pee on a wall (tipsy) · hold E 1 s on a public bin to kick it over (tipsy) · M large map · wheel zoom · G 20 m/s debug walk and T time ×30 (only with `?debug` or in dev) · Esc pause (releases the mouse; the clock stops). The list lives in the start/pause card in `index.html`.
 
 ## Conventions and decisions
 
@@ -88,6 +89,12 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Debug: `DEBUG` in `main.ts` is dev builds or `?debug`; it enables G, T and the fps/position/spawned line.
 - Performance: the scene light count never changes (lamp pool lights and shop interior lights stay "visible" at intensity 0) because a changed light count recompiles every shader; `renderer.compile()` runs once at startup with hidden groups temporarily shown, plus the close-up item meshes. Camera far plane 2400. Night glints refresh every 0.25 s. A typical street view is ~160 draw calls and ~315k triangles including the shadow pass.
 - Balance (`SUPPLY` in `balance.ts`): every source rolls its contents through `state.supply(n)`. Full amounts until 35% of the 1 400-item budget is left, then thinning to 12% (minimum 1 item, street spawns skip proportionally). At run start ~245 items are already out (street items plus stocked stashes). This keeps a perfect run near the 50 000 Ft ceiling even with 266 courtyards. Estimates: a courtyard gives ~20 items for 30–90 s of waiting, a bin 2–8 for 2 s, a party heap 15–30; the machine takes 3/s; machines are shut 7.5 of the 30 real minutes. First runs that learn the bins and a few courtyards should land near 10 000 Ft; a planned route with the big bag early 25 000–35 000 Ft. Unverified without real playtests.
+- Bags (M10): `state.bags` 1–3 × `BAG_SIZE` 50; `state.takeBag()` refuses a 4th ("Can't carry more bags"). Each run hides `EXTRA_BAGS.count` 3–5 extra bags, a third on the street (`items.placeBags`: Nehru kiosks, the Ráday book kiosk, else a lawn), the rest in random courtyards (`buildings.reset(n)`). `CharacterModel.setBags(n)` shows bags in the right hand, left hand, then over the shoulder.
+- Countdown (M10): `Hud` shows "Ends in m:ss" (real time) and "Ends Sunday 08:00 · N h left"; orange with a toast at 5 minutes, red, pulsing and ticking (`hud.onTick`) in the last 60 s.
+- Hunger (M10): `state.hunger` 1 → 0 over `HUNGER.lasts` (14 game h). Warning toast at 25%; starving = ×0.6 speed, no running, and `Interaction.collectBlockedReason` blocks every collecting interactable (item sources are registered with `collect = true`; courtyard bins, jackpots and bags carry `collect: true`). Machines, shop doors and the till still work.
+- Till (M10): `ShopInterior.till` in both interiors (SPAR counter with a cashier; Aldi counter by the corner). E opens a small panel; 1 buys a bread roll with párizsi (100 Ft, full hunger), 2 a beer (200 Ft). `state.spend()` fails with the cashier line "Nincs elég pénze, kérem." Walking 2.6 m away or E closes it. Score = money left at the end.
+- Tipsy (M10): `state.drinkBeer()` sets 2–6 game hours; another beer restarts it and raises `tipsyLevel` (max 3). ×1.2 speed, steering drift (yaw offset), camera roll and bob (`FollowCamera.roll/bob`), a CSS vignette with edge blur (`#tipsy-fx`, blur off on low quality, sway halved). P in front of a wall (2D raycast 1.6 m) freezes you 3 s, leaves a fading puddle (`Puddles`), a sigh, "Nem szégyelli magát?!" from any pedestrian within 10 m, and in a courtyard an awake házmester starts his chase (`buildings.peed()`). Public bins switch to "Kick the bin over" (hold 1 s): everything spills, the bin lies on its side and never refills that run.
+- Traffic (`src/npc/Traffic.ts`, M10): its own graph from road ways (skips pedestrian/service/footways, `nocars`), drives on the right a quarter road width out (centre on one-ways), 8 m/s, slows into junctions, keeps 6 m gaps, honks (3 s cooldown) and brakes for the player in its lane up to 18 m ahead; within 2.6 m at >2.5 m/s it hits: 2 s down, 1–5 items smashed, a driver shout, off the bike. ~22 cars by day, 12 at night, 6 at 02–06, up to 32 instanced; 18% are yellow taxis with a roof sign; headlights brighten at night. Cars are solid (three circles each). One-way rules need a re-bake: `bake.mjs` now writes `oneway` and `nocars`, but Overpass is blocked from the sandbox, so the committed `city.json` has none and cars drive both ways everywhere.
 - `CollisionWorld.addBox()` adds solid props (machines now; kiosks and gates later).
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
@@ -132,6 +139,8 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/audio/Sfx.ts` | Synthesised SFX, ambience, voice playback |
 | `src/state/settings.ts` | Settings load/save |
 | `tools/voice/` | Piper voice generation script and README |
+| `src/npc/Traffic.ts` | Moving cars, honking, hits |
+| `src/world/Puddles.ts` | Fading puddles (tipsy) |
 | `src/player/Interaction.ts` | Nearest interactable, press/hold E |
 | `src/ui/Hud.ts` | Clock, money, bag, prompt, toasts, status chips, funniest stat |
 | `src/world/cityData.ts` | `city.json` types and loader |
@@ -178,4 +187,8 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M8 time cap.** Each landmark got a short pass (well under 20 minutes each). Not done: corner towers and balconies on Lónyay tenements, the brick Református gimnázium, a passing yellow tram (left out because the brief says no moving traffic in v1), and Corvinus beyond the palace-style facade.
 - **M9 voices need you.** The sandbox could not reach huggingface.co, so no Piper MP3s are committed. Run the four commands in `tools/voice/README.md` on your Mac and commit `public/audio/voice/`. Until then the game uses your browser's Hungarian voice if it has one (Safari and Chrome on macOS usually ship "Mariska"), and subtitles always show.
 - **M9 playtest.** The "playtest with friends" step is yours. Things to watch: is ~10 000 Ft a fair first run, does the supply budget feel stingy late in a run (`SUPPLY` in `balance.ts`), are the 30–90 s resident waits too long, and is the 5 s házmester escape fair?
+- **M10 one-way streets.** Overpass is blocked in the sandbox, so I could not re-bake. Run `npm run osm:fetch && npm run osm:bake` on your Mac and commit `public/data/city.json`: cars then follow OSM one-way rules and avoid `motor_vehicle=no` roads.
+- **M10 Ráday cars.** All of Ráday utca is `highway=residential` in the baked data, so cars drive the whole street. M11 makes the pedestrian part car-free.
+- **M10 tram.** Not added yet (optional in the brief). Kálvin tér photos describe it; it is a candidate for M11's Kálvin tér pass.
+- **M10 balance.** Bigger carrying capacity (up to 150) makes trips shorter, but the 1 400-item supply budget still caps the ceiling; food (~300 Ft a run) and beer come off the score. I kept the supply numbers; playtests should tell whether strong runs drift above 35 000 Ft.
 - **M9 balance budget.** The brief says ~1 400 items spawn per run. With a courtyard in every building the raw supply was far higher, so I added the soft supply budget instead of cutting courtyards. Late in a run, bins and courtyards that you open for the first time hold less. Tell me if you would rather have fewer, richer courtyards.

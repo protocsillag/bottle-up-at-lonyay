@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { GameState, ItemKind } from '../../state/GameState';
-import { BINS, HIDDEN, PARTY, STREET } from '../../state/balance';
+import { BINS, HIDDEN, PARTY, STREET, TIPSY } from '../../state/balance';
+import { sound } from '../../audio/Sfx';
 import { dayIndex, hourIn, hourOf, minutesUntilHour } from '../../state/time';
 import type { Interactable } from '../../player/Interaction';
 import type { Placement, Spot, Zone } from '../placement';
@@ -13,7 +14,7 @@ import { bigBagGeometry, binGeometry, glintTexture, itemGeometry, partyGeometry,
 
 interface StreetItem { spot: Spot; kinds: ItemKind[]; yaw: number[]; off: [number, number][]; it: Interactable; }
 interface Hidden { spot: Spot; count: number; refillAt: number; it: Interactable; glint: THREE.Sprite; planter: number; }
-interface Bin { x: number; z: number; zone: Zone; readyAt: number; it: Interactable; }
+interface Bin { x: number; z: number; zone: Zone; readyAt: number; it: Interactable; index: number; broken: boolean; }
 interface Party { x: number; z: number; count: number; clearAt: number; mesh: THREE.Mesh; it: Interactable; }
 
 const KINDS: ItemKind[] = ['pet', 'can', 'glass'];
@@ -49,12 +50,13 @@ export class ItemSystem {
   private bins: Bin[] = [];
   private party: Party[] = [];
   private partyTimes: number[] = [];
-  private bigBag: { x: number; z: number; mesh: THREE.Mesh; it: Interactable; taken: boolean } | null = null;
+  private bags: { x: number; z: number; mesh: THREE.Mesh; it: Interactable; taken: boolean }[] = [];
   private used = new Set<Spot>();
   private spawnAcc = 0;
   private itemMeshes: Record<ItemKind, THREE.InstancedMesh>;
   private planters: THREE.InstancedMesh;
   private dirty = true;
+  private binMesh!: THREE.InstancedMesh;
   private glintMat: THREE.SpriteMaterial;
   private partyGeo = partyGeometry();
   private hiddenCandidates: Spot[];
@@ -129,22 +131,45 @@ export class ItemSystem {
     }
     const mesh = new THREE.InstancedMesh(binGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }), pts.length);
     const m = new THREE.Matrix4();
+    const state = this.state;
     pts.forEach((p, i) => {
       m.makeTranslation(p.x, 0, p.z);
       mesh.setMatrixAt(i, m);
       const bin: Bin = {
-        x: p.x, z: p.z, zone: this.place.zoneAt(p.x, p.z), readyAt: 0,
+        x: p.x, z: p.z, zone: this.place.zoneAt(p.x, p.z), readyAt: 0, index: i, broken: false,
         it: {
-          x: p.x, z: p.z, reach: 1.6, hold: BINS.hold,
-          label: () => this.state.minute >= bin.readyAt ? 'Search the bin' : 'Bin already searched',
-          blocked: () => this.state.minute < bin.readyAt ? `Searched — refills in ${hoursText(bin.readyAt - this.state.minute)}` : this.fullText(),
-          act: () => this.searchBin(bin),
+          x: p.x, z: p.z, reach: 1.6,
+          get hold() { return state.tipsy ? TIPSY.kickHold : BINS.hold; },
+          label: () => bin.broken ? 'Kicked-over bin' : state.tipsy ? 'Kick the bin over' : state.minute >= bin.readyAt ? 'Search the bin' : 'Bin already searched',
+          blocked: () => bin.broken ? 'Broken — nothing left' : state.tipsy ? this.fullText() : state.minute < bin.readyAt ? `Searched — refills in ${hoursText(bin.readyAt - state.minute)}` : this.fullText(),
+          act: () => state.tipsy ? this.kickBin(bin) : this.searchBin(bin),
         },
       };
       this.bins.push(bin);
     });
     mesh.castShadow = true;
     this.group.add(mesh);
+    this.binMesh = mesh;
+  }
+
+  /** Tipsy: kick a public bin over. Everything spills at once, but it never refills. */
+  private kickBin(b: Bin) {
+    const rng = this.state.rng;
+    // Whatever was in it, plus what a search would have found.
+    const n = this.state.supply(this.state.minute >= b.readyAt ? rng.int(3, BINS.items[1]) : rng.int(1, 3));
+    b.broken = true;
+    b.readyAt = Infinity;
+    this.state.stats.binsKicked++;
+    sound.play('kick');
+    this.state.pickup(n, 'bin');
+    this.setBinTilt(b, true);
+  }
+
+  private setBinTilt(b: Bin, down: boolean) {
+    const m = new THREE.Matrix4().makeTranslation(b.x, 0, b.z);
+    if (down) m.multiply(new THREE.Matrix4().makeRotationY(b.index * 1.7)).multiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2)).multiply(new THREE.Matrix4().makeTranslation(0.3, 0, 0));
+    this.binMesh.setMatrixAt(b.index, m);
+    this.binMesh.instanceMatrix.needsUpdate = true;
   }
 
   /** New run: clears and rolls everything. */
@@ -184,7 +209,8 @@ export class ItemSystem {
       this.hidden.push(h);
     }
 
-    // Bins: most start with something in them.
+    // Bins: most start with something in them; kicked bins stand up again.
+    for (const b of this.bins) { if (b.broken) { b.broken = false; this.setBinTilt(b, false); } }
     for (const b of this.bins) b.readyAt = rng.chance(0.75) ? 0 : rng.range(60, BINS.refill) + this.state.minute;
 
     // Party leftovers: a few random times each night.
@@ -198,54 +224,49 @@ export class ItemSystem {
     }
     this.partyTimes.sort((a, b) => a - b);
 
-    this.placeBigBag();
     this.dirty = true;
   }
 
-  private placeBigBag() {
-    if (this.bigBag) this.group.remove(this.bigBag.mesh);
+  /** Hides `n` extra bags on the street: behind the Nehru part kiosks, the Ráday book
+   *  kiosk, or on a park lawn. The rest of the run's extra bags are in courtyards. */
+  placeBags(n: number) {
+    for (const b of this.bags) this.group.remove(b.mesh);
+    this.bags = [];
     const rng = this.state.rng;
-    // On the Nehru part lawn; BuildingSystem may move it into a courtyard instead.
-    const nehru = this.place.spots.filter((s) => s.zone === 'nehru' && s.green);
-    let x: number, z: number;
-    if (this.bagSpots.length && rng.chance(0.7)) [x, z] = rng.pick(this.bagSpots);
-    else if (nehru.length) ({ x, z } = rng.pick(nehru));
-    else ({ x, z } = rng.pick(this.place.spots));
-    const mesh = new THREE.Mesh(bigBagGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
-    mesh.position.set(x, 0, z);
-    mesh.rotation.y = rng.range(0, Math.PI * 2);
-    mesh.castShadow = true;
-    this.group.add(mesh);
-    const bag: NonNullable<ItemSystem['bigBag']> = {
-      x, z, mesh, taken: false,
-      it: {
-        x, z, reach: 1.6, hold: 0,
-        label: () => bag.taken ? null : 'Take the big blue bag',
-        act: () => {
-          bag.taken = true;
-          mesh.visible = false;
-          this.state.bigBag = true;
-          this.state.toast('Big blue bag! Your bag now holds 100.', 'good');
+    const nehru = this.place.spots.filter((s) => s.green);
+    const pool: [number, number][] = rng.shuffle([...this.bagSpots]);
+    for (let i = 0; i < n; i++) {
+      let x: number, z: number;
+      if (pool.length && rng.chance(0.75)) [x, z] = pool.pop()!;
+      else ({ x, z } = rng.pick(nehru.length ? nehru : this.place.spots));
+      const mesh = new THREE.Mesh(bigBagGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
+      mesh.position.set(x, 0, z);
+      mesh.rotation.y = rng.range(0, Math.PI * 2);
+      mesh.castShadow = true;
+      this.group.add(mesh);
+      const bag: ItemSystem['bags'][number] = {
+        x, z, mesh, taken: false,
+        it: {
+          x, z, reach: 1.6, hold: 0,
+          label: () => bag.taken ? null : 'Take the blue bag',
+          act: () => {
+            if (!this.state.takeBag()) return;
+            bag.taken = true;
+            mesh.visible = false;
+          },
         },
-      },
-    };
-    this.bigBag = bag;
+      };
+      this.bags.push(bag);
+    }
   }
 
-  /** Removes the street big bag (M4 hides it in a courtyard instead). */
-  hideBigBag() {
-    if (!this.bigBag) return;
-    this.group.remove(this.bigBag.mesh);
-    this.bigBag = null;
-  }
-
-  /** Where the big bag is this run (for debugging and the M4 courtyard logic). */
-  get bigBagPos() { return this.bigBag && !this.bigBag.taken ? [this.bigBag.x, this.bigBag.z] : null; }
+  /** Where the street bags are this run (debugging). */
+  get bagPositions() { return this.bags.filter((b) => !b.taken).map((b) => [b.x, b.z]); }
 
   // ------------------------------------------------------------------ actions
 
   private fullText() {
-    return this.state.bagFull ? 'Bag full — go to a Mohu machine' : null;
+    return this.state.bagFull ? (this.state.bags > 1 ? 'Bags full — go to a Mohu machine' : 'Bag full — go to a Mohu machine') : null;
   }
 
   private pickup(n: number, source: Parameters<GameState['collect']>[1], kinds?: ItemKind[]) {
@@ -486,7 +507,7 @@ export class ItemSystem {
     for (const h of this.hidden) if (h.count > 0 && near(h.it.x, h.it.z)) yield h.it;
     for (const b of this.bins) if (near(b.x, b.z)) yield b.it;
     for (const p of this.party) if (near(p.x, p.z)) yield p.it;
-    if (this.bigBag && !this.bigBag.taken && near(this.bigBag.x, this.bigBag.z)) yield this.bigBag.it;
+    for (const b of this.bags) if (!b.taken && near(b.x, b.z)) yield b.it;
   }
 
   /** For the minimap / debugging. */

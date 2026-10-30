@@ -14,6 +14,9 @@ export class FollowCamera {
   yaw = 0;
   /** Mouse sensitivity multiplier (settings). */
   sensitivity = 1;
+  /** Tipsy wobble: camera roll (rad) and vertical bob (m), set each frame. */
+  roll = 0;
+  bob = 0;
   pitch = 0.3;
   distance = 6;
   private current = 6;
@@ -42,6 +45,8 @@ export class FollowCamera {
 
     const k = this.current / this.distance;
     this.camera.position.set(fx + dx * k, fy + Math.sin(this.pitch) * this.current, fz + dz * k);
+    this.camera.position.y += this.bob;
     this.camera.lookAt(fx, fy, fz);
+    if (this.roll) this.camera.rotateZ(this.roll);
   }
 }

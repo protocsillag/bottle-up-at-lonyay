@@ -17,6 +17,8 @@ export interface ShopInterior {
   exitZ: number;
   /** Where the REpont pair stands (world), facing (heading). */
   machines: { x: number; z: number; facing: number };
+  /** Where you stand to buy food and beer (world). */
+  till: { x: number; z: number };
 }
 
 type Part = THREE.BufferGeometry;
@@ -103,8 +105,16 @@ export function buildSpar(origin: Vec2): ShopInterior {
   const light = new THREE.PointLight(0xffffff, 30, 30, 1.2);
   light.position.set(0, 3.6, -10);
   group.add(light);
+  // The till: a counter with a cashier behind it, a beer fridge and a bread basket.
+  const till: Part[] = [];
+  bx(till, 0.8, 1.0, 2.4, 4.4, 0.5, -10, 0x3a3a3a);
+  bx(till, 0.82, 0.06, 2.42, 4.4, 1.03, -10, 0xd8d8d0);
+  bx(till, 0.35, 0.3, 0.3, 4.4, 1.2, -10.6, 0x1b1b1b); // till screen
+  bx(till, 0.5, 0.18, 0.4, 4.4, 1.15, -9.3, 0xc9a25a); // bread rolls
+  group.add(meshOf(till));
+  colliders.push([4.4, -10, 0.8, 2.4]);
   // A cashier and a couple of shoppers.
-  addPeople(group, [[5.5, -10, Math.PI / 2], [-3.4, -12, 0], [0.5, -17, Math.PI]]);
+  addPeople(group, [[5.4, -10, Math.PI / 2], [-3.4, -12, 0], [0.5, -17, Math.PI]]);
   group.position.set(ox, 0, oz);
 
   const w = (x: number, z: number): Vec2 => [ox + x, oz + z];
@@ -113,7 +123,7 @@ export function buildSpar(origin: Vec2): ShopInterior {
   world.addLine([w(1.5, 0), w(W / 2, 0)]);
   for (const [x, z, cw, cd] of colliders) world.addBox(ox + x, oz + z, cw, cd);
   // REpont pair just inside the entrance on the right, facing into the shop's front area.
-  return { group, world, spawn: w(0, -1.2), exitZ: oz - 0.4, machines: { x: ox + 7.6, z: oz - 1.6, facing: Math.PI / 2 } };
+  return { group, world, spawn: w(0, -1.2), exitZ: oz - 0.4, machines: { x: ox + 7.6, z: oz - 1.6, facing: Math.PI / 2 }, till: { x: ox + 3.4, z: oz - 10 } };
 }
 
 /** The Central Market Hall: one huge hall, orange-brown steel trusses, skylights, two
@@ -183,6 +193,11 @@ export function buildHall(origin: Vec2): ShopInterior {
   bx(parts, 9, 3.2, 0.3, W / 2 - 5.5, 1.6, -7.5, 0xf2f2ee);
   bx(parts, 9, 0.8, 0.32, W / 2 - 5.5, 3.6, -7.5, 0x1f3f8a);
   colliders.push([W / 2 - 5.5, -7.5, 9, 0.3]);
+  // Aldi till by the corner.
+  bx(parts, 2.4, 1.0, 0.8, 8.5, 0.5, -5, 0x3a3a3a);
+  bx(parts, 2.42, 0.06, 0.82, 8.5, 1.03, -5, 0xd8d8d0);
+  bx(parts, 0.35, 0.3, 0.3, 9.2, 1.2, -5, 0x1b1b1b);
+  colliders.push([8.5, -5, 2.4, 0.8]);
   const group = new THREE.Group();
   group.add(meshOf(parts));
   const aldi = sign('ALDI', '#1f3f8a', '#ffffff', 3, 0.8, '#f2a31a');
@@ -194,7 +209,7 @@ export function buildHall(origin: Vec2): ShopInterior {
   const sky2 = new THREE.PointLight(0xfff6e8, 60, 40, 1.0);
   sky2.position.set(0, 10, -12);
   group.add(sky, sky2);
-  addPeople(group, [[-6.5, -11, 0], [6.5, -19, Math.PI], [-6.5, -27, 0], [2, -16, 1.4], [-2, -30, -2], [6.5, -35, Math.PI], [-12, -20, -1.5], [0, -44, 0.3]]);
+  addPeople(group, [[8.5, -6, Math.PI], [-6.5, -11, 0], [6.5, -19, Math.PI], [-6.5, -27, 0], [2, -16, 1.4], [-2, -30, -2], [6.5, -35, Math.PI], [-12, -20, -1.5], [0, -44, 0.3]]);
   group.position.set(ox, 0, oz);
 
   const w = (x: number, z: number): Vec2 => [ox + x, oz + z];
@@ -203,7 +218,7 @@ export function buildHall(origin: Vec2): ShopInterior {
   world.addLine([w(2, 0), w(W / 2, 0)]);
   for (const [x, z, cw, cd] of colliders) world.addBox(ox + x, oz + z, cw, cd);
   for (let z = -4.5; z > -D; z -= 9) for (const sx of [-1, 1]) world.addBox(ox + sx * (W / 2 - 1.2), oz + z, 0.5, 0.5);
-  return { group, world, spawn: w(0, -1.5), exitZ: oz - 0.4, machines: { x: ox + W / 2 - 4.5, z: oz - 6.6, facing: Math.PI } };
+  return { group, world, spawn: w(0, -1.5), exitZ: oz - 0.4, machines: { x: ox + W / 2 - 4.5, z: oz - 6.6, facing: Math.PI }, till: { x: ox + 8.5, z: oz - 3.9 } };
 }
 
 function addPeople(group: THREE.Group, spots: [number, number, number][]) {

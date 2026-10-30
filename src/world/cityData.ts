@@ -20,6 +20,10 @@ export interface Road {
   pts: Vec2[];
   name?: string;
   bridge?: 1;
+  /** One-way (baked from OSM since M10): 1 along `pts`, −1 against. */
+  oneway?: 1 | -1;
+  /** No motor vehicles. */
+  nocars?: 1;
 }
 
 export interface Area {

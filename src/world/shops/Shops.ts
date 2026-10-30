@@ -24,6 +24,8 @@ export class Shops {
   private fadeEl = document.getElementById('fade')!;
   private its: Interactable[] = [];
   enterBlock: () => string | null = () => null;
+  /** Opens the till menu; set by main. */
+  onTill: (d: ShopDoor) => void = () => {};
 
   constructor(city: CityData, private state: GameState, private host: BuildingHost, hallDoor: { x: number; z: number; facing: number } | null) {
     const sparP = city.landmarks.spar;
@@ -84,7 +86,15 @@ export class Shops {
   get inside() { return this.current !== null; }
   mapPos(): Vec2 | null { return this.current ? [this.current.x, this.current.z] : null; }
 
-  *interactables(): Iterable<Interactable> { if (!this.current) yield* this.its; }
+  *interactables(): Iterable<Interactable> {
+    if (!this.current) { yield* this.its; return; }
+    const d = this.current;
+    yield {
+      x: d.interior.till.x, z: d.interior.till.z, reach: 1.8, hold: 0,
+      label: () => 'Till: food 100 Ft · beer 200 Ft',
+      act: () => this.onTill(d),
+    };
+  }
 
   private flash() {
     this.fadeEl.classList.add('on');

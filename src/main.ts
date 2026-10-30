@@ -19,8 +19,11 @@ import { Minimap, type MapMarker } from './ui/Minimap';
 import { Hud, funniestStat } from './ui/Hud';
 import { GameState } from './state/GameState';
 import { newSeed } from './state/rng';
-import { formatFt } from './state/time';
-import { BIKE, DOG, GLASS_BREAK } from './state/balance';
+import { GAME_MIN_PER_SEC, formatFt } from './state/time';
+import { BIKE, DOG, EXTRA_BAGS, GLASS_BREAK, HUNGER, TILL, TIPSY, TRAFFIC } from './state/balance';
+import { Traffic } from './npc/Traffic';
+import { Puddles } from './world/Puddles';
+import type { ShopDoor } from './world/shops/Shops';
 import { DayNight } from './world/DayNight';
 import { facadeUniforms } from './world/facade';
 import { Lamps } from './world/lamps';
@@ -97,7 +100,10 @@ const dressing = buildDressing(city, placement);
 cityGroup.add(dressing.group);
 for (const c of dressing.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const state = new GameState(newSeed());
-const items = new ItemSystem(city, placement, state, { hidden: dressing.hiddenSpots, bagSpots: dressing.kioskSpots });
+const items = new ItemSystem(city, placement, state, {
+  hidden: dressing.hiddenSpots,
+  bagSpots: [...dressing.kioskSpots, ...dressing.hiddenSpots.map((s) => [s.x, s.z] as [number, number])],
+});
 scene.add(items.group);
 for (const c of hall?.colliders ?? []) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 
@@ -118,6 +124,11 @@ scene.add(crowd.group);
 const sweeper = new Sweeper(graph);
 sweeper.onSweep = (x, z, r) => items.sweep(x, z, r);
 scene.add(sweeper.group);
+
+const traffic = new Traffic(city);
+scene.add(traffic.group);
+const puddles = new Puddles();
+scene.add(puddles.group);
 
 const [sx, sz] = city.landmarks.spawn ?? [0, 0];
 const player = new Player(world, sx, sz);
@@ -153,10 +164,54 @@ shops.enterBlock = buildings.enterBlock;
 const interaction = new Interaction();
 interaction.add((x, z) => bikes.interactables(x, z));
 interaction.add((x, z) => buildings.getInteractables(x, z));
-interaction.add((x, z) => items.interactables(x, z));
+interaction.add((x, z) => items.interactables(x, z), true);
 interaction.add(() => returns.interactables());
 interaction.add(() => shops.interactables());
 const hud = new Hud(state);
+hud.onTick = () => sound.play('tick');
+const hungerEl = $('hunger');
+const hungerFill = $('hunger-fill');
+const tillEl = $('till');
+const tipsyFx = $('tipsy-fx');
+let tillOpen: ShopDoor | null = null;
+let hungerWarned = false;
+let peeTimer = 0;
+let lowFx = false;
+
+traffic.onHonk = (d) => sound.play('honk', Math.max(0.2, 1 - d / 30));
+traffic.onHit = () => {
+  if (player.stun > 0) return;
+  if (bikes.current) dismount(true);
+  player.fall(TRAFFIC.knockdown);
+  const lost = Math.min(state.bag.length, state.rng.int(TRAFFIC.lostItems[0], TRAFFIC.lostItems[1]));
+  state.loseItems(lost);
+  state.stats.carHits++;
+  state.stats.itemsLostToCars += lost;
+  sound.play('thud');
+  if (lost > 0) setTimeout(() => sound.play('glass', 0.7), 150);
+  say(state.rng.chance(0.6) ? 'car_vak' : 'car_figyelj', 2.4);
+  state.toast(lost > 0 ? `Hit by a car! ${lost} ${lost === 1 ? 'item' : 'items'} smashed.` : 'Hit by a car!', 'bad');
+};
+shops.onTill = (d) => { tillOpen = d; tillEl.classList.remove('hidden'); };
+function closeTill() { tillOpen = null; tillEl.classList.add('hidden'); }
+function buy(what: 'food' | 'beer') {
+  const price = TILL[what];
+  if (!state.spend(price)) { say('till_nomoney'); sound.play('reject'); return; }
+  sound.play('till');
+  if (what === 'food') {
+    state.eat();
+    hungerWarned = false;
+    say('till_food', 2.2);
+    setTimeout(() => sound.play('munch'), 400);
+    state.toast(`Bread roll with párizsi: −${price} Ft. Full again.`, 'good');
+  } else {
+    state.drinkBeer();
+    say('till_beer', 2.2);
+    setTimeout(() => sound.play('gulp'), 400);
+    const h = Math.round((state.tipsyUntil - state.minute) / 60);
+    state.toast(`Beer: −${price} Ft. Tipsy for ${h} h${state.tipsyLevel > 1 ? ` (level ${state.tipsyLevel})` : ''}.`, 'good');
+  }
+}
 player.allowDebug = DEBUG;
 mohu.onSound = (n) => sound.play(n);
 interaction.onRustle = () => sound.play('search');
@@ -172,7 +227,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -226,7 +281,11 @@ function startRun() {
   returns.reset();
   items.reset();
   if (shops.inside) shops.leave(false);
-  if (buildings.reset().bigBagInCourtyard) items.hideBigBag();
+  // About 4 extra bags per run, a third of them on the street.
+  const extraBags = state.rng.int(EXTRA_BAGS.count[0], EXTRA_BAGS.count[1]);
+  const streetBags = Math.max(1, Math.round(extraBags * EXTRA_BAGS.streetShare));
+  items.placeBags(streetBags);
+  buildings.reset(extraBags - streetBags);
   returns.stop();
   crowd.reset();
   dogMess.reset();
@@ -234,6 +293,11 @@ function startRun() {
   sweeper.reset();
   player.onBike = false;
   player.stun = 0;
+  player.freeze = 0;
+  traffic.reset();
+  puddles.reset();
+  closeTill();
+  hungerWarned = false;
   player.teleport(sx, sz, 0);
   player.stamina = 100;
   // Start looking up Lónyay utca toward Kálvin tér.
@@ -257,6 +321,10 @@ async function endRun() {
     ['Items still in the bag (worth nothing)', state.bag.length],
     ['Items collected', s.itemsCollected],
     ['Bins searched', s.binsSearched],
+    ['Spent on food and beer', formatFt(s.spentFt)],
+    ['Walls watered', s.wallsWatered],
+    ['Bins kicked over', s.binsKicked],
+    ['Hit by cars', s.carHits],
     ['Distance walked', `${(s.distance / 1000).toFixed(1)} km`],
   ];
   $('end-stats').replaceChildren(...rows.map(([k, v]) => {
@@ -318,6 +386,7 @@ function applySettings() {
     sun.shadow.map = null;
   }
   crowd.maxNpcs = q === 'low' ? 30 : q === 'medium' ? 45 : 60;
+  lowFx = q === 'low';
 }
 applySettings();
 let settingsReturn: Screen | 'pause' = 'title';
@@ -356,6 +425,7 @@ let fpsTime = 0, fpsFrames = 0, fps = 0;
 
 let titleAngle = 0;
 let stepAcc = 0;
+let wasStarving = false;
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
@@ -382,8 +452,41 @@ function frame() {
     const px = player.position.x, pz = player.position.z;
     // F gets off the bike anywhere.
     if (bikes.current && input.wasPressed('KeyF') && !mohu.active) dismount(false);
-    player.speedMul = dogMess.slowed > 0 ? DOG.slowFactor : 1;
-    if (!mohu.active) player.update(dt, input, follow.yaw);
+    // Hunger and beer change how you move.
+    player.speedMul = (dogMess.slowed > 0 ? DOG.slowFactor : 1) * (state.starving ? HUNGER.speed : 1) * (state.tipsy ? TIPSY.speed : 1);
+    player.canRun = !state.starving;
+    if (!hungerWarned && state.hunger < HUNGER.warnAt && !state.starving) { hungerWarned = true; state.toast('Getting hungry — buy food at SPAR or Aldi', 'bad'); }
+    if (state.starving && !wasStarving) state.toast("Too hungry! Slow, and you can't collect until you eat.", 'bad');
+    wasStarving = state.starving;
+    const wobble = state.tipsy ? state.tipsyLevel * (lowFx ? 0.5 : 1) : 0;
+    const drift = wobble ? Math.sin(state.realTime * 0.9) * 0.08 * wobble : 0;
+    if (tillOpen) {
+      if (input.wasPressed('Digit1') || input.wasPressed('Numpad1')) buy('food');
+      if (input.wasPressed('Digit2') || input.wasPressed('Numpad2')) buy('beer');
+      if (input.wasPressed('KeyE') || Math.hypot(player.position.x - tillOpen.interior.till.x, player.position.z - tillOpen.interior.till.z) > 2.6) closeTill();
+    }
+    // Tipsy: P pees on the wall in front of you.
+    if (state.tipsy && input.wasPressed('KeyP') && !player.onBike && player.freeze <= 0 && !mohu.active && !shops.inside) {
+      const fx = -Math.sin(player.facing), fz = -Math.cos(player.facing);
+      const hit = player.world.raycast(player.position.x, player.position.z, player.position.x + fx * 1.6, player.position.z + fz * 1.6);
+      if (hit < 1) {
+        player.freeze = TIPSY.peeSeconds;
+        peeTimer = TIPSY.peeSeconds;
+        sound.play('stream');
+      } else state.toast('Find a wall first', 'info');
+    }
+    if (peeTimer > 0) {
+      peeTimer -= dt;
+      if (peeTimer <= 0) {
+        const fx = -Math.sin(player.facing), fz = -Math.cos(player.facing);
+        puddles.add(player.position.x + fx * 0.6, player.position.z + fz * 0.6);
+        state.stats.wallsWatered++;
+        say('pee_sigh', 1.5);
+        if (buildings.inside) buildings.peed();
+        else if (crowd.npcs.some((n) => Math.hypot(n.x - player.position.x, n.z - player.position.z) < 10)) setTimeout(() => say('pee_shame', 2.6), 900);
+      }
+    }
+    if (!mohu.active) player.update(dt, input, follow.yaw + drift);
     else mohu.update(dt, input);
     if (!inside()) {
       // Pedestrians and the sweeper are solid; a fast bike into a person is a crash.
@@ -428,13 +531,25 @@ function frame() {
     items.update(dt, gameMinutes, player.position.x, player.position.z, lighting.night);
     crowd.update(dt, state.minute, player.position.x, player.position.z, !inside());
     sweeper.update(dt, state.minute, player.position.x, player.position.z);
+    traffic.update(dt, state.minute, inside() ? null : { x: player.position.x, z: player.position.z }, lighting.lamps, !inside());
+    if (!inside()) {
+      const [cx, cz] = traffic.pushOut(player.position.x, player.position.z, 0.35);
+      if (cx !== player.position.x || cz !== player.position.z) {
+        [player.position.x, player.position.z] = world.resolve(cx, cz, 0.35);
+        player.mesh.position.copy(player.position);
+      }
+    }
+    puddles.update(dt);
     returns.update(dt, player.position.x, player.position.z);
     interaction.holdDisabledReason = player.onBike ? 'Get off the bike first (F)' : null;
-    if (!mohu.active) interaction.update(dt, input, player.position.x, player.position.z, player.facing);
+    interaction.collectBlockedReason = state.starving ? 'Too hungry — buy food at SPAR or Aldi' : null;
+    if (tillOpen) interaction.prompt = null;
+    else if (!mohu.active) interaction.update(dt, input, player.position.x, player.position.z, player.facing);
     else interaction.prompt = null;
     if (input.wasPressed('KeyM')) minimap.toggleLarge();
   }
   player.mesh.visible = !mohu.active;
+  player.setBags(state.bags);
   document.body.classList.toggle('mohu-on', mohu.active);
   if (mohu.active) mohu.camera(camera);
   else if (screen === 'title' || screen === 'scores') {
@@ -442,7 +557,17 @@ function frame() {
     titleAngle += dt * 0.04;
     camera.position.set(sx + Math.sin(titleAngle) * 260, 150, sz + Math.cos(titleAngle) * 260);
     camera.lookAt(sx, 0, sz);
-  } else follow.update(dt, input, player.position);
+  } else {
+    // Tipsy: a gentle roll and bob.
+    const w = state.tipsy && screen === 'run' ? state.tipsyLevel * (lowFx ? 0.5 : 1) : 0;
+    follow.roll = w ? Math.sin(state.realTime * 0.8) * 0.035 * w : 0;
+    follow.bob = w ? Math.sin(state.realTime * 1.6) * 0.06 * w : 0;
+    follow.update(dt, input, player.position);
+  }
+  tipsyFx.classList.toggle('on', state.tipsy && screen === 'run');
+  tipsyFx.classList.toggle('lite', lowFx);
+  hungerFill.style.width = `${state.hunger * 100}%`;
+  hungerEl.classList.toggle('low', state.hunger < HUNGER.warnAt);
   const [mx, mz] = shops.mapPos() ?? buildings.mapPos(player.position.x, player.position.z);
   minimap.draw(mx, mz, player.facing);
   staminaFill.style.width = `${player.stamina}%`;
@@ -451,8 +576,14 @@ function frame() {
   const status: string[] = [];
   if (player.debugFast) status.push('Debug walk');
   if (state.timeScale > 1) status.push(`Time ×${state.timeScale}`);
-  if (state.bigBag) status.push('Big blue bag');
+
   if (player.onBike) status.push('On a bike');
+  if (state.starving) status.push('Starving!');
+  else if (state.hunger < HUNGER.warnAt) status.push('Hungry');
+  if (state.tipsy) {
+    const left = (state.tipsyUntil - state.minute) / GAME_MIN_PER_SEC;
+    status.push(`🍺 Tipsy ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} · P: pee`);
+  }
   if (dogMess.slowed > 0) status.push(`Slowed: dog mess ${Math.ceil(dogMess.slowed)} s`);
   if (buildings.inside) status.push('In a courtyard');
   hud.update(state, interaction, status);

@@ -8,7 +8,10 @@
   </head>
   <body>
     <canvas id="game"></canvas>
+    <div id="tipsy-fx"></div>
     <div id="hud">
+      <div id="countdown">Ends in 30:00</div>
+      <div id="timeleft">Ends Sunday 08:00 · 48 h left</div>
       <div class="clock"><span id="day">Friday</span> <span id="time">08:00</span></div>
       <div id="street">Loading Belső-Ferencváros…</div>
       <div id="shops"></div>
@@ -32,8 +35,18 @@
       <div id="mohu-help"></div>
     </div>
     <div id="receipt" class="hidden"></div>
+    <div id="till" class="hidden">
+      <div class="till-title">Till</div>
+      <div class="till-row"><b>1</b> Bread roll with párizsi <span>100&nbsp;Ft</span></div>
+      <div class="till-sub">Fills you up</div>
+      <div class="till-row"><b>2</b> Beer, „folyékony kenyér” <span>200&nbsp;Ft</span></div>
+      <div class="till-sub">Tipsy for a few hours: faster, wobbly; P to pee on a wall, hold E to kick a bin over</div>
+      <div class="till-foot">E or walk away to close</div>
+    </div>
+
     <div id="prompt" class="hidden"><span id="prompt-key">E</span><span id="prompt-text"></span><div class="bar"><div id="prompt-fill"></div></div></div>
-    <div id="stamina"><div class="label">Stamina</div><div class="bar"><div id="stamina-fill"></div></div></div>
+    <div id="stamina"><div class="label">Stamina</div><div class="bar"><div id="stamina-fill"></div></div>
+      <div id="hunger"><div class="label">Hunger</div><div class="bar"><div id="hunger-fill"></div></div></div></div>
     <canvas id="minimap" width="200" height="200"></canvas>
     <div id="title" class="overlay title">
       <div class="card">
@@ -63,12 +76,14 @@
       <div class="card">
         <h1>Friday, 08:00.</h1>
         <p class="intro">Lónyay utca. 48 hours.<br />Every bottle and can is 50&nbsp;Ft.</p>
-        <p class="muted">Fill your bag from streets, planters, bins, party leftovers and courtyards, then feed it to the bottle machine at SPAR (S) or Aldi in the market hall (A). Open 06:00–24:00. Items in the bag are worth nothing until they go through a machine.</p>
+        <p class="endtime">The run ends <b>Sunday 08:00</b>, in 30 real minutes. Only money from the machines counts.</p>
+        <p class="muted">Fill your bag from streets, planters, bins, party leftovers and courtyards, then feed it to the bottle machine at SPAR (S) or Aldi in the market hall (A). Open 06:00–24:00. Items in the bag are worth nothing until they go through a machine. Each bag holds 50; find up to two more. Eat at the till before you starve, mind the cars, and go easy on the beer.</p>
         <ul class="controls">
           <li><b>WASD</b> move</li><li><b>Mouse</b> look</li>
           <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
           <li><b>E</b> interact, ring bells (hold for bins)</li><li><b>M</b> big map</li>
           <li><b>F</b> get on / off a bike</li><li><b>Wheel</b> zoom</li>
+          <li><b>1</b> / <b>2</b> buy food / beer at the till</li><li><b>P</b> pee on a wall (tipsy)</li>
           <li><b>Esc</b> pause</li>
         </ul>
         <button id="i-go">Start</button>
@@ -82,6 +97,7 @@
           <li><b>Shift</b> run</li><li><b>Space</b> jump</li>
           <li><b>E</b> interact, ring bells (hold for bins)</li><li><b>M</b> big map</li>
           <li><b>F</b> get on / off a bike</li><li><b>Wheel</b> zoom</li>
+          <li><b>1</b> / <b>2</b> buy food / beer at the till</li><li><b>P</b> pee on a wall (tipsy)</li>
           <li><b>Esc</b> pause</li>
         </ul>
         <div class="menu row"><button id="play">Resume</button><button id="p-settings" class="ghost">Settings</button><button id="p-quit" class="ghost">Quit to title</button></div>

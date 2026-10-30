@@ -7,7 +7,8 @@ import type { Line, Speaker } from './lines';
 
 export type SfxName =
   | 'beep' | 'reject' | 'print' | 'clunk' | 'pop' | 'wipe' | 'pickup' | 'glass' | 'slam' | 'creak'
-  | 'buzz' | 'crackle' | 'squelch' | 'bell' | 'ching' | 'step' | 'click' | 'search' | 'bag' | 'shout';
+  | 'buzz' | 'crackle' | 'squelch' | 'bell' | 'ching' | 'step' | 'click' | 'search' | 'bag' | 'shout'
+  | 'tick' | 'honk' | 'thud' | 'stream' | 'kick' | 'till' | 'gulp' | 'munch';
 
 export type VoiceMode = 'auto' | 'speech' | 'off';
 
@@ -178,6 +179,14 @@ export class Sound {
       case 'step': this.hiss(t, 0.04, 0.035 * v, 'lowpass', 500); break;
       case 'click': this.tone('square', 1000, 1000, t, 0.02, 0.04 * v); break;
       case 'shout': break;
+      case 'tick': this.tone('square', 1500, 1500, t, 0.03, 0.06 * v); break;
+      case 'honk': this.tone('sawtooth', 392, 392, t, 0.35, 0.09 * v); this.tone('sawtooth', 494, 494, t, 0.35, 0.07 * v); break;
+      case 'thud': this.tone('sine', 110, 45, t, 0.3, 0.6 * v); this.hiss(t, 0.2, 0.3 * v, 'lowpass', 1200); break;
+      case 'stream': this.hiss(t, 2.8, 0.06 * v, 'bandpass', 2600, 1.5, 1800); break;
+      case 'kick': this.tone('sine', 160, 60, t, 0.25, 0.5 * v); this.hiss(t + 0.05, 0.4, 0.15 * v, 'bandpass', 900, 1); for (let i = 0; i < 5; i++) this.tone('triangle', 2000 + Math.random() * 1500, 1800, t + 0.1 + Math.random() * 0.4, 0.08, 0.05 * v); break;
+      case 'till': this.tone('sine', 1200, 1200, t, 0.08, 0.1 * v); this.tone('sine', 1800, 1800, t + 0.09, 0.15, 0.1 * v); break;
+      case 'gulp': for (let i = 0; i < 3; i++) this.tone('sine', 300, 180, t + i * 0.25, 0.12, 0.15 * v); break;
+      case 'munch': for (let i = 0; i < 4; i++) this.hiss(t + i * 0.2, 0.08, 0.1 * v, 'bandpass', 1500, 2); break;
     }
   }
 
@@ -191,7 +200,7 @@ export class Sound {
     const u = new SpeechSynthesisUtterance(line.hu.replace(/\.\.\./g, ', '));
     u.voice = this.huVoice;
     u.lang = this.huVoice.lang;
-    const p: Record<Speaker, [number, number]> = { granny: [1.5, 0.85], grandpa: [0.6, 0.85], hazmester: [0.5, 1.15], street: [0.8, 0.95], player: [1, 1], machine: [1, 1] };
+    const p: Record<Speaker, [number, number]> = { granny: [1.5, 0.85], grandpa: [0.6, 0.85], hazmester: [0.5, 1.15], street: [0.8, 0.95], player: [1, 1], machine: [1, 1], cashier: [1.2, 1.05], driver: [0.7, 1.2] };
     [u.pitch, u.rate] = p[line.who];
     u.volume = this.volumes.master * this.volumes.voice;
     speechSynthesis.cancel();

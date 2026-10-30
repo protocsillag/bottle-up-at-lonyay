@@ -286,6 +286,10 @@ for (const w of ways.values()) {
   const road = { kind, hw: t.highway, w: width, pts };
   if (t.name) road.name = t.name;
   if (t.bridge === 'yes') road.bridge = 1;
+  // One-way streets for M10 traffic: 1 = along the points, -1 = against them.
+  if (t.oneway === 'yes' || t.oneway === '1' || t.junction === 'roundabout') road.oneway = 1;
+  if (t.oneway === '-1') road.oneway = -1;
+  if (t.motor_vehicle === 'no' || t.access === 'no') road.nocars = 1;
   roads.push(road);
 }
 

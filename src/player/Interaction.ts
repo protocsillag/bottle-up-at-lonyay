@@ -12,6 +12,8 @@ export interface Interactable {
   blocked?(): string | null;
   /** Real seconds to hold E; 0 = single press. */
   hold: number;
+  /** Collecting something (blocked while starving). */
+  collect?: boolean;
   /** Key to use instead of E (bikes use F). */
   key?: string;
   act(): void;
@@ -20,7 +22,9 @@ export interface Interactable {
 export type InteractableSource = (x: number, z: number) => Iterable<Interactable>;
 
 export class Interaction {
-  private sources: InteractableSource[] = [];
+  private sources: { src: InteractableSource; collect: boolean }[] = [];
+  /** Blocks every collecting action (starving). */
+  collectBlockedReason: string | null = null;
   target: Interactable | null = null;
   progress = 0; // 0–1 while holding
   prompt: string | null = null;
@@ -34,12 +38,14 @@ export class Interaction {
   /** Blocks only hold-E actions (searching bins on a bike). */
   holdDisabledReason: string | null = null;
 
-  add(src: InteractableSource) { this.sources.push(src); }
+  /** collect: everything this source yields is a collecting action. */
+  add(src: InteractableSource, collect = false) { this.sources.push({ src, collect }); }
 
   update(dt: number, input: Input, px: number, pz: number, facing: number) {
     let best: Interactable | null = null, bestScore = Infinity;
     const fx = -Math.sin(facing), fz = -Math.cos(facing);
-    for (const src of this.sources) {
+    let bestCollect = false;
+    for (const { src, collect } of this.sources) {
       for (const it of src(px, pz)) {
         const dx = it.x - px, dz = it.z - pz;
         const d = Math.hypot(dx, dz);
@@ -47,7 +53,7 @@ export class Interaction {
         // Prefer things in front of the player.
         const front = d > 0.01 ? (dx * fx + dz * fz) / d : 1;
         const score = d * (1.4 - 0.4 * front);
-        if (score < bestScore) { bestScore = score; best = it; }
+        if (score < bestScore) { bestScore = score; best = it; bestCollect = collect || !!it.collect; }
       }
     }
     if (best !== this.target) { this.target = best; this.progress = 0; }
@@ -55,7 +61,7 @@ export class Interaction {
     this.promptBlocked = false;
     if (!best) return;
 
-    const blocked = this.disabledReason ?? (best.hold > 0 ? this.holdDisabledReason : null) ?? best.blocked?.() ?? null;
+    const blocked = this.disabledReason ?? (bestCollect ? this.collectBlockedReason : null) ?? (best.hold > 0 ? this.holdDisabledReason : null) ?? best.blocked?.() ?? null;
     if (blocked) {
       this.prompt = blocked;
       this.promptBlocked = true;

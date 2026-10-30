@@ -121,6 +121,7 @@ export class CharacterModel {
   private airBlend = 0;
   private time = 0;
   private pet: THREE.Group | null = null;
+  private carried: THREE.Object3D[] = [];
 
   constructor(c: CharacterColors = DEFAULT_COLORS, opts: CharacterOptions = {}) {
     this.root.add(this.body);
@@ -310,6 +311,28 @@ export class CharacterModel {
     this.torso.rotation.y = s * 0.08 * move;
     this.head.rotation.x = lean * 0.6;
     this.animatePet(dt, speed);
+  }
+
+  /** Shows 0–3 carried bags: right hand, left hand, then over the shoulder. */
+  setBags(n: number) {
+    if (this.carried.length === 0) {
+      const bag = (w: number, h: number) => {
+        const g = new THREE.Group();
+        g.add(box(w, h, 0.16, 0x1f4fa8, -0.05 - h / 2));
+        const handle = box(0.03, 0.1, 0.03, 0xf2c418, 0);
+        g.add(at(handle, -0.06, -0.02, 0), at(handle.clone(), 0.06, -0.02, 0));
+        return g;
+      };
+      const r = at(bag(0.3, 0.36), 0, -0.3, 0);
+      const l = at(bag(0.3, 0.36), 0, -0.3, 0);
+      this.armR.knee.add(r);
+      this.armL.knee.add(l);
+      const s = at(bag(0.36, 0.46), -0.05, 0.6, 0.2);
+      s.rotation.z = 0.25;
+      this.torso.add(s);
+      this.carried = [r, l, s];
+    }
+    this.carried.forEach((b, i) => { b.visible = i < n; });
   }
 
   private animatePet(dt: number, speed: number) {

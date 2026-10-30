@@ -1,5 +1,15 @@
 # Changelog
 
+## M10 Gameplay round 2 (2026-10-30)
+
+- Bags hold 50 items each. You start with one and can carry three (150 items); about four extra blue bags are hidden each run, mostly in courtyards, some behind the Nehru part kiosks or the Ráday book kiosk. A fourth says "Can't carry more bags". Your character carries them in hand and on the shoulder. HUD: "73 / 100 · 2 bags".
+- A clear countdown: "Ends in 23:41" with "Ends Sunday 08:00 · 37 h left" under it. Orange and a warning at 5 minutes, red, pulsing and ticking in the last minute. The intro card says when the run ends.
+- Tills in SPAR and the Aldi corner: a bread roll with párizsi (100 Ft) or a beer (200 Ft). The score is the money you have left.
+- Hunger: a bar under stamina that empties about three times a run. Starving means slow, no running and no collecting until you eat.
+- Beer makes you tipsy for 2–6 game hours: faster, a swaying view, slightly wobbly steering. P pees on a wall (people nearby are not impressed, and a házmester gives chase); hold E on a public bin to kick it over and grab everything at once, but it never refills.
+- Moving traffic: cars (and yellow taxis) drive the streets, slow at junctions, honk and brake if you stand in the road, and knock you down if you step out right in front: 1–5 items smashed and an angry driver.
+- New end-screen stats: spent on food and beer, walls watered, bins kicked over, hit by cars.
+
 ## M9 Polish (2026-10-29)
 
 - Sound: every effect is synthesised in code, with no audio files: scan beeps, reject buzz, printer rattle, clinks when you pick things up, rustling while you search a bin, smashing glass, creaking and slamming gates, the door buzzer, intercom crackle, the squelch of dog mess, a bike bell, the receipt "ching", footsteps, a quiet city hum and birds by day.

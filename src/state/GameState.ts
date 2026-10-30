@@ -1,4 +1,4 @@
-import { BAG_BIG, BAG_SMALL, CONDITION, ITEM_VALUE_FT, KIND_ODDS, SUPPLY } from './balance';
+import { BAG_SIZE, CONDITION, HUNGER, ITEM_VALUE_FT, KIND_ODDS, MAX_BAGS, SUPPLY, TIPSY } from './balance';
 import { Rng } from './rng';
 import { sound } from '../audio/Sfx';
 import { END_MINUTE, GAME_MIN_PER_SEC, START_MINUTE, hourIn, hourOf } from './time';
@@ -27,6 +27,14 @@ export interface RunStats {
   itemsLostToHazmester: number;
   bikeCrashes: number;
   distance: number; // metres walked
+  foodBought: number;
+  beersBought: number;
+  spentFt: number;
+  wallsWatered: number;
+  binsKicked: number;
+  carHits: number;
+  itemsLostToCars: number;
+  timesStarving: number;
 }
 
 export interface Toast { text: string; kind?: 'good' | 'bad' | 'info'; }
@@ -34,7 +42,8 @@ export interface Toast { text: string; kind?: 'good' | 'bad' | 'info'; }
 const freshStats = (): RunStats => ({
   itemsCollected: 0, itemsReturned: 0, itemsRejected: 0, glassBroken: 0, binsSearched: 0,
   doorsSlammed: 0, bellsRung: 0, dogIncidents: 0, hazmesterCatches: 0, itemsLostToHazmester: 0,
-  bikeCrashes: 0, distance: 0,
+  bikeCrashes: 0, distance: 0, foodBought: 0, beersBought: 0, spentFt: 0, wallsWatered: 0, binsKicked: 0,
+  carHits: 0, itemsLostToCars: 0, timesStarving: 0,
 });
 
 export class GameState {
@@ -42,7 +51,14 @@ export class GameState {
   minute = START_MINUTE;
   money = 0;
   bag: Item[] = [];
-  bigBag = false;
+  /** 1 = full, 0 = starving. */
+  hunger = 1;
+  /** Game minute the tipsiness wears off (0 = sober). */
+  tipsyUntil = 0;
+  /** 1–3: how strong the wobble is. */
+  tipsyLevel = 0;
+  /** Bags carried, 1–3 (50 items each). */
+  bags = 1;
   status: RunStatus = 'ready';
   stats = freshStats();
   /** Real seconds since the run started (not counting pauses). */
@@ -60,7 +76,10 @@ export class GameState {
     this.minute = START_MINUTE;
     this.money = 0;
     this.bag = [];
-    this.bigBag = false;
+    this.bags = 1;
+    this.hunger = 1;
+    this.tipsyUntil = 0;
+    this.tipsyLevel = 0;
     this.status = 'playing';
     this.stats = freshStats();
     this.realTime = 0;
@@ -81,7 +100,36 @@ export class GameState {
     return m;
   }
 
-  get capacity() { return this.bigBag ? BAG_BIG : BAG_SMALL; }
+  get tipsy() { return this.minute < this.tipsyUntil; }
+  get starving() { return this.hunger <= 0; }
+
+  /** Spends money at the till. Returns false if there is not enough. */
+  spend(ft: number) {
+    if (this.money < ft) return false;
+    this.money -= ft;
+    this.stats.spentFt += ft;
+    return true;
+  }
+
+  eat() { this.hunger = 1; this.stats.foodBought++; }
+
+  drinkBeer() {
+    const hours = this.rng.range(TIPSY.hours[0], TIPSY.hours[1]);
+    this.tipsyLevel = this.tipsy ? Math.min(TIPSY.maxLevel, this.tipsyLevel + 1) : 1;
+    this.tipsyUntil = this.minute + hours * 60;
+    this.stats.beersBought++;
+  }
+
+  get capacity() { return this.bags * BAG_SIZE; }
+
+  /** Picks up another bag. Returns false (and says so) when already carrying the maximum. */
+  takeBag(): boolean {
+    if (this.bags >= MAX_BAGS) { this.toast("Can't carry more bags", 'bad'); return false; }
+    this.bags++;
+    this.toast(`Another bag! You can carry ${this.capacity} items now.`, 'good');
+    sound.play('bag');
+    return true;
+  }
   get bagFull() { return this.bag.length >= this.capacity; }
   get bagSpace() { return Math.max(0, this.capacity - this.bag.length); }
   get hour() { return hourOf(this.minute); }
@@ -92,7 +140,12 @@ export class GameState {
   tick(dt: number) {
     if (this.status !== 'playing') return false;
     this.realTime += dt;
+    const before = this.minute;
     this.minute = Math.min(END_MINUTE, this.minute + dt * GAME_MIN_PER_SEC * this.timeScale);
+    const wasFed = this.hunger > 0;
+    this.hunger = Math.max(0, this.hunger - (this.minute - before) / HUNGER.lasts);
+    if (wasFed && this.hunger <= 0) this.stats.timesStarving++;
+    if (!this.tipsy) this.tipsyLevel = 0;
     if (this.minute >= END_MINUTE) { this.status = 'ended'; return true; }
     return false;
   }

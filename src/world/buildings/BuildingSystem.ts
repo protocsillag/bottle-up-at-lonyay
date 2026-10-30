@@ -43,7 +43,7 @@ export class BuildingSystem {
   readonly group = new THREE.Group();
   private courts = new Map<string, CourtState>();
   private jackpotGates = new Set<number>();
-  private bigBagGate = -1;
+  private bagGates = new Set<number>();
   private lastLine: Line | null = null;
   // Inside state.
   current: Gate | null = null;
@@ -75,7 +75,8 @@ export class BuildingSystem {
     return `Courtyard, ${this.streets.nearest(this.current.x + this.current.nx * 4, this.current.z + this.current.nz * 4) ?? 'Belső-Ferencváros'}`;
   }
 
-  reset(): { bigBagInCourtyard: boolean } {
+  /** New run; `bags` extra bags are hidden in random courtyards. */
+  reset(bags: number) {
     if (this.current) this.leave(false);
     this.gates.reset();
     this.courts.clear();
@@ -84,8 +85,8 @@ export class BuildingSystem {
     this.jackpotGates = new Set();
     const want = rng.int(COURTYARD.jackpots[0], COURTYARD.jackpots[1]);
     while (this.jackpotGates.size < Math.min(want, n)) this.jackpotGates.add(rng.int(0, n - 1));
-    this.bigBagGate = rng.chance(0.6) ? rng.int(0, n - 1) : -1;
-    return { bigBagInCourtyard: this.bigBagGate >= 0 };
+    this.bagGates = new Set();
+    while (this.bagGates.size < Math.min(bags, n)) this.bagGates.add(rng.int(0, n - 1));
   }
 
   /** Lazily rolls a courtyard's contents the first time you enter this run. */
@@ -102,7 +103,7 @@ export class BuildingSystem {
       })),
       jackpot: jackpot ? { kind: rng.chance(0.5) ? 'skip' : 'party', count: this.state.supply(rng.int(COURTYARD.jackpotItems[0], COURTYARD.jackpotItems[1])) } : null,
       hazmester: rng.chance(jackpot ? COURTYARD.hazmesterJackpot : COURTYARD.hazmester),
-      bigBag: g.index === this.bigBagGate,
+      bigBag: this.bagGates.has(g.index),
     };
     this.courts.set(g.b.id, c);
     return c;
@@ -187,7 +188,7 @@ export class BuildingSystem {
       interior.group.attach(mesh);
       interior.world.addBox(x, z, 1.3, 1.0);
       this.interactables.push({
-        x, z, reach: 1.7, hold: COURTYARD.binHold,
+        x, z, reach: 1.7, hold: COURTYARD.binHold, collect: true,
         label: () => this.state.minute >= bin.readyAt ? (bin.lid === 0xf2c418 ? 'Search the yellow recycling bin' : 'Search the courtyard bin') : 'Bin already searched',
         blocked: () => this.state.minute < bin.readyAt ? 'Searched — refills in 12 h' : this.state.bagFull ? 'Bag full — go to a Mohu machine' : null,
         act: () => {
@@ -210,7 +211,7 @@ export class BuildingSystem {
       interior.world.addBox(x, z, jp.kind === 'skip' ? 1.6 : 1.8, jp.kind === 'skip' ? 3.4 : 1.6);
       if (jp.count <= 0) mesh.visible = false;
       this.interactables.push({
-        x: x + 1.3, z, reach: 2.2, hold: COURTYARD.jackpotHold,
+        x: x + 1.3, z, reach: 2.2, hold: COURTYARD.jackpotHold, collect: true,
         label: () => jp.count > 0 ? (jp.kind === 'skip' ? `Jackpot! Renovation skip full of cans (${jp.count})` : `Jackpot! A party flat's recycling (${jp.count})`) : null,
         blocked: () => this.state.bagFull ? 'Bag full — go to a Mohu machine' : null,
         act: () => {
@@ -219,19 +220,19 @@ export class BuildingSystem {
         },
       });
     }
-    if (c.bigBag && !this.state.bigBag) {
+    if (c.bigBag) {
       const [x, z] = layout.bag;
       const mesh = new THREE.Mesh(bigBagGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }));
       mesh.position.set(x, 0, z);
       mesh.rotation.y = 0.4;
       interior.group.attach(mesh);
       this.interactables.push({
-        x, z, reach: 1.6, hold: 0,
-        label: () => this.state.bigBag ? null : 'Take the big blue bag',
+        x, z, reach: 1.6, hold: 0, collect: true,
+        label: () => c.bigBag ? 'Take the blue bag' : null,
         act: () => {
-          this.state.bigBag = true;
+          if (!this.state.takeBag()) return;
+          c.bigBag = false;
           mesh.visible = false;
-          this.state.toast('Big blue bag! Your bag now holds 100.', 'good');
         },
       });
     }
@@ -273,6 +274,15 @@ export class BuildingSystem {
     follow.yaw = g.facing;
     this.host.setOutsideVisible(true);
     if (fade) this.flash();
+  }
+
+  /** The player peed against a courtyard wall: an awake házmester gives chase. */
+  peed() {
+    const h = this.hazmester;
+    if (!h || h.chasing) return;
+    h.chasing = true;
+    say('hz_hey');
+    this.escape = ESCAPE_TIME;
   }
 
   private caught() {
