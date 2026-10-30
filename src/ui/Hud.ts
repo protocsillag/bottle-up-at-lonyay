@@ -10,7 +10,7 @@ const $ = (id: string) => document.getElementById(id)!;
 export class Hud {
   private day = $('day');
   private countdown = $('countdown');
-  private timeleft = $('timeleft');
+  private countdownTime = $('countdown-time');
   private warned5 = false;
   private lastTick = -1;
   /** Plays the last-minute tick (set by main). */
@@ -44,8 +44,7 @@ export class Hud {
     // Countdown in real time, with the game time left under it.
     const realLeft = Math.max(0, (END_MINUTE - state.minute) / GAME_MIN_PER_SEC);
     const m = Math.floor(realLeft / 60), sec = Math.floor(realLeft % 60);
-    this.countdown.textContent = `Ends in ${m}:${String(sec).padStart(2, '0')}`;
-    this.timeleft.textContent = `Ends Sunday 08:00 · ${Math.ceil(state.timeLeft / 60)} h left`;
+    this.countdownTime.textContent = `${m}:${String(sec).padStart(2, '0')}`;
     this.countdown.classList.toggle('warn', realLeft <= 300 && realLeft > 60);
     this.countdown.classList.toggle('final', realLeft <= 60);
     if (state.minute < END_MINUTE - 300 * GAME_MIN_PER_SEC) this.warned5 = false;

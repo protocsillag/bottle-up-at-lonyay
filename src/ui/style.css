@@ -186,7 +186,7 @@ table.scores td:last-child { text-align: right; font-weight: 800; }
 table.scores img { display: block; border-radius: 6px; }
 table.scores tr.me { background: var(--ink); color: var(--mohu-yellow); }
 #end .card { max-height: 92vh; overflow-y: auto; }
-body.in-menu #hud, body.in-menu #wallet, body.in-menu #stamina, body.in-menu #minimap, body.in-menu #prompt, body.in-menu #toasts, body.in-menu #subtitle { display: none; }
+body.in-menu #hud, body.in-menu #countdown, body.in-menu #wallet, body.in-menu #stamina, body.in-menu #minimap, body.in-menu #prompt, body.in-menu #toasts, body.in-menu #subtitle { display: none; }
 
 /* ---- M9 settings ---- */
 .settings label { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 10px; text-align: left; margin: 8px 0; font-weight: 600; }
@@ -194,11 +194,16 @@ body.in-menu #hud, body.in-menu #wallet, body.in-menu #stamina, body.in-menu #mi
 .settings select { width: 100%; min-width: 0; font: inherit; padding: 4px 6px; border-radius: 6px; border: 2px solid var(--ink); background: #fff8d0; }
 
 /* ---- M10 countdown, hunger, tipsy, till ---- */
-#countdown { font-size: 22px; font-weight: 900; color: #fff; }
-#countdown.warn { color: #ff9f3a; }
-#countdown.final { color: #ff5a4a; animation: pulse 1s infinite; }
+/* Real time left in the run: its own pill at the top centre, apart from the game clock. */
+#countdown {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%); padding: 8px 18px; border-radius: 8px;
+  background: rgba(20, 20, 24, 0.72); color: #ddd; font-size: 15px; font-weight: 600; white-space: nowrap; pointer-events: none;
+}
+#countdown b { font-size: 22px; font-weight: 900; color: #fff; margin-left: 4px; font-variant-numeric: tabular-nums; }
+#countdown.warn b { color: #ff9f3a; }
+#countdown.final b { color: #ff5a4a; }
+#countdown.final { animation: pulse 1s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
-#timeleft { font-size: 12px; color: #ccc; margin-bottom: 4px; }
 .card .endtime { font-size: 14px; }
 #till { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); width: 380px; padding: 12px 16px;
   border-radius: 10px; background: rgba(20, 20, 20, 0.88); color: #fff; border-top: 4px solid #2b8a3e; pointer-events: none; }

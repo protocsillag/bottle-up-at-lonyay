@@ -9,6 +9,7 @@
 - The City Spar on Kinizsi utca is SPAR from every side: a white building with the green-and-red SPAR band, boards and blade signs on every street side, and a big sign on the roof. No residential gate on it any more.
 - Beer: tipsy for 3 real minutes, a second beer while tipsy makes it 4, a third 5; more beers just restart the 5.
 - Starving: you can still pick up loose bottles and cans from the street (and take blue bags), but you are too weak to search bins, stashes and party leftovers or to go into courtyards. Shops stay open to you, so you can go and eat.
+- The time left in the run now has its own box at the top centre, "Game time remaining: 17:51", so it is no longer mixed up with the game clock (Saturday 03:26) in the top-left panel. The "Ends Sunday 08:00 · N h left" line is gone.
 - The end screen's "Title" button is now "Home" (and the pause card says "Quit to home").
 
 ## World fixes from Alex's walk-through (2026-10-30)
