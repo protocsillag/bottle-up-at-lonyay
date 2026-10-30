@@ -190,7 +190,7 @@ export function buildKalvin(city: CityData, place: Placement): Kalvin {
       colliders.push({ x: jx, z: jz, w: s * 0.85, d: s * 0.85, rot: 0 });
     }
   }
-  const ballMesh = new THREE.InstancedMesh(colored(new THREE.SphereGeometry(0.5, 14, 10), 0xe8e6de), vertex, balls.length);
+  const ballMesh = new THREE.InstancedMesh(colored(new THREE.SphereGeometry(0.5, 10, 7), 0xe8e6de), vertex, balls.length);
   balls.forEach((m, i) => ballMesh.setMatrixAt(i, m));
   ballMesh.castShadow = ballMesh.receiveShadow = true;
   group.add(ballMesh);

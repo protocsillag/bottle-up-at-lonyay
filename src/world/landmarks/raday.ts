@@ -194,13 +194,12 @@ export function buildRaday(city: CityData, place: Placement, prep: RadayPrep, op
     }
   }
   const bollardGeo = merge([
-    colored(new THREE.CylinderGeometry(0.09, 0.11, 0.8, 10).translate(0, 0.4, 0), 0x1f3a2c),
-    colored(new THREE.SphereGeometry(0.1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.8, 0), 0x1f3a2c),
-    colored(new THREE.TorusGeometry(0.095, 0.02, 4, 12).rotateX(Math.PI / 2).translate(0, 0.66, 0), 0x2a4a38),
+    colored(new THREE.CylinderGeometry(0.09, 0.11, 0.8, 7, 1, true).translate(0, 0.4, 0), 0x1f3a2c),
+    colored(new THREE.SphereGeometry(0.1, 7, 3, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.8, 0), 0x1f3a2c),
+    colored(new THREE.CylinderGeometry(0.115, 0.115, 0.04, 7, 1, true).translate(0, 0.66, 0), 0x2a4a38),
   ]);
   const bollardMesh = new THREE.InstancedMesh(bollardGeo, vertex, bollards.length);
   bollards.forEach((m, i) => bollardMesh.setMatrixAt(i, m));
-  bollardMesh.castShadow = true;
   group.add(bollardMesh);
 
   // ---- Terraces.

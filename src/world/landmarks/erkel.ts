@@ -116,12 +116,11 @@ export function buildErkel(city: CityData, place: Placement, prep: ErkelPrep): E
   marks.forEach((m, i) => markMesh.setMatrixAt(i, m));
   group.add(markMesh);
   const ballGeo = merge([
-    colored(new THREE.CylinderGeometry(0.07, 0.08, 0.75, 8).translate(0, 0.375, 0), 0x1b1b1b),
-    colored(new THREE.SphereGeometry(0.11, 10, 6).translate(0, 0.82, 0), 0x1b1b1b),
+    colored(new THREE.CylinderGeometry(0.07, 0.08, 0.75, 6, 1, true).translate(0, 0.375, 0), 0x1b1b1b),
+    colored(new THREE.SphereGeometry(0.11, 6, 4).translate(0, 0.82, 0), 0x1b1b1b),
   ]);
   const ballMesh = new THREE.InstancedMesh(ballGeo, vertex, balls.length);
   balls.forEach((m, i) => ballMesh.setMatrixAt(i, m));
-  ballMesh.castShadow = true;
   group.add(ballMesh);
 
   const skip = new Set<string>();

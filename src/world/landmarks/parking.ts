@@ -48,14 +48,27 @@ export function buildParking(city: CityData, place: Placement) {
       }
     }
   }
-  const mesh = new THREE.InstancedMesh(carGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }), cars.length);
+  // One instanced mesh per 250 m tile so the frustum culls the cars out of view.
+  const mesh = new THREE.Group();
+  mesh.name = 'parked cars';
+  const geo = carGeometry(), mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const tiles = new Map<string, Parked[]>();
+  for (const p of cars) {
+    const k = `${Math.floor(p.x / 250)},${Math.floor(p.z / 250)}`;
+    (tiles.get(k) ?? tiles.set(k, []).get(k)!).push(p);
+  }
   const m = new THREE.Matrix4();
   const c = new THREE.Color();
-  cars.forEach((p, i) => {
-    mesh.setMatrixAt(i, m.makeRotationY(p.rot).setPosition(p.x, 0, p.z));
-    mesh.setColorAt(i, c.setHex(COLORS[Math.floor(rnd() * COLORS.length)]));
-  });
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  for (const list of tiles.values()) {
+    const im = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((p, i) => {
+      im.setMatrixAt(i, m.makeRotationY(p.rot).setPosition(p.x, 0, p.z));
+      im.setColorAt(i, c.setHex(COLORS[Math.floor(rnd() * COLORS.length)]));
+    });
+    im.computeBoundingSphere();
+    im.castShadow = true;
+    im.receiveShadow = true;
+    mesh.add(im);
+  }
   return { mesh, cars };
 }

@@ -83,14 +83,14 @@ function hungHeadGeometry() {
 function candelabraGeometry() {
   const grey = 0x34383a;
   const parts = [
-    colored(new THREE.CylinderGeometry(0.26, 0.34, 1.2, 12).translate(0, 0.6, 0), grey),
-    colored(new THREE.CylinderGeometry(0.2, 0.26, 0.2, 12).translate(0, 1.3, 0), grey),
-    colored(new THREE.CylinderGeometry(0.09, 0.13, 5.6, 10).translate(0, 4.2, 0), grey),
+    colored(new THREE.CylinderGeometry(0.26, 0.34, 1.2, 8).translate(0, 0.6, 0), grey),
+    colored(new THREE.CylinderGeometry(0.2, 0.26, 0.2, 8).translate(0, 1.3, 0), grey),
+    colored(new THREE.CylinderGeometry(0.09, 0.13, 5.6, 6).translate(0, 4.2, 0), grey),
     colored(new THREE.SphereGeometry(0.14, 8, 6).translate(0, 7.1, 0), grey),
   ];
   for (const s of [-1, 1]) {
-    parts.push(colored(new THREE.TorusGeometry(0.42, 0.035, 5, 12, Math.PI).rotateY(s > 0 ? 0 : Math.PI).translate(s * 0.42, 6.6, 0), grey));
-    parts.push(colored(new THREE.TorusGeometry(0.16, 0.025, 4, 10).translate(s * 0.35, 6.25, 0), grey));
+    parts.push(colored(new THREE.TorusGeometry(0.42, 0.035, 3, 8, Math.PI).rotateY(s > 0 ? 0 : Math.PI).translate(s * 0.42, 6.6, 0), grey));
+    parts.push(colored(new THREE.TorusGeometry(0.16, 0.025, 3, 8).translate(s * 0.35, 6.25, 0), grey));
     parts.push(colored(new THREE.CylinderGeometry(0.05, 0.24, 0.26, 8).translate(s * 0.84, 6.38, 0), grey));
   }
   return merge(parts);
