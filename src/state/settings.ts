@@ -16,13 +16,14 @@ export interface Settings {
 const KEY = 'bual.settings.v1';
 export const DEFAULT_SETTINGS: Settings = { master: 0.8, sfx: 0.8, voice: 0.9, voiceMode: 'auto', mouse: 1, quality: 'high' };
 
-export function loadSettings(): Settings {
+/** touch: phones start on Medium (M14); a saved setting still wins. */
+export function loadSettings(touch = false): Settings {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
   } catch { /* storage blocked */ }
   // Default to medium on small or high-DPI screens where fill rate hurts most.
-  return { ...DEFAULT_SETTINGS, quality: devicePixelRatio > 1.5 ? 'medium' : 'high' };
+  return { ...DEFAULT_SETTINGS, quality: touch || devicePixelRatio > 1.5 ? 'medium' : 'high' };
 }
 
 export function saveSettings(s: Settings) {

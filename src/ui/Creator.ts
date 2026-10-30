@@ -160,8 +160,14 @@ export class Creator {
     this.model?.animate(dt, 0, false, false, 0);
     const w = innerWidth, h = innerHeight;
     this.camera.aspect = w / h;
-    // Shift the view so the model stands right of the panel.
-    this.camera.setViewOffset(w, h, -Math.min(260, w * 0.18), 0, w, h);
+    // Shift the view so the model stands right of the panel (phones: centred in the space
+    // the wider panel leaves, or below it in portrait).
+    if (document.body.classList.contains('touch')) {
+      const r = this.el.querySelector('.panel')!.getBoundingClientRect();
+      const portrait = h > w;
+      this.camera.zoom = portrait ? 0.55 : 1;
+      this.camera.setViewOffset(w, h, portrait ? 0 : w / 2 - (r.right + (w - r.right) / 2), portrait ? h / 2 - (r.bottom + (h - r.bottom) / 2) : 0, w, h);
+    } else this.camera.setViewOffset(w, h, -Math.min(260, w * 0.18), 0, w, h);
     this.camera.updateProjectionMatrix();
     this.renderer.render(this.scene, this.camera);
   }

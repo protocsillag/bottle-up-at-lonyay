@@ -127,6 +127,13 @@ export class Player {
     if (input.isDown('KeyS')) fz += 1;
     if (input.isDown('KeyA')) fx -= 1;
     if (input.isDown('KeyD')) fx += 1;
+    // Phones: the analog stick; a small deflection walks slower (not on a bike).
+    let analog = 1;
+    const stick = Math.hypot(input.stickX, input.stickY);
+    if (stick > 0 && fx === 0 && fz === 0) {
+      fx = input.stickX; fz = -input.stickY;
+      analog = this.onBike ? 1 : Math.min(1, 0.35 + stick);
+    }
     const len = Math.hypot(fx, fz);
 
     const wantsRun = input.isDown('ShiftLeft') || input.isDown('ShiftRight');
@@ -139,7 +146,7 @@ export class Player {
       // Rotate the input from camera space into world space.
       const wx = (fx * cos + fz * sin) / len;
       const wz = (-fx * sin + fz * cos) / len;
-      const max = this.debugFast ? DEBUG_SPEED : this.onBike ? BIKE.speed : (this.running ? RUN_SPEED : WALK_SPEED) * this.speedMul;
+      const max = this.debugFast ? DEBUG_SPEED : this.onBike ? BIKE.speed : (this.running ? RUN_SPEED : WALK_SPEED * analog) * this.speedMul;
       const want = Math.atan2(-wx, -wz);
       let diff = want - this.heading;
       diff = Math.atan2(Math.sin(diff), Math.cos(diff));

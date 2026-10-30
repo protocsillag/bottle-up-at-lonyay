@@ -17,7 +17,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M11 Real streets from Alex's photos: done** (2026-10-30). Reference folders done: `bins/`, `lonyay-utca/`, `matyas-utca/`, `raday-utca/`, `erkel-torok-pal-utca/`, `kalvin-ter/`, `bakats-ter/` (status column in `reference/README.md`).
 - **M12 Shared high scores: done** (2026-10-30). Alex deployed the Worker from his Mac at `https://bottle-up-scores.protocsillag.workers.dev` (D1 `d3adc35d-…`); the URL is in `.env.production`. Redeploy the Worker from his Mac with `npm run deploy` in `server/` (the sandbox cannot reach Cloudflare or workers.dev).
 - **M13 The fire barrel fight: done** (2026-10-31, unattended).
-- Next: **M14 Phones** (see the Build plan in `BRIEF.md`).
+- **M14 Phones: done** (2026-10-31, unattended), tested with Playwright device emulation only; see "Phones: still to check on a real phone" below.
+- All fourteen milestones are built.
 
 ## Commands
 
@@ -31,6 +32,8 @@ npm run osm:bake   # -> public/data/city.json (committed)
 Node is not installed system-wide on Alex's Mac; it lives at `~/.local/node/bin` (Node 24 LTS). Use `export PATH=~/.local/node/bin:$PATH`.
 
 ## Controls (current)
+
+Phones (M14): left thumb joystick (anywhere on the left 45%) · right thumb drag to look, pinch to zoom · the prompt is the action button (tap, or hold for bins) · Run (toggle), Jump, Bike, Pee bottom right · ❚❚ and Map top left · till: Food / Beer / Close buttons · machine: hold Feed, Fix (tap or hold), ◀ ▶, Push, Walk away, Done · fight: stick (up jump, down crouch, back block), Punch, Kick, Special.
 
 Fire barrel fight (M13): A / D walk · W jump · S crouch · J punch · K kick · J + K together (or L) bag swing · hold away from Zsiga to block · Esc or P pauses the fight. Zsiga's offer: 1 yes, 2 no.
 
@@ -116,6 +119,8 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Kálvin tér (M11, `kalvin.ts`; church parts in `dressing.ts`): paving over the plaza areas within 70 m of the landmark, stone balls on a jittered 3.6 m grid inside them (solid), props kept apart through a `taken` list, the metro dome first; billboard on the largest nearby roof.
 - Bakáts tér (M11, `bakats.ts`): the church is in the `brick` set; tower, spires, portal and railing are hand-built; plaza, paths, benches (pushed into `city.benches` after `Lamps` draws the OSM ones, so street people use them), lamps (`extraRaday`), and 18 pigeons updated in `bakats.update()` that scatter when you come within 5 m running (1.6 m walking) and glide back after ~14 s.
 - Fire barrel fight (M13, `src/minigames/fight/`): `findBarrelSpot()` puts the barrel on the Nehru part lawn nearest the river end of Kinizsi utca, ≥ 4 m off paths (it lands at the north-west corner by Közraktár utca, about (9, 289)). `FireBarrel` (flame sprites, smoke column, spark points, a crackle with distance falloff, four `CharacterModel`s in the `warm` pose passing a bottle, toggle-box colliders) appears when `state.tipsy` starts and walks off toward the river (or vanishes if you are > 60 m away) when it ends. Its light is the last lamp pool light, taken with `lamps.borrowLight()`, so the light count never changes. E on the group → `openOffer()`: chat only once `state.fightDone`; "Üres zsákkal nem bunyózunk" with an empty bag; else the offer panel (`#fight-offer`, 1 / 2 or buttons) with the stakes. `FightGame` is a full-screen 2D canvas (virtual 1600 × 900, cover-scaled); while `fight.active` the frame loop only runs the fight (world, clock, countdown, tipsy and hunger all frozen) and the mouse is released (Esc / P pause the fight). Fighters are drawn from the creator look (`CharacterLook.colors/opts`) as jointed shapes; poses use angles where 0 points down and positive swings toward the opponent. Zsiga's AI: walks in, punch/kick every `FIGHT.ai.attackGap`, blocks 30% after a 350–500 ms reaction, belly-punch special every 8–12 s with a "!" tell; his punches and kicks wind up `FIGHT.zsigaWindup` × longer. Specials knock down and cannot be blocked; punches go over a crouch. Tuned with a bot: a novice-like bot wins ~45%, a decent one ~60%; fights last 20–25 s. `state.settleFight()` applies the stakes (win: `min(2n, capacity)` with fine cans/PET; lose: bag emptied; draw: nothing) and sets `stats.fight` (once per run; end-screen row). The result card (`#fight-result`, Enter / Space / button) re-locks the mouse.
+- Phones (M14, `src/ui/touch.ts`): `isTouchDevice()` (`(hover: none) and (pointer: coarse)`) sets `body.touch` once at startup; every touch style in `style.css` sits under `body.touch`, and `.touch-only` / `.desktop-only` switch content (controls lists, till buttons, the look-sensitivity label). `TouchControls` feeds the same `Input`: `setStick` (analog, y up), `setHeld(code)` for hold buttons (separate from keyboard keys, so keyup/blur do not drop them; a fresh hold also counts as a press), `tap(code)`, `look`, `zoom`, `clearTouch()`. Buttons emit the desktop key codes (Space, KeyE, KeyF, KeyP, KeyM, KeyJ/K/L, KeyA/D, KeyS, Escape), so the systems are unchanged. Modes (`body.tc-street|tc-mohu|tc-fight`) are set each frame by `touchFrame()` in `main.ts`; menus are mode `none` (no layer, so the creator canvas gets the swipe). `Input.touch` replaces pointer lock with a virtual lock (`lock()`/`unlock()` dispatch `pointerlockchange`, so the pause card logic is shared); never call `requestPointerLock`/`exitPointerLock` directly, use `input.lock()`/`input.unlock()`. Player: stick deflection scales walking speed (0.35 + magnitude); Run auto-switches off when exhausted or starving. Fight: `fightInput()` also reads the stick (±0.4 sideways, ±0.6 up/down). `MohuGame.touch` swaps help lines; `touchInfo` exposes phase, reason and alignment for the buttons. On phones `#stamina` is moved into `#wallet`. Creator: on touch the model is centred in the space right of (or below, in portrait) the panel's bounding box. Phones default to Medium (`loadSettings(touch)`); a one-time `#fps-tip` offers Low after 10 s under 25 fps on the street. First touch: Android fullscreen, an empty speech utterance to unlock iOS speech. Viewport meta has `viewport-fit=cover`, no user scaling.
+- Phone testing: `scratchpad/phone.cjs <device> <script.js>` style scripts use `devices['iPhone 14 landscape']` (750 × 340 CSS px in Playwright, smaller than the real 844 × 390 without browser bars) and `'Pixel 7 landscape'` (863 × 360) with `deviceScaleFactor: 1` for speed; drive touches with CDP `Input.dispatchTouchEvent` and `page.touchscreen.tap`.
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
 ## File map
@@ -155,6 +160,7 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `server/` | Score Worker + D1 schema, `wrangler.toml`, deploy README |
 | `.env.production` | `VITE_SCORES_URL` for the GitHub Pages build |
 | `src/ui/Scores.ts` | Top 10 table |
+| `src/ui/touch.ts` | Phone controls: joystick, look/pinch, street, machine and fight buttons |
 | `src/world/facade.ts` | Procedural facade shader |
 | `src/world/landmarks/common.ts` | `obb`, Zsolnay tile texture, sign texture, pyramid |
 | `src/world/landmarks/marketHall.ts` | Central Market Hall exterior |
@@ -245,3 +251,19 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M13 fight balance.** Zsiga is tuned against a bot: a button-mashing bot that rarely blocks wins about 45% of fights, a steadier one about 60%. Fights last 20–25 seconds, so the 3-minute timer only matters if you keep away from him. Big and slow: his punches and kicks wind up 25% longer than yours. All numbers are in `FIGHT` in `balance.ts`.
 - **M13 bag swing.** J + K pressed together (within 70 ms), or L, does the bag swing. It has a 0.6 s wind-up as the brief says, so Zsiga can punch you out of it; time it after he swings.
 - **M13 voice.** Zsiga's lines are in `lines.ts` with a new `zsiga` speaker (low, slow); `tools/voice/generate.mjs` knows him for the Piper run on your Mac.
+- **M14 portrait.** Portrait uses the same controls and the landscape menus stacked into one column. It is playable but not polished (as the brief allows); cards may scroll on very short phones.
+- **M14 intercom choice.** The brief mentions tappable answers for an "intercom choice", but the bell has no choice in the game (ringing is one press), so the prompt button covers it. Zsiga's offer and the till have real buttons.
+- **M14 swatches.** The creator's colour swatches are 24 px circles, under the 44 px tap-target rule, so all nine fit on one row beside the slots without scrolling. Tell me if they are fiddly and I'll give them their own page.
+- **M14 analog walking.** A small push on the joystick strolls at about a third of walking speed; full push walks. Run is a toggle (like Kiruna's Jog) that turns itself off when you run out of breath.
+- **M14 Pee button** only appears while tipsy, outside shops, facing a wall within 1.6 m, so you know when it will work.
+
+## Phones: still to check on a real phone
+
+Tested only with Playwright device emulation (iPhone 14 and Pixel 7 landscape, iPhone 14 portrait, Chromium with touch), driving real touch events: title → creator → intro → joystick walk → drag-look → pick up a can with the prompt → bin prompt → courtyard → SPAR till (Food, Beer, Close) → bottle machine (hold Feed, tap Fix for a crushed can, ◀ ▶ / Push for a hiccup, receipt) → Zsiga's offer → fight (stick, Punch, Kick) → result card → end screen → top 10. Hold actions on bins were only checked to start (headless frames are ~1 s apart and `dt` is clamped to 0.1 s, so a 2 s hold takes minutes there). Please check on real devices:
+
+- Frame rate on Medium in the busiest views (spawn on Lónyay, Ráday in the evening) on an iPhone and a mid-range Android, and whether the "switch to Low" tip shows when it should.
+- iPhone Safari: safe areas around the notch / Dynamic Island and the home bar, the address bar collapsing (the layout uses `100dvh`), no rubber-banding or text selection on long presses, and that Hungarian speech starts after the first tap.
+- Android Chrome: fullscreen on the first tap, and leaving it with the back gesture.
+- Multi-touch: walking with the stick while dragging to look, holding the prompt while the stick is held, pinch zoom.
+- The on-screen keyboard for the name in the creator (it should not push the panel off screen).
+- Comfort: button sizes and positions for real thumbs, joystick dead zone (12%), look speed (Settings → Look sensitivity).

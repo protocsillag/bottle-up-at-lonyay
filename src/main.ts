@@ -53,9 +53,13 @@ import { OnlineScoreStore, createScoreStore, type ScoreStore } from './state/sco
 import { renderScores } from './ui/Scores';
 import { sound } from './audio/Sfx';
 import { loadSettings, saveSettings, type Settings } from './state/settings';
+import { TouchControls, isTouchDevice, type TouchMode } from './ui/touch';
 
 /** Debug keys (G fast walk, T fast time) and the fps line: dev builds or ?debug. */
 const DEBUG = import.meta.env.DEV || new URLSearchParams(location.search).has('debug');
+/** M14: phones and tablets get the touch controls and layouts (body.touch); desktop is unchanged. */
+const TOUCH = isTouchDevice();
+document.body.classList.toggle('touch', TOUCH);
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const $ = (id: string) => document.getElementById(id)!;
@@ -69,6 +73,8 @@ const introEl = $('intro');
 const scoresEl = $('scores');
 const staminaEl = $('stamina');
 const staminaFill = $('stamina-fill');
+// Phones: stamina and hunger become thin bars inside the money panel.
+if (TOUCH) $('wallet').insertBefore(staminaEl, $('status'));
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -207,6 +213,7 @@ const [sx, sz] = city.landmarks.spawn ?? [0, 0];
 const player = new Player(world, sx, sz);
 scene.add(player.mesh);
 const input = new Input(canvas);
+input.touch = TOUCH;
 const follow = new FollowCamera(camera, world);
 const host = {
   player, follow, cityWorld: world,
@@ -263,6 +270,7 @@ for (const p of returns.points) {
   shops.doors.find((d) => d.id === p.id)!.interior.world.addBox(f.x, f.z, f.w, f.d, f.rot);
 }
 const mohu = new MohuGame(scene, state);
+mohu.touch = TOUCH;
 returns.onUse = (p, m) => {
   mohu.start({ machine: p.machines[m], name: p.name, onEnd: () => returns.stop() });
 };
@@ -326,7 +334,7 @@ function acceptFight() {
   fight.start(look, state.tipsyLevel, (r) => showFightResult(r));
   // The fight takes the keyboard (Esc pauses it), so give the mouse back (after starting,
   // so the pause card stays away).
-  if (document.pointerLockElement) document.exitPointerLock();
+  input.unlock();
 }
 function declineFight() { closeOffer(); say('zs_later', 2.5); }
 $('fo-yes').onclick = () => acceptFight();
@@ -357,8 +365,11 @@ if (fire) fire.onTalk = () => openOffer();
 function fightInput(): FightInput {
   const k = (...codes: string[]) => codes.some((c) => input.isDown(c));
   const p = (...codes: string[]) => codes.some((c) => input.wasPressed(c));
+  // Phones: the stick walks; pushed up it jumps, down it crouches (away from Zsiga blocks).
+  const sx = input.stickX, sy = input.stickY;
   return {
-    left: k('KeyA', 'ArrowLeft'), right: k('KeyD', 'ArrowRight'), up: k('KeyW', 'ArrowUp'), down: k('KeyS', 'ArrowDown'),
+    left: k('KeyA', 'ArrowLeft') || sx < -0.4, right: k('KeyD', 'ArrowRight') || sx > 0.4,
+    up: k('KeyW', 'ArrowUp') || sy > 0.6, down: k('KeyS', 'ArrowDown') || sy < -0.6,
     punch: p('KeyJ'), kick: p('KeyK'), special: p('KeyL'), pause: p('Escape', 'KeyP'),
   };
 }
@@ -405,7 +416,7 @@ function mount(b: import('./world/Bikes').Bike) {
   bikes.current = b;
   player.onBike = true;
   player.teleport(b.x, b.z, b.heading);
-  state.toast('On the bike: F to get off', 'info');
+  state.toast(TOUCH ? 'On the bike: tap Bike to get off' : 'On the bike: F to get off', 'info');
 }
 function dismount(crashed: boolean) {
   const b = bikes.current;
@@ -499,7 +510,7 @@ async function endRun() {
   returns.stop();
   if (buildings.inside) buildings.leave(false);
   if (shops.inside) shops.leave(false);
-  document.exitPointerLock();
+  input.unlock();
   const s = state.stats;
   $('end-money').textContent = formatFt(state.money);
   ($('end-portrait') as HTMLImageElement).src = portrait;
@@ -557,7 +568,7 @@ document.addEventListener('pointerlockchange', () => {
 show('title');
 
 // ---------------------------------------------------------------- settings
-const settings: Settings = loadSettings();
+const settings: Settings = loadSettings(TOUCH);
 function applySettings() {
   sound.volumes = { master: settings.master, sfx: settings.sfx, voice: settings.voice };
   sound.voiceMode = settings.voiceMode;
@@ -606,6 +617,63 @@ $('t-settings').onclick = () => openSettings('title');
 $('p-settings').onclick = () => openSettings('pause');
 // Audio starts on the first click (browsers require a gesture); every button clicks.
 addEventListener('pointerdown', () => sound.init());
+// ---------------------------------------------------------------- phones (M14)
+const touch = TOUCH ? new TouchControls(input, () => input.unlock()) : null;
+if (TOUCH) {
+  // First touch: Android goes fullscreen (iPhone Safari cannot), and speech is unlocked
+  // with an empty utterance inside the gesture (iOS only speaks after one).
+  addEventListener('pointerdown', () => {
+    const d = document.documentElement;
+    if (!document.fullscreenElement && d.requestFullscreen) void d.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+    if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+  }, { once: true });
+  // No double-tap zoom, long-press menu or pinch-zoom of the page itself.
+  addEventListener('dblclick', (e) => e.preventDefault());
+  addEventListener('contextmenu', (e) => e.preventDefault());
+  addEventListener('gesturestart', (e) => e.preventDefault());
+}
+// Till buttons for phones.
+$('till-food').onclick = () => buy('food');
+$('till-beer').onclick = () => buy('beer');
+$('till-close').onclick = () => closeTill();
+// Low frame rate on a phone: suggest Low quality once.
+const fpsTip = $('fps-tip');
+let slowFor = 0;
+let fpsTipShown = false;
+function showFpsTip() {
+  fpsTipShown = true;
+  fpsTip.classList.remove('hidden');
+  setTimeout(() => fpsTip.classList.add('hidden'), 15000);
+}
+$('fps-low').onclick = () => {
+  settings.quality = 'low';
+  applySettings();
+  saveSettings(settings);
+  fpsTip.classList.add('hidden');
+  state.toast('Graphics: Low', 'info');
+};
+$('fps-close').onclick = () => fpsTip.classList.add('hidden');
+function touchFrame(playing: boolean) {
+  if (!touch) return;
+  const mode: TouchMode = fight.active ? 'fight' : screen === 'run' && playing ? (mohu.active ? 'mohu' : 'street') : 'none';
+  touch.setMode(mode);
+  if (mode === 'none' || mode === 'fight') return;
+  const p = player.position;
+  const facingWall = () => {
+    const fx = -Math.sin(player.facing), fz = -Math.cos(player.facing);
+    return player.world.raycast(p.x, p.z, p.x + fx * 1.6, p.z + fz * 1.6) < 1;
+  };
+  const mi = mohu.touchInfo;
+  touch.update({
+    bike: !!bikes.current || interaction.target?.key === 'KeyF',
+    pee: state.tipsy && !player.onBike && !shops.inside && !mohu.active && player.freeze <= 0 && facingWall(),
+    exhausted: player.exhausted || state.starving,
+    mohuPhase: mohu.active ? mi.phase : null,
+    mohuReason: mi.reason,
+    mohuAligned: mi.aligned,
+    promptKey: interaction.promptKey,
+  });
+}
 addEventListener('click', (e) => { if ((e.target as HTMLElement).tagName === 'BUTTON') sound.play('click'); });
 
 const clock = new THREE.Clock();
@@ -624,11 +692,13 @@ function frame() {
   }
   // M13: during the fight the whole world is paused and the 3D view is not drawn.
   if (fight.active) {
+    touchFrame(false);
     fight.update(dt, fightInput());
     input.endFrame();
     return;
   }
   const playing = state.status === 'playing' && input.locked;
+  touchFrame(playing);
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
   raday.update((state.minute / 60) % 24, lighting.lamps);
@@ -790,7 +860,7 @@ function frame() {
   else if (state.hunger < HUNGER.warnAt) status.push('Hungry');
   if (state.tipsy) {
     const left = (state.tipsyUntil - state.minute) / GAME_MIN_PER_SEC;
-    status.push(`🍺 Tipsy ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')} · P: pee`);
+    status.push(`🍺 Tipsy ${Math.floor(left / 60)}:${String(Math.floor(left % 60)).padStart(2, '0')}${TOUCH ? '' : ' · P: pee'}`);
   }
   if (dogMess.slowed > 0) status.push(`Slowed: dog mess ${Math.ceil(dogMess.slowed)} s`);
   if (buildings.inside) status.push('In a courtyard');
@@ -806,6 +876,11 @@ function frame() {
   fpsTime += dt;
   if (fpsTime >= 0.5) {
     fps = Math.round(fpsFrames / fpsTime);
+    // Phones: under 25 fps for 10 s on the street suggests Low quality (once).
+    if (TOUCH && !fpsTipShown && screen === 'run' && playing && settings.quality !== 'low') {
+      slowFor = fps < 25 ? slowFor + fpsTime : 0;
+      if (slowFor >= 10) showFpsTip();
+    }
     fpsFrames = 0;
     fpsTime = 0;
     const p = player.position;

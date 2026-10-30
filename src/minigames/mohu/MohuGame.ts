@@ -68,6 +68,8 @@ export interface MohuSession { machine: MachineModel; name: string; onEnd: () =>
 
 export class MohuGame {
   active = false;
+  /** Phones: help lines name the on-screen buttons instead of keys. */
+  touch = false;
   private s: MohuSession | null = null;
   private phase: Phase = 'ready';
   private item: Item | null = null;
@@ -180,7 +182,7 @@ export class MohuGame {
     switch (this.phase) {
       case 'ready': {
         msg = st.bag.length ? `${st.bag.length} items in the bag` : 'Bag empty';
-        help = space ? 'Feeding…' : 'Hold SPACE to feed · E / S walk away';
+        help = space ? 'Feeding…' : this.touch ? 'Hold the feed button · Walk away at the top' : 'Hold SPACE to feed · E / S walk away';
         if (!st.bag.length && this.count > 0) { this.print(); break; }
         if (space && !this.wantLeave && st.bag.length && this.sinceLast >= 1 / MOHU.feedRate) {
           this.sinceLast = 0;
@@ -221,7 +223,7 @@ export class MohuGame {
       case 'fix': {
         const r = REASON_TEXT[this.reason!];
         msg = `${r.hu} — ${r.en}`;
-        help = `${r.help} · S walk away`;
+        help = this.touch ? (this.reason === 'crushed' ? 'Tap Fix to pop it back into shape' : 'Hold to wipe the label') : `${r.help} · S walk away`;
         this.uiBar.classList.remove('hidden');
         if (this.reason === 'crushed') {
           if (input.wasPressed('KeyE')) {
@@ -251,7 +253,8 @@ export class MohuGame {
         s.machine.setRing(ok ? 0x2ecc71 : 0xc0392b);
         this.faceMachine(this.angle);
         msg = this.reason === 'hiccup' ? `${r.hu} — ${r.en}` : 'Line up the barcode';
-        help = ok ? 'Ring is green: press SPACE to push it in' : 'A / D to roll the item until the ring turns green · S walk away';
+        help = this.touch ? (ok ? 'Ring is green: Push' : '◀ ▶ roll the item until the ring turns green')
+          : ok ? 'Ring is green: press SPACE to push it in' : 'A / D to roll the item until the ring turns green · S walk away';
         this.uiDial.classList.remove('hidden');
         this.uiDial.classList.toggle('ok', ok);
         this.uiNeedle.style.transform = `rotate(${this.angle}rad)`;
@@ -337,6 +340,11 @@ export class MohuGame {
     this.onSound('beep');
     this.s!.machine.setScreen({ kind: 'feeding', count: this.count, ft: this.ft });
     this.phase = 'ready';
+  }
+
+  /** What the phone buttons need to know. */
+  get touchInfo() {
+    return { phase: this.phase, reason: this.reason, aligned: Math.abs(this.angle) < MOHU.alignTolerance };
   }
 
   private reject(reason: Reason) {

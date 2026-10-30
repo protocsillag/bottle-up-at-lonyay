@@ -243,3 +243,233 @@ body.fight-on #prompt, body.fight-on #toasts, body.fight-on #tipsy-fx { display:
 #hunger { margin-top: 6px; }
 #hunger .bar div { height: 100%; background: #e0a83d; }
 #hunger.low .bar div { background: #e0523d; }
+
+/* ---- M14 phones: everything below applies only with body.touch (set by main.ts) ---- */
+.touch-only, .touch-layer, .touch-bar, .touch-street, .touch-mohu, .touch-fight { display: none; }
+body.touch .desktop-only { display: none !important; }
+body.touch span.touch-only { display: inline; }
+body.touch ul.controls.touch-only { display: grid; }
+body.touch .till-touch { display: flex; }
+body.touch {
+  touch-action: none; overscroll-behavior: none; -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+}
+body.touch input { -webkit-user-select: text; user-select: text; }
+body.touch #game { height: 100dvh; }
+
+/* Stacking: canvas < touch layer < HUD < buttons < panels < menus. */
+body.touch .touch-layer { z-index: 1; }
+body.touch #hud, body.touch #wallet, body.touch #countdown, body.touch #minimap, body.touch #toasts,
+body.touch #subtitle, body.touch #alert, body.touch #tipsy-fx { z-index: 2; }
+body.touch #prompt, body.touch #mohu, body.touch #receipt { z-index: 4; }
+body.touch .touch-bar, body.touch .touch-street .touch-btn, body.touch .touch-mohu .touch-btn, body.touch .touch-fight .touch-btn { z-index: 5; }
+body.touch #till, body.touch #fight-offer, body.touch #fps-tip { z-index: 12; }
+body.touch .overlay, body.touch #creator { z-index: 20; }
+body.touch #fight-result { z-index: 40; }
+body.touch.tc-fight .touch-layer { z-index: 31; }
+body.touch.tc-fight .touch-bar, body.touch.tc-fight .touch-fight .touch-btn { z-index: 32; }
+
+body.touch.tc-street .touch-layer, body.touch.tc-fight .touch-layer { display: block; position: fixed; inset: 0; touch-action: none; }
+body.touch.tc-street .touch-bar, body.touch.tc-mohu .touch-bar, body.touch.tc-fight .touch-bar {
+  display: flex; gap: 8px; position: fixed;
+  top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left));
+}
+.tc-mohu-only { display: none; }
+body.tc-mohu .tc-mohu-only { display: block; }
+body.touch.tc-street .touch-street, body.touch.tc-mohu .touch-mohu, body.touch.tc-fight .touch-fight { display: block; }
+
+.stick-base {
+  position: fixed; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(20, 20, 20, 0.25); pointer-events: none;
+}
+.stick-base.idle {
+  left: calc(96px + env(safe-area-inset-left)); top: auto; bottom: calc(96px + env(safe-area-inset-bottom));
+  margin: 0 0 -60px -60px; opacity: 0.4;
+}
+.stick-knob { position: absolute; left: 33px; top: 33px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255, 210, 0, 0.75); }
+
+.touch-btn {
+  min-width: 46px; height: 46px; padding: 0 14px; font: inherit; font-size: 15px; font-weight: 800; color: #fff;
+  background: rgba(20, 20, 20, 0.5); border: 2px solid rgba(255, 255, 255, 0.55); border-radius: 23px; touch-action: none;
+}
+.touch-btn.pressed { background: rgba(255, 210, 0, 0.55); color: var(--ink); }
+.touch-btn.on { background: var(--mohu-yellow); color: var(--ink); border-color: var(--mohu-yellow); }
+.touch-btn.dim { opacity: 0.45; }
+.touch-street .touch-btn, .touch-mohu .touch-btn, .touch-fight .touch-btn { position: fixed; border-radius: 50%; padding: 0; }
+.t-jump { right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 78px; height: 78px; }
+.t-run { right: calc(108px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 64px; height: 64px; }
+.t-bike { right: calc(22px + env(safe-area-inset-right)); bottom: calc(108px + env(safe-area-inset-bottom)); width: 58px; height: 58px; }
+.t-pee { right: calc(110px + env(safe-area-inset-right)); bottom: calc(94px + env(safe-area-inset-bottom)); width: 58px; height: 58px; background: rgba(200, 170, 20, 0.5); }
+.m-feed, .m-fix, .m-push, .m-done { right: calc(22px + env(safe-area-inset-right)); bottom: calc(22px + env(safe-area-inset-bottom)); width: 104px; height: 104px; font-size: 16px !important; }
+.m-feed { background: rgba(255, 210, 0, 0.35) !important; }
+.m-push { bottom: calc(22px + env(safe-area-inset-bottom)); }
+.m-left, .m-right { bottom: calc(22px + env(safe-area-inset-bottom)); width: 84px; height: 84px; font-size: 28px !important; }
+.m-left { left: calc(22px + env(safe-area-inset-left)); }
+.m-right { left: calc(120px + env(safe-area-inset-left)); }
+.f-punch { right: calc(118px + env(safe-area-inset-right)); bottom: calc(20px + env(safe-area-inset-bottom)); width: 84px; height: 84px; }
+.f-kick { right: calc(20px + env(safe-area-inset-right)); bottom: calc(100px + env(safe-area-inset-bottom)); width: 84px; height: 84px; }
+.f-special { right: calc(130px + env(safe-area-inset-right)); bottom: calc(124px + env(safe-area-inset-bottom)); width: 72px; height: 72px; font-size: 13px !important; background: rgba(232, 130, 42, 0.5); }
+
+/* Compact HUD: countdown and clock top centre, money and bags top left under ❚❚ / Map,
+   stamina and hunger as thin bars inside that panel, a small minimap top right. */
+body.touch #countdown { top: max(6px, env(safe-area-inset-top)); padding: 3px 12px; font-size: 12px; border-radius: 14px; }
+body.touch #countdown b { font-size: 16px; }
+body.touch #hud {
+  top: calc(max(6px, env(safe-area-inset-top)) + 32px); left: 50%; transform: translateX(-50%); min-width: 0;
+  padding: 3px 12px 4px; text-align: center; border-radius: 12px; white-space: nowrap;
+}
+body.touch #hud .clock { font-size: 16px; display: inline; }
+body.touch #hud .clock #day { font-size: 12px; }
+body.touch #street { display: inline; font-size: 13px; margin-left: 8px; }
+body.touch #shops { font-size: 10px; margin-top: 0; }
+body.touch #wallet {
+  top: calc(max(8px, env(safe-area-inset-top)) + 54px); left: max(8px, env(safe-area-inset-left)); right: auto;
+  min-width: 0; width: 150px; padding: 5px 9px 7px; text-align: left;
+}
+body.touch #money { font-size: 19px; }
+body.touch .bagrow { font-size: 12px; }
+body.touch #status { justify-content: flex-start; gap: 4px; margin-top: 4px; }
+body.touch #status span { font-size: 10px; padding: 0 6px; }
+body.touch #stamina { position: static; width: auto; padding: 0; margin-top: 5px; background: none; font-size: 9px; }
+body.touch #stamina .label { display: none; }
+body.touch #stamina .bar { height: 5px; margin-top: 3px; }
+body.touch #hunger { margin-top: 0; }
+body.touch #minimap {
+  top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); bottom: auto; width: 118px; height: 118px;
+}
+body.touch #minimap.large { top: 50%; right: 50%; width: min(86vh, 86vw); height: min(86vh, 86vw); transform: translate(50%, -50%); }
+/* The prompt is the action button above the right thumb. */
+body.touch #prompt {
+  left: auto; right: calc(18px + env(safe-area-inset-right)); bottom: calc(172px + env(safe-area-inset-bottom)); transform: none;
+  min-width: 0; max-width: 44vw; min-height: 52px; padding: 10px 18px; font-size: 16px; font-weight: 700; border-radius: 26px;
+  pointer-events: auto; border: 2px solid var(--mohu-yellow); background: rgba(20, 20, 20, 0.7); touch-action: none;
+}
+body.touch #prompt #prompt-key { display: none; }
+body.touch #prompt.pressed { background: rgba(255, 210, 0, 0.85); color: var(--ink); }
+body.touch #prompt.blocked { pointer-events: none; border-color: #b8332b; }
+body.touch #prompt .bar { height: 6px; }
+body.touch #toasts { bottom: auto; top: 58%; }
+body.touch .toast { font-size: 13px; padding: 4px 12px; white-space: normal; max-width: 52vw; text-align: center; }
+body.touch #subtitle { top: 28%; max-width: 64vw; }
+body.touch #subtitle .hu { font-size: 19px; }
+body.touch #subtitle .en { font-size: 13px; }
+body.touch #alert { top: 26%; font-size: 17px; }
+body.touch #attribution { right: auto; left: 50%; transform: translateX(-50%); bottom: max(2px, env(safe-area-inset-bottom)); font-size: 9px; pointer-events: none; }
+body.touch.tc-street #attribution, body.touch.tc-mohu #attribution { display: none; }
+/* Mohu: the panel sits bottom centre between ◀ ▶ and the big button. */
+body.touch #mohu { bottom: max(8px, env(safe-area-inset-bottom)); min-width: 0; width: min(44vw, 360px); padding: 6px 10px 8px; }
+body.touch #mohu-msg { font-size: 15px; }
+body.touch #mohu-help { font-size: 12px; }
+body.touch #mohu .bar { width: 80%; }
+body.touch #receipt { right: auto; left: 50%; top: 10%; transform: translateX(-50%) rotate(2deg); width: 180px; font-size: 11px; padding: 8px 10px 10px; }
+/* Till, Zsiga's offer and the low-fps tip: centred panels with real buttons. */
+body.touch #till, body.touch #fight-offer {
+  top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(440px, 58vw); pointer-events: auto; padding: 10px 14px;
+}
+body.touch .till-sub { display: none; }
+body.touch .till-row { font-size: 14px; margin-top: 4px; }
+body.touch .till-row b, body.touch .fo-buttons b { display: none; }
+.till-touch { gap: 8px; margin-top: 10px; }
+.till-touch button { flex: 1; min-height: 46px; border: 0; border-radius: 8px; font: inherit; font-size: 15px; font-weight: 800; background: var(--mohu-yellow); color: var(--ink); }
+.till-touch button.ghost { flex: 0 0 auto; padding: 0 14px; background: transparent; color: #fff; border: 2px solid #777; }
+body.touch .fo-line { font-size: 13px; }
+body.touch .fo-en { font-size: 11px; }
+body.touch .fo-stakes { font-size: 14px; margin-top: 6px; }
+#fps-tip {
+  position: fixed; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px;
+  border-radius: 12px; background: rgba(20, 20, 20, 0.88); color: #fff; font-size: 13px; font-weight: 600; white-space: nowrap;
+}
+#fps-tip button { min-height: 44px; border: 0; border-radius: 8px; padding: 0 12px; font: inherit; font-weight: 800; background: var(--mohu-yellow); color: var(--ink); }
+#fps-tip button.ghost { min-width: 44px; background: transparent; color: #fff; border: 2px solid #777; }
+
+/* Menus: fit a phone in landscape (about 844 × 390) without scrolling; tap targets ≥ 44 px. */
+body.touch .card { padding: 14px 20px; max-height: calc(100dvh - 16px); overflow-y: auto; max-width: min(560px, 94vw); }
+body.touch .card h1 { font-size: 24px; margin-bottom: 4px; }
+body.touch .card button { margin-top: 10px; min-height: 44px; font-size: 16px; padding: 8px 20px; }
+body.touch .card .muted { font-size: 12px; }
+body.touch .card .controls { gap: 3px 20px; font-size: 12px; margin-top: 8px; }
+body.touch .card .controls.touch-only li { grid-template-columns: 84px max-content; }
+body.touch .title .card { padding: 18px 24px; }
+body.touch .title h1 { font-size: 30px; }
+body.touch .title .menu { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+body.touch .menu button { min-width: 0; }
+body.touch .card .big { font-size: 30px; margin: 2px 0; }
+body.touch .settings label { margin: 4px 0; grid-template-columns: 120px 1fr; font-size: 14px; }
+body.touch .settings select { min-height: 40px; font-size: 14px; }
+body.touch .settings input[type=range] { height: 36px; }
+body.touch table.scores img { width: 26px; height: 26px; }
+body.touch table.scores td { padding: 1px 8px; font-size: 13px; }
+body.touch #end-stats { font-size: 12px; margin: 4px auto; }
+body.touch #end-stats td { padding: 0 8px; }
+body.touch .endtop img { width: 44px; height: 44px; }
+body.touch .card .fun { font-size: 13px; margin: 4px 0; }
+body.touch .rank { font-size: 14px; }
+@media (orientation: landscape) {
+  /* Two columns where a card is too tall for a landscape phone. */
+  body.touch #intro .card { max-width: min(800px, 94vw); display: grid; grid-template-columns: 1.15fr 1fr; column-gap: 22px; align-items: center; text-align: left; }
+  body.touch #intro .card > h1, body.touch #intro .card > p { grid-column: 1; }
+  body.touch #intro .card > ul.touch-only { grid-column: 2; grid-row: 1 / span 3; grid-template-columns: 1fr; margin: 0; }
+  body.touch #intro .card > #i-go { grid-column: 2; grid-row: 4; justify-self: center; }
+  body.touch #intro .card .intro { font-size: 15px; }
+  body.touch #intro .card .endtime { font-size: 12px; }
+  body.touch .card.wide.settings { max-width: min(760px, 94vw); display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; }
+  body.touch .card.wide.settings > h1, body.touch .card.wide.settings > p, body.touch .card.wide.settings > button { grid-column: 1 / -1; justify-self: center; }
+  body.touch #end .card { max-width: min(820px, 96vw); display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; align-items: start; max-height: calc(100dvh - 12px); padding: 10px 16px; }
+  body.touch #end .card > :not(#end-scores):not(.menu) { grid-column: 1; }
+  body.touch #end .card > #end-scores { grid-column: 2; grid-row: 1 / span 5; }
+  body.touch #end .card > .menu { grid-column: 2; grid-row: 6; align-self: end; margin-top: 0; }
+  body.touch #end .card h1 { font-size: 20px; }
+  body.touch #scores .card { max-width: min(720px, 94vw); display: grid; grid-template-columns: auto 1fr; column-gap: 24px; align-items: center; padding: 8px 16px; }
+  body.touch #scores .card > h1 { grid-column: 1; grid-row: 1; }
+  body.touch #scores .card > #s-back { grid-column: 1; grid-row: 2; align-self: start; justify-self: center; }
+  body.touch #scores .card > #scores-table { grid-column: 2; grid-row: 1 / span 2; }
+  /* Creator: a wide two-column panel on the left, the model in the space to the right. */
+  body.touch #creator .panel {
+    left: max(8px, env(safe-area-inset-left)); top: max(6px, env(safe-area-inset-top)); bottom: max(6px, env(safe-area-inset-bottom));
+    width: min(620px, calc(100vw - 200px)); padding: 8px 12px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); column-gap: 12px;
+    grid-template-rows: auto auto auto auto auto 1fr; align-content: start;
+  }
+  body.touch #creator h2, body.touch #creator .turn-hint { display: none; }
+  body.touch #cr-presets { grid-column: 1; grid-row: 1; margin-bottom: 4px; }
+  body.touch #cr-colors { grid-column: 1; grid-row: 2; }
+  body.touch #creator .name { grid-column: 1; grid-row: 3; margin-top: 2px; font-size: 13px; }
+  body.touch #cr-error { grid-column: 1; grid-row: 4; min-height: 16px; font-size: 12px; }
+  body.touch #creator .panel > .row { grid-column: 1; grid-row: 5; margin-top: 0; }
+  body.touch #cr-slots { grid-column: 2; grid-row: 1 / span 6; }
+}
+body.touch .presets button { min-height: 36px; font-size: 12px; padding: 4px 6px; line-height: 1.1; }
+body.touch .slot { grid-template-columns: 58px 44px minmax(0, 1fr) 44px; margin: 2px 0; gap: 4px; }
+body.touch .slot .k { font-size: 11px; }
+body.touch .slot .v { font-size: 12px; line-height: 1.1; overflow-wrap: anywhere; }
+body.touch .slot button { min-height: 42px; height: 42px; font-size: 20px; }
+body.touch .swatches { margin: 3px 0; gap: 3px; flex-wrap: nowrap; }
+body.touch .swatches .k { width: 50px; flex: 0 0 50px; font-size: 11px; }
+body.touch .swatches button { width: 24px; height: 24px; flex: 0 1 24px; min-width: 18px; }
+body.touch #creator input { font-size: 16px; padding: 6px 8px; min-height: 40px; }
+body.touch #creator .row button { min-height: 44px; flex: 1; }
+@media (max-height: 380px) {
+  body.touch #minimap:not(.large) { width: 100px; height: 100px; }
+  body.touch #end .card h1 { font-size: 18px; margin: 0; }
+  body.touch #end .card p { margin: 2px 0; }
+  body.touch #end .card .big { font-size: 24px; }
+  body.touch #end .endtop img { width: 34px; height: 34px; }
+  body.touch #end-stats { font-size: 11px; line-height: 1.25; }
+}
+@media (orientation: portrait) {
+  body.touch #creator .panel { left: 8px; right: 8px; top: max(8px, env(safe-area-inset-top)); bottom: auto; width: auto; max-height: 60dvh; padding: 10px 12px; }
+  body.touch #creator h2 { font-size: 18px; margin-bottom: 6px; }
+  body.touch #creator .panel { max-height: 56dvh; }
+  body.touch #creator .panel > .row { position: sticky; bottom: -10px; background: var(--mohu-yellow); padding: 6px 0 8px; z-index: 1; }
+  body.touch #countdown { font-size: 10px; top: calc(max(6px, env(safe-area-inset-top)) + 54px); }
+  body.touch #hud { top: calc(max(6px, env(safe-area-inset-top)) + 100px); max-width: 66vw; white-space: normal; }
+  body.touch #wallet { top: calc(max(8px, env(safe-area-inset-top)) + 154px); }
+  body.touch #minimap { width: 92px; height: 92px; }
+  body.touch #prompt { max-width: 70vw; }
+  body.touch #till, body.touch #fight-offer { width: 92vw; }
+  body.touch .card .controls { grid-template-columns: 1fr; }
+}
+body.mohu-on #fps-tip, body.fight-on #fps-tip { display: none; }
+/* In the fight the health bars own the top corners: ❚❚ moves to the bottom centre. */
+body.touch.tc-fight .touch-bar { top: auto; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom)); }
+/* Panels that may scroll (portrait, very short screens) still pan with a finger. */
+body.touch #creator .panel, body.touch .card { touch-action: pan-y; }

@@ -1,5 +1,17 @@
 # Changelog
 
+## M14 Phones (2026-10-31)
+
+- The game now plays in phone browsers. Phones and tablets get touch controls and a compact layout; a laptop or desktop (even one with a touchscreen) looks and plays exactly as before.
+- On the street: a joystick appears wherever your left thumb lands (push it a little to stroll, all the way to walk; it steers the bike too). Drag with the right thumb to look around, pinch to zoom. The prompt is the action button above your right thumb: tap it to pick things up, open doors, ring bells and get on bikes; press and hold it to search bins and courtyards or kick a bin over. Run (a toggle), Jump, Bike (only when a bike is in reach or you are riding) and Pee (only while tipsy and facing a wall) sit bottom right. ❚❚ pauses, Map opens the big map.
+- At the till: big "Food 100 Ft", "Beer 200 Ft" and "Close" buttons. Zsiga's offer has tappable answers.
+- At the bottle machine: hold the big Feed button; when an item is refused, Fix appears (tap it to pop a crushed can back, hold it to wipe a wet label), then ◀ ▶ to roll the item and Push once the ring is green. Walk away is at the top; Done takes the receipt.
+- In the fight: the joystick walks, up jumps, down crouches, back blocks; Punch, Kick and Special sit in an arc on the right. ❚❚ pauses the fight.
+- Compact HUD on phones: the countdown and the clock at the top centre, money, bags, stamina and hunger in a small panel under the ❚❚ / Map buttons, a smaller minimap top right, toasts and subtitles kept clear of your thumbs.
+- Every menu (title, character creator, intro, pause, settings, end screen, top 10) fits a phone held sideways without scrolling. The creator is a two-column panel with the model beside it; swipe the model to turn it. Settings has "Look sensitivity" for the drag-to-look speed.
+- Phones start on Medium graphics (a quality you saved still wins). If the game runs under 25 fps for 10 seconds, a tip offers to switch to Low.
+- Landscape is the main layout; portrait works too. Notches and home bars are respected, the page never scrolls, zooms or selects text, Android goes full screen on the first tap, and sound and Hungarian speech start with the first touch.
+
 ## M13 The fire barrel fight (2026-10-31)
 
 - Have a beer and four street people turn up round a burning barrel on the Nehru part, by where Kinizsi utca reaches the river: flames, sparks, a column of smoke and a firelit glow you can see from far off at night, a crackle as you get close. They warm their hands and pass a bottle round. When you sober up they wander off toward the river. No minimap marker: finding them is the point.

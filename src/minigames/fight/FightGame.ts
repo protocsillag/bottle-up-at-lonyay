@@ -511,7 +511,7 @@ export class FightGame {
     const cd = this.p.specialCd;
     c.font = 'bold 22px system-ui, sans-serif'; c.textAlign = 'left'; c.textBaseline = 'top';
     c.fillStyle = cd > 0 ? 'rgba(255,255,255,0.5)' : '#ffd23a';
-    c.fillText(cd > 0 ? `Zsákos csapás ${Math.ceil(cd)} s` : 'Zsákos csapás ready (J + K)', 90, 130);
+    c.fillText(cd > 0 ? `Zsákos csapás ${Math.ceil(cd)} s` : `Zsákos csapás ready (${document.body.classList.contains('touch') ? 'Special' : 'J + K'})`, 90, 130);
     // Banners.
     const banner = (text: string, color: string, sub?: string) => {
       c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 330, W, 200);
@@ -532,7 +532,7 @@ export class FightGame {
     if (this.paused) {
       c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(0, 0, W, H);
       c.fillStyle = '#fff'; c.font = '900 90px system-ui, sans-serif'; c.textBaseline = 'middle'; c.fillText('Szünet', W / 2, H / 2 - 30);
-      c.font = '30px system-ui, sans-serif'; c.fillText('Paused — Esc to carry on', W / 2, H / 2 + 50);
+      c.font = '30px system-ui, sans-serif'; c.fillText(document.body.classList.contains('touch') ? 'Paused — tap ❚❚ to carry on' : 'Paused — Esc to carry on', W / 2, H / 2 + 50);
     }
   }
 
