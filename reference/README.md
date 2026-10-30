@@ -12,6 +12,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Waiting for M11 |
 | `kalvin-ter/` | Kálvin tér, the big square and junction at the north corner | Waiting for M11 |
 | `bakats-ter/` | Bakáts tér, the church square | Waiting for M11 |
+| `bins/` | Every kind of bin in the game: street bins, wheelie bins, skips, courtyard bins | Waiting for M11; do this one first |
 | `../mohu-repont-machines.png` | The REpont machine pair (used in M5) | Used |
 
 ## `lonyay-utca/` — Lónyay utca
@@ -213,3 +214,33 @@ A green church square, recently renovated, and the calmest place on the map. One
 - The curly dark green lamp posts with copper lanterns (as in Ráday utca) around the paths.
 - Surrounding tenements in ochre and grey with tall facades all round the square.
 - Gameplay ideas: pigeons on the plaza that scatter when you run through; a bin by each bench cluster.
+
+## `bins/` — every kind of bin
+
+Bins are what the player looks at most, so do this folder **first** in M11. It collects all the bin types from Alex's photos into one set, with what each one holds. The numbers are a starting point; keep the totals inside the supply budget in `balance.ts`.
+
+| Bin | Photo | Where | Search | Contents |
+| --- | --- | --- | --- | --- |
+| Green mesh hoop bin | `mesh-hoop-bin.jpg` | Side streets, Ráday, Bakáts tér benches | Hold E 2 s | 1–5 items |
+| Lime-green post bin | `lime-post-bin.jpg` | Main streets, körút, Kálvin tér, near metro and tram stops | Hold E 2 s | 1–4 items |
+| Wheelie bins put out for collection | `wheelie-bins-out-and-skip.jpg`, `../kalvin-ter/wheelie-bins-metro-offices.jpg` | On the pavement outside restaurants and buildings, early mornings only | Hold E 3 s each | 4–12 items each |
+| Skip at a renovation site | `wheelie-bins-out-and-skip.jpg` | Street, next to scaffolded buildings | Hold E 5 s | 10–25 items, once |
+| Courtyard bins | `../lonyay-utca/gateway-mailboxes-bins.jpg` | Inside buildings, behind the inner gateway doors | Hold E 4 s | By lid colour, see below |
+
+**Green mesh hoop bin.** A round basket of dark green perforated steel mesh, hung in a tall green steel hoop (an upside-down U) bolted to the paving with round foot plates. A small round ashtray cup sticks out of the side. A mint-green bin bag lines it, pulled over the rim and tied in a knot at the front. Usually next to a green bollard.
+
+**Lime-green post bin.** A bright lime-green plastic bin with a rounded hood over the opening, fixed to a galvanised steel post. A black pictogram of a person throwing rubbish into a bin, a small steel ashtray box bolted to the front, scuffs, stickers and cigarette butts on the ground around it.
+
+**Wheelie bins put out for collection.** Dark green two-wheeled bins with lids, 120–240 litres, standing on the pavement between the bollards on collection mornings, sometimes four or five in a row. Gameplay: they appear around 05:00–06:00 on the two mornings of the run and a garbage truck comes along between 08:00 and 10:00 and takes them in, so they are a race at dawn. The garbage truck can be a slow orange municipal truck that drives the road graph like the sweeper.
+
+**Skip at a renovation site.** A building under scaffolding with green netting, and in front of it on the street: a red steel skip, a yellow-and-white site office container, a blue portable toilet and a run of steel crowd barriers. The skip is a jackpot that can only be searched once; the scaffolding sites can also have a házmester-style site guard instead. The phone number painted on the skip is a real company's; leave it off in the game.
+
+**Courtyard bins by lid colour** (`../lonyay-utca/gateway-mailboxes-bins.jpg`). Inside the gateway, behind the inner double doors, stand big wheelie bins in different colours. Make the colour matter:
+
+- **Dark blue with a yellow lid: recycling (plastic and metal).** This is where bottles and cans are. Most items, 8–20.
+- **Green: mixed household waste.** A few items, 0–5, some of them crushed or wet.
+- **Dark blue with a blue lid: paper.** No items, only newspapers and cardboard. A gag the first time ("Csak újság..." — only newspapers).
+
+Players learn to go straight for the yellow lids. Courtyards have one to three bins in a random mix of these colours.
+
+**Other details in these photos** worth adding: green bollards with a ring collar and rounded top (on Ráday, some with black-and-yellow tape); a terrace with black wooden railings in an X pattern and wicker chairs stacked behind it; dried trailing plants hanging from the railings; a gym shopfront with a bright yellow sign (invent the name).
