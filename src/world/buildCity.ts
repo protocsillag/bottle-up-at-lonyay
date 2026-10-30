@@ -24,7 +24,7 @@ const COLORS = {
 };
 
 /** A polyline shifted sideways by d metres (per-segment normals, averaged at joints). */
-function offsetLine(pts: Vec2[], d: number): Vec2[] {
+export function offsetLine(pts: Vec2[], d: number): Vec2[] {
   return pts.map((p, i) => {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
     const dx = b[0] - a[0], dz = b[1] - a[1], len = Math.hypot(dx, dz) || 1;
@@ -193,6 +193,8 @@ export interface BuildCityOptions {
   colors?: Map<string, number>;
   /** Red-brick buildings with cream bands (facade kind 4). */
   brick?: Set<string>;
+  /** Street names paved at one level, without kerbs (Ráday utca). */
+  noKerb?: Set<string>;
 }
 
 export function buildCity(city: CityData, opts: BuildCityOptions = {}): THREE.Group {
@@ -230,8 +232,8 @@ export function buildCity(city: CityData, opts: BuildCityOptions = {}): THREE.Gr
     else if (r.kind === 'foot') ribbon(footBuf, r.pts, r.w, 0.035, COLORS.foot);
     else {
       ribbon(roadBuf, r.pts, r.w, 0.05, COLORS.road);
-      // Granite kerbs along both edges.
-      for (const side of [-1, 1]) ribbon(kerbBuf, offsetLine(r.pts, (side * r.w) / 2), 0.28, 0.11, COLORS.kerb);
+      // Granite kerbs along both edges (not on paved one-level streets).
+      if (!opts.noKerb?.has(r.name ?? '')) for (const side of [-1, 1]) ribbon(kerbBuf, offsetLine(r.pts, (side * r.w) / 2), 0.28, 0.11, COLORS.kerb);
     }
   }
   const kerbs = new THREE.Mesh(kerbBuf.geometry(), groundMaterial(4));

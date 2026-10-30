@@ -49,6 +49,10 @@ function area(ring: Vec2[]) {
 }
 
 /** Finds a gate position for every residential building. */
+/** Areas no gate may open onto (the Ráday empty lot: its neighbours' walls are firewalls). */
+const excluded: Vec2[][] = [];
+export function excludeGateAreas(rings: Vec2[][]) { excluded.push(...rings); }
+
 export function placeGates(city: CityData, place: Placement, avoid: Vec2[] = []): Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown' | 'variant'>[] {
   const out: Omit<Gate, 'index' | 'open' | 'state' | 'timer' | 'nextExit' | 'bellCooldown' | 'variant'>[] = [];
   for (const b of city.buildings) {
@@ -64,6 +68,7 @@ export function placeGates(city: CityData, place: Placement, avoid: Vec2[] = [])
       const mx = (a[0] + c[0]) / 2, mz = (a[1] + c[1]) / 2;
       if (pointInPolygon(mx + nx * 0.2, mz + nz * 0.2, ring)) { nx = -nx; nz = -nz; }
       if (!place.free(mx + nx * 2, mz + nz * 2, 0.6) || !place.free(mx + nx * 4, mz + nz * 4, 0.6)) continue;
+      if (excluded.some((r) => pointInPolygon(mx + nx * 1.5, mz + nz * 1.5, r))) continue;
       // The gate's whole width must face open pavement.
       if (!place.free(mx + nx * 1.5 + ux * 1.4, mz + nz * 1.5 + uz * 1.4, 0.3) || !place.free(mx + nx * 1.5 - ux * 1.4, mz + nz * 1.5 - uz * 1.4, 0.3)) continue;
       let score = len;

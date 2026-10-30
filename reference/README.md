@@ -8,7 +8,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | --- | --- | --- |
 | `lonyay-utca/` | Lónyay utca, around the Református gimnázium and the SPAR corner | Done (M11) |
 | `matyas-utca/` | Mátyás utca, a quieter side street of tenements, gates and doors | Done (M11) |
-| `raday-utca/` | Ráday utca, the café and bar street | Waiting for M11 |
+| `raday-utca/` | Ráday utca, the café and bar street | Done (M11) |
 | `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Waiting for M11 |
 | `kalvin-ter/` | Kálvin tér, the big square and junction at the north corner | Waiting for M11 |
 | `bakats-ter/` | Bakáts tér, the church square | Waiting for M11 |

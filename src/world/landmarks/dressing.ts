@@ -72,60 +72,7 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
 
   // ---------------------------------------------------------------- Ráday utca
   {
-    const awnings: THREE.Matrix4[] = [], tables: THREE.Matrix4[] = [], pots: THREE.Matrix4[] = [], balls: THREE.Matrix4[] = [];
-    let k = 0;
-    for (const f of facadesAlong(city, 'Ráday utca', 13)) {
-      const len = Math.hypot(f.b[0] - f.a[0], f.b[1] - f.a[1]);
-      const ux = (f.b[0] - f.a[0]) / len, uz = (f.b[1] - f.a[1]) / len;
-      const ry = Math.atan2(f.nx, f.nz); // local +z points out of the facade
-      for (let t = 3; t < len - 3; t += 6.5) {
-        k++;
-        const x = f.a[0] + ux * t, z = f.a[1] + uz * t;
-        if (k % 3 !== 0) awnings.push(at(x, z, ry));
-        // Terrace set 1.8 m out, if there is pavement.
-        const tx = x + f.nx * 1.9, tz = z + f.nz * 1.9;
-        if (k % 2 === 0 && place.free(tx, tz, 0.6)) { tables.push(at(tx, tz, ry)); colliders.push({ x: tx, z: tz, w: 0.7, d: 0.7, rot: ry }); }
-        const px = x + f.nx * 0.5 + ux * 2.4, pz = z + f.nz * 0.5 + uz * 2.4;
-        if (k % 2 === 1 && place.free(px, pz, 0.3)) pots.push(at(px, pz, ry));
-      }
-    }
-    // Stone ball bollards along the kerbs.
-    for (const r of city.roads.filter((r) => r.name === 'Ráday utca' && r.kind === 'road')) {
-      for (let i = 0; i < r.pts.length - 1; i++) {
-        const [ax, az] = r.pts[i], [bx2, bz] = r.pts[i + 1];
-        const len = Math.hypot(bx2 - ax, bz - az);
-        const ux = (bx2 - ax) / len, uz = (bz - az) / len;
-        for (let t = 2; t < len; t += 5) for (const s of [-1, 1]) {
-          const x = ax + ux * t - uz * (r.w / 2 + 0.3) * s, z = az + uz * t + ux * (r.w / 2 + 0.3) * s;
-          if (place.free(x, z, 0.3)) balls.push(at(x, z));
-        }
-      }
-    }
-    const awn: Part[] = [];
-    // Red awning sloping out from the facade at 3 m, with a scalloped front edge.
-    const a = new THREE.BoxGeometry(5, 0.06, 2.2).rotateX(0.28).translate(0, 3.0, 1.1);
-    awn.push(colored(a, 0xb8262c));
-    bx(awn, 5, 0.25, 0.04, 0, 2.62, 2.18, 0xd8d0c0);
-    bx(awn, 0.05, 0.05, 2.1, -2.4, 3.0, 1.05, 0x2b2b2b);
-    bx(awn, 0.05, 0.05, 2.1, 2.4, 3.0, 1.05, 0x2b2b2b);
-    group.add(instanced(merge(awn), awnings));
-    const tab: Part[] = [];
-    bx(tab, 0.7, 0.04, 0.7, 0, 0.74, 0, 0x2b2b2b);
-    bx(tab, 0.06, 0.72, 0.06, 0, 0.36, 0, 0x2b2b2b);
-    for (const s of [-1, 1]) {
-      bx(tab, 0.42, 0.04, 0.42, s * 0.65, 0.46, 0, 0x8a5a32);
-      bx(tab, 0.42, 0.45, 0.04, s * 0.65, 0.7, s * 0.0 + 0.2, 0x8a5a32);
-      for (const cx of [-0.18, 0.18]) for (const cz of [-0.18, 0.18]) bx(tab, 0.03, 0.46, 0.03, s * 0.65 + cx, 0.23, cz, 0x2b2b2b);
-    }
-    bx(tab, 0.08, 0.1, 0.08, 0.1, 0.81, 0.05, 0x3d6b2a); // a bottle on the table
-    group.add(instanced(merge(tab), tables));
-    const pot: Part[] = [];
-    bx(pot, 0.6, 0.55, 0.6, 0, 0.275, 0, 0x9a5a3a);
-    pot.push(colored(new THREE.IcosahedronGeometry(0.45, 0).translate(0, 0.85, 0), 0x4f8a3a));
-    group.add(instanced(merge(pot), pots));
-    group.add(instanced(colored(new THREE.SphereGeometry(0.22, 8, 6).translate(0, 0.32, 0), 0xc8c2b4).toNonIndexed(), balls));
-    for (const m of balls) { const p = new THREE.Vector3().setFromMatrixPosition(m); colliders.push({ x: p.x, z: p.z, w: 0.4, d: 0.4, rot: 0 }); }
-
+    // Terraces, bollards and lamps for Ráday utca live in raday.ts (M11).
     // The little green book kiosk near the Kálvin tér end, with a stash behind it.
     const ends = city.roads.filter((r) => r.name === 'Ráday utca').flatMap((r) => r.pts);
     const kalvin = city.landmarks.kalvinTer;

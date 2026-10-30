@@ -33,6 +33,39 @@ function headGeometry() {
   return new THREE.CylinderGeometry(0.22, 0.12, 0.42, 6).translate(0, 4.62, 0.9);
 }
 
+/** Ráday utca lamp (reference/raday-utca/lamp-flower-basket-bollards.jpg): fluted green
+ *  post, a scroll arm, a copper bell shade over a glass globe and a hanging flower basket. */
+function radayPostGeometry() {
+  const green = 0x1f3a2c;
+  const parts = [
+    colored(new THREE.CylinderGeometry(0.2, 0.26, 0.8, 12).translate(0, 0.4, 0), green),
+    colored(new THREE.CylinderGeometry(0.15, 0.2, 0.12, 12).translate(0, 0.86, 0), green),
+    colored(new THREE.CylinderGeometry(0.075, 0.1, 4.0, 10).translate(0, 2.9, 0), green),
+    colored(new THREE.TorusGeometry(0.3, 0.035, 5, 12, Math.PI * 1.5).rotateY(Math.PI / 2).translate(0, 4.65, 0.3), green),
+    colored(new THREE.CylinderGeometry(0.03, 0.03, 0.9, 6).rotateX(Math.PI / 2).translate(0, 4.95, 0.45), green),
+    // Copper bell shade over the globe.
+    colored(new THREE.CylinderGeometry(0.06, 0.34, 0.3, 12, 1, true).translate(0, 4.88, 0.9), 0xb0683a),
+    colored(new THREE.SphereGeometry(0.06, 6, 4).translate(0, 5.06, 0.9), 0xb0683a),
+    // Flower basket on a bracket at 3.5 m, on the far side of the post.
+    colored(new THREE.BoxGeometry(0.04, 0.04, 0.5).translate(0, 3.9, -0.25), green),
+    colored(new THREE.CylinderGeometry(0.42, 0.28, 0.32, 10).translate(0, 3.45, -0.55), 0x3b2a1a),
+    colored(new THREE.IcosahedronGeometry(0.5, 0).scale(1, 0.75, 1).translate(0, 3.55, -0.55), 0x4a2a52),
+    colored(new THREE.IcosahedronGeometry(0.4, 0).scale(1, 1.2, 1).translate(0.15, 3.2, -0.45), 0x8ab83a),
+    colored(new THREE.IcosahedronGeometry(0.33, 0).scale(1, 1.3, 1).translate(-0.2, 3.15, -0.68), 0x5a2a62),
+  ];
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2;
+    parts.push(colored(new THREE.IcosahedronGeometry(0.07, 0).translate(Math.cos(a) * 0.45, 3.5 + (i % 2) * 0.15, -0.55 + Math.sin(a) * 0.45), 0xc8202c));
+  }
+  return merge(parts);
+}
+function globeGeometry() {
+  return new THREE.SphereGeometry(0.2, 10, 8).translate(0, 4.58, 0.9);
+}
+
+const RADAY = 'Ráday utca';
+const RADAY_SPACING = 20;
+
 export class Lamps {
   readonly group = new THREE.Group();
   readonly positions: THREE.Vector3[] = [];
@@ -47,10 +80,13 @@ export class Lamps {
   constructor(city: CityData, place: Placement) {
     this.group.name = 'lamps';
     let side = 1;
+    const raday: boolean[] = [];
     for (const r of city.roads) {
       if (r.kind !== 'road' || r.bridge) continue;
-      // Walk the polyline and drop a lamp every SPACING metres, alternating sides.
-      let next = SPACING / 2, walked = 0;
+      const isRaday = r.name === RADAY;
+      const spacing = isRaday ? RADAY_SPACING : SPACING;
+      // Walk the polyline and drop a lamp every `spacing` metres, alternating sides.
+      let next = spacing / 2, walked = 0;
       for (let i = 0; i < r.pts.length - 1; i++) {
         const [ax, az] = r.pts[i], [bx, bz] = r.pts[i + 1];
         const len = Math.hypot(bx - ax, bz - az);
@@ -58,35 +94,45 @@ export class Lamps {
         const ux = (bx - ax) / len, uz = (bz - az) / len;
         while (next <= walked + len) {
           const t = next - walked;
-          next += SPACING;
+          next += spacing;
           side = -side;
-          const off = r.w / 2 + 0.7;
+          // Ráday lamps stand at the edge of the drive strip, everywhere else by the kerb.
+          const off = isRaday ? 3.3 : r.w / 2 + 0.7;
           const x = ax + ux * t - uz * off * side, z = az + uz * t + ux * off * side;
-          if (!place.free(x, z, 0.6) || this.positions.some((p) => Math.abs(p.x - x) < 9 && Math.abs(p.z - z) < 9)) continue;
+          const gap = isRaday ? 6 : 9;
+          if (!place.free(x, z, 0.6) || this.positions.some((p) => Math.abs(p.x - x) < gap && Math.abs(p.z - z) < gap)) continue;
           // y temporarily holds the angle the arm points (out over the road).
           this.positions.push(new THREE.Vector3(x, Math.atan2(uz * side, -ux * side), z));
+          raday.push(isRaday);
         }
         walked += len;
       }
     }
     const n = this.positions.length;
-    const posts = new THREE.InstancedMesh(postGeometry(), new THREE.MeshLambertMaterial({ vertexColors: true }), n);
-    const heads = new THREE.InstancedMesh(headGeometry(), this.headMat, n);
+    const nr = raday.filter(Boolean).length;
+    const postMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+    const posts = new THREE.InstancedMesh(postGeometry(), postMat, n - nr);
+    const heads = new THREE.InstancedMesh(headGeometry(), this.headMat, n - nr);
+    const rPosts = new THREE.InstancedMesh(radayPostGeometry(), postMat, nr);
+    const rHeads = new THREE.InstancedMesh(globeGeometry(), this.headMat, nr);
     const poolTex = poolTexture();
     this.poolMat = new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -16 });
     const pools = new THREE.InstancedMesh(new THREE.PlaneGeometry(9, 9).rotateX(-Math.PI / 2), this.poolMat, n);
     const m = new THREE.Matrix4();
+    let ci = 0, ri = 0;
     this.positions.forEach((p, i) => {
       this.posts.push([p.x, p.z]);
       m.makeRotationY(p.y).setPosition(p.x, 0, p.z);
-      posts.setMatrixAt(i, m);
-      heads.setMatrixAt(i, m);
+      if (raday[i]) { rPosts.setMatrixAt(ri, m); rHeads.setMatrixAt(ri++, m); }
+      else { posts.setMatrixAt(ci, m); heads.setMatrixAt(ci++, m); }
       // Pool under the lantern head (0.9 m out along the arm).
       const hx = p.x + Math.sin(p.y) * 0.9, hz = p.z + Math.cos(p.y) * 0.9;
       pools.setMatrixAt(i, new THREE.Matrix4().makeTranslation(hx, 0.06, hz));
       p.set(hx, p.y, hz); // keep head position (y holds the angle until here)
       p.y = 4.5;
     });
+    rPosts.castShadow = true;
+    this.group.add(rPosts, rHeads);
     posts.castShadow = true;
     this.group.add(posts, heads, pools);
     for (let i = 0; i < POOL_LIGHTS; i++) {

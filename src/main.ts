@@ -13,6 +13,8 @@ import { buildMarketHall, mostNorthWestEdge } from './world/landmarks/marketHall
 import { buildDressing } from './world/landmarks/dressing';
 import { buildGimnaziumExtras, findGimnazium, lonyayColors } from './world/landmarks/lonyay';
 import { buildMosoda, buildWear, matyasColors, RoadWorks } from './world/landmarks/matyas';
+import { buildLot, buildRaday, prepareRaday } from './world/landmarks/raday';
+import { excludeGateAreas } from './world/buildings/gates';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -92,11 +94,17 @@ addEventListener('resize', () => {
 
 const city = await loadCity();
 const hallBuilding = city.buildings.find((b) => b.name === 'Központi Vásárcsarnok');
+// Ráday utca from Alex's photos: car-free north stretch, the empty lot, the Art Nouveau house.
+const radayPrep = prepareRaday(city);
+if (radayPrep.lot) excludeGateAreas([radayPrep.lot.b.outer]);
 // Lónyay utca from Alex's photos: the brick school and the street's palette.
 const gimnazium = findGimnazium(city);
+const cityColors = matyasColors(city, lonyayColors(city, gimnazium));
+if (radayPrep.art) cityColors.set(radayPrep.art.b.id, 0xf3f0e8);
 const cityGroup = buildCity(city, {
   skip: new Set(hallBuilding ? [hallBuilding.id] : []),
-  colors: matyasColors(city, lonyayColors(city, gimnazium)),
+  colors: cityColors,
+  noKerb: new Set(['Ráday utca']),
   brick: new Set(gimnazium ? [gimnazium.b.id] : []),
 });
 if (gimnazium) cityGroup.add(buildGimnaziumExtras(gimnazium));
@@ -112,6 +120,13 @@ const placement = new Placement(city);
 
 const dressing = buildDressing(city, placement);
 cityGroup.add(dressing.group);
+if (radayPrep.lot) {
+  const lot = buildLot(radayPrep.lot, placement);
+  cityGroup.add(lot.group);
+  for (const c of lot.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
+  for (const l of lot.lines) world.addLine(l);
+  dressing.hiddenSpots.push(lot.spot);
+}
 for (const c of dressing.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const parking = buildParking(city, placement);
 cityGroup.add(parking.mesh);
@@ -185,6 +200,9 @@ cityGroup.add(buildWear(city, placement, streets, {
   openings,
   noPlinth: new Set([gimnazium?.b.id, hallBuilding?.id, lonyaySpar ? placement.buildings.at(...lonyaySpar.p)?.id : undefined].filter((v): v is string => !!v)),
 }));
+const raday = buildRaday(city, placement, radayPrep, { openings: [...openings, ...dressing.skips.map((k) => ({ x: k.x, z: k.z, r: 3 }))] });
+cityGroup.add(raday.group);
+for (const c of raday.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const roadWorks = new RoadWorks(placement, world, (x, z) => openings.some((o) => Math.hypot(x - o.x, z - o.z) < o.r + 4));
 cityGroup.add(roadWorks.group);
 for (const f of shops.fronts) for (const c of f.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
@@ -267,7 +285,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -479,6 +497,7 @@ function frame() {
   const playing = state.status === 'playing' && input.locked;
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
+  raday.update((state.minute / 60) % 24, lighting.lamps);
   facadeUniforms.uNight.value = lighting.lamps;
   shops.updateFronts(lighting.lamps);
   sound.ambience(lighting.night, !inside() && screen === 'run', dt);
