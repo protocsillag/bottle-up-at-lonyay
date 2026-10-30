@@ -6,7 +6,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 
 | Folder | Location | Status |
 | --- | --- | --- |
-| `lonyay-utca/` | Lónyay utca, around the Református gimnázium and the SPAR corner | Waiting for M11 |
+| `lonyay-utca/` | Lónyay utca, around the Református gimnázium and the SPAR corner | Done (M11) |
 | `matyas-utca/` | Mátyás utca, a quieter side street of tenements, gates and doors | Waiting for M11 |
 | `raday-utca/` | Ráday utca, the café and bar street | Waiting for M11 |
 | `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Waiting for M11 |

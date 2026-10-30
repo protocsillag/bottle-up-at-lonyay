@@ -171,10 +171,11 @@ function groundMaterial(offset: number) {
 const PLASTER = [0xe6d9bd, 0xd9b26a, 0xe3c58d, 0xb9b4aa, 0xa8553f, 0xd99b7e, 0xb8c4a0, 0xeadc9a, 0xd8d4cc, 0xaab8c0, 0xc98f5a, 0xdcc8a8];
 const ROOFS = [0x5e5a56, 0x6e4a3a, 0x7a3f2e, 0x55595e];
 
-function buildingLook(b: CityData['buildings'][number], seed: number) {
+function buildingLook(b: CityData['buildings'][number], seed: number, opts: BuildCityOptions) {
   const name = b.name ?? '';
-  let color = PLASTER[Math.floor(seed * PLASTER.length)];
+  let color = opts.colors?.get(b.id) ?? PLASTER[Math.floor(seed * PLASTER.length)];
   let kind = 1;
+  if (opts.brick?.has(b.id)) { kind = 4; color = 0x9a4a35; }
   if (/palota|Múzeum|Egyetem|Corvinus|Sóház|Bánffy|Wenckheim|Almássy|Pálffy|Zichy|Hadik|Károlyi/i.test(name)) { kind = 3; color = [0xe8dcc0, 0xd8c8a8, 0xe3d3b0][Math.floor(seed * 3)]; }
   if (/templom|plébánia|kápolna/i.test(name)) { kind = 3; color = 0xe0d6c0; }
   if (/Corvinus Egyetem$/.test(name)) color = 0xd7c9a8;
@@ -188,6 +189,10 @@ function buildingLook(b: CityData['buildings'][number], seed: number) {
 export interface BuildCityOptions {
   /** Building ids replaced by hand-built landmarks. */
   skip?: Set<string>;
+  /** Plaster colour overrides per building id (street palettes from Alex's photos). */
+  colors?: Map<string, number>;
+  /** Red-brick buildings with cream bands (facade kind 4). */
+  brick?: Set<string>;
 }
 
 export function buildCity(city: CityData, opts: BuildCityOptions = {}): THREE.Group {
@@ -252,7 +257,7 @@ export function buildCity(city: CityData, opts: BuildCityOptions = {}): THREE.Gr
     let buf = tiles.get(key);
     if (!buf) tiles.set(key, (buf = new TriBuffer()));
     const seed = hash(b.id);
-    const { wall, kind, roof } = buildingLook(b, seed);
+    const { wall, kind, roof } = buildingLook(b, seed, opts);
     buf.style = [seed, kind];
     walls(buf, b.outer, false, b.h, wall, true);
     buf.style = [seed, 2];

@@ -24,7 +24,7 @@ const SPAWN_MIN = 70, SPAWN_MAX = 190, DESPAWN = 240;
 const NO_CARS = new Set(['pedestrian', 'service', 'footway', 'path', 'cycleway', 'steps', 'track']);
 const COLORS = [0xe8e8e8, 0x1b1b1b, 0x8a8f96, 0x3d4a66, 0x8a2f2f, 0x2f5a4a, 0xc9c2b4, 0x274060, 0x5a5a5a, 0xb33a2e];
 
-function carGeometry() {
+export function carGeometry() {
   const p: THREE.BufferGeometry[] = [];
   const box = (w: number, h: number, d: number, x: number, y: number, z: number, c: number) => {
     const g = new THREE.BoxGeometry(w, h, d).translate(x, y, z);
@@ -121,7 +121,8 @@ export class Traffic {
     const E = this.edges[c.edge];
     const A = this.nodes[c.from], B = this.nodes[this.other(c.edge, c.from)];
     const ux = (B.x - A.x) / E.len, uz = (B.z - A.z) / E.len;
-    const off = E.oneway ? 0 : Math.min(E.w / 4, 3);
+    // Narrow streets have parked cars along both kerbs: keep the lanes clear of them.
+    const off = E.oneway ? 0 : E.w < 12 ? Math.max(1.2, E.w / 2 - 3.1) : Math.min(E.w / 4, 3);
     c.x = A.x + ux * c.t - uz * off;
     c.z = A.z + uz * c.t + ux * off;
     const want = Math.atan2(-ux, -uz);

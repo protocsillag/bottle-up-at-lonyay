@@ -11,6 +11,8 @@ import { MohuGame } from './minigames/mohu/MohuGame';
 import { Shops, doorOnFacade } from './world/shops/Shops';
 import { buildMarketHall, mostNorthWestEdge } from './world/landmarks/marketHall';
 import { buildDressing } from './world/landmarks/dressing';
+import { buildGimnaziumExtras, findGimnazium, lonyayColors } from './world/landmarks/lonyay';
+import { buildParking } from './world/landmarks/parking';
 import { Input } from './player/input';
 import { Player } from './player/Player';
 import { FollowCamera } from './player/FollowCamera';
@@ -88,7 +90,14 @@ addEventListener('resize', () => {
 
 const city = await loadCity();
 const hallBuilding = city.buildings.find((b) => b.name === 'Központi Vásárcsarnok');
-const cityGroup = buildCity(city, { skip: new Set(hallBuilding ? [hallBuilding.id] : []) });
+// Lónyay utca from Alex's photos: the brick school and the street's palette.
+const gimnazium = findGimnazium(city);
+const cityGroup = buildCity(city, {
+  skip: new Set(hallBuilding ? [hallBuilding.id] : []),
+  colors: lonyayColors(city, gimnazium),
+  brick: new Set(gimnazium ? [gimnazium.b.id] : []),
+});
+if (gimnazium) cityGroup.add(buildGimnaziumExtras(gimnazium));
 scene.add(cityGroup);
 const hall = hallBuilding ? buildMarketHall(hallBuilding, mostNorthWestEdge(hallBuilding.outer)) : null;
 if (hall) cityGroup.add(hall.group);
@@ -99,6 +108,9 @@ const placement = new Placement(city);
 const dressing = buildDressing(city, placement);
 cityGroup.add(dressing.group);
 for (const c of dressing.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
+const parking = buildParking(city, placement);
+cityGroup.add(parking.mesh);
+for (const p of parking.cars) world.addBox(p.x, p.z, 1.8, 4.3, p.rot);
 const state = new GameState(newSeed());
 const items = new ItemSystem(city, placement, state, {
   hidden: dressing.hiddenSpots,
@@ -147,12 +159,19 @@ const host = {
   },
 };
 // No street gates on top of the shop doors.
-const shopDoorSpots = [city.landmarks.spar ? doorOnFacade(city, city.landmarks.spar) : null, hall?.door ?? null]
+const [sx0, sz0] = city.landmarks.spawn ?? [0, 0];
+// The SPAR corner on Lónyay utca (reference/lonyay-utca/spar-corner.jpg): decorative only;
+// the return point stays the City Spar on Kinizsi utca.
+const lonyaySpar = city.shops.find((s) => /spar/i.test(s.name ?? '') && Math.hypot(s.p[0] - sx0, s.p[1] - sz0) < 120 && s.p !== city.landmarks.spar);
+const lonyaySparDoor = lonyaySpar ? doorOnFacade(city, lonyaySpar.p) : null;
+const shopDoorSpots = [city.landmarks.spar ? doorOnFacade(city, city.landmarks.spar) : null, hall?.door ?? null, lonyaySparDoor]
   .filter((d) => d !== null).map((d) => [d!.x, d!.z] as [number, number]);
 const buildings = new BuildingSystem(city, placement, state, host, streets, shopDoorSpots);
 scene.add(buildings.group);
 const shops = new Shops(city, state, host, hall?.door ?? null);
 scene.add(shops.group, shops.street, shops.lights);
+if (lonyaySparDoor) shops.addDecorativeFront(lonyaySparDoor);
+for (const f of shops.fronts) for (const c of f.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 const returns = new ReturnPoints(state, shops.doors.map((d) => ({ id: d.id, name: d.name, ...d.interior.machines })));
 scene.add(returns.group);
 for (const p of returns.points) {
@@ -232,7 +251,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -444,6 +463,7 @@ function frame() {
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
   facadeUniforms.uNight.value = lighting.lamps;
+  shops.updateFronts(lighting.lamps);
   sound.ambience(lighting.night, !inside() && screen === 'run', dt);
 
   if (playing) {

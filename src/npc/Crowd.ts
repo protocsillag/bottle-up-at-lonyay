@@ -13,7 +13,7 @@ import { pointInPolygon } from '../world/collision';
 // bar crowds stand on Ráday utca at night, picnickers sit on the Nehru part lawn in
 // the evening, and street people sit on benches or push trolleys.
 
-export type NpcType = 'commuter' | 'tourist' | 'student' | 'pensioner' | 'dogwalker' | 'bar' | 'picnic' | 'street';
+export type NpcType = 'commuter' | 'tourist' | 'student' | 'pensioner' | 'dogwalker' | 'bar' | 'picnic' | 'street' | 'warden';
 type Prop = 'none' | 'phone' | 'backpack' | 'trolley' | 'dog' | 'cart' | 'bottle' | 'bag';
 type Mode = 'walk' | 'stand' | 'sit';
 
@@ -92,13 +92,14 @@ const TYPE_PROPS: Record<NpcType, Prop[]> = {
   commuter: ['none', 'bag', 'none'], tourist: ['phone', 'backpack', 'phone'], student: ['backpack', 'backpack', 'phone'],
   pensioner: ['trolley', 'bag', 'trolley'], dogwalker: ['dog'], bar: ['bottle', 'bottle', 'none'], picnic: ['bottle', 'none'],
   street: ['cart', 'none', 'bag'],
+  warden: ['phone', 'none'],
 };
-const TYPE_SPEED: Record<NpcType, number> = { commuter: 1.45, tourist: 1.0, student: 1.35, pensioner: 0.8, dogwalker: 1.1, bar: 0, picnic: 0, street: 0.75 };
+const TYPE_SPEED: Record<NpcType, number> = { commuter: 1.45, tourist: 1.0, student: 1.35, pensioner: 0.8, dogwalker: 1.1, bar: 0, picnic: 0, street: 0.75, warden: 0.9 };
 
 /** Walker mix by hour. */
 function walkerMix(h: number): Record<string, number> {
   if (hourIn(h, 7, 10)) return { commuter: 0.45, student: 0.2, pensioner: 0.13, dogwalker: 0.12, street: 0.06, tourist: 0.04 };
-  if (hourIn(h, 10, 18)) return { tourist: 0.3, pensioner: 0.2, student: 0.2, commuter: 0.1, dogwalker: 0.1, street: 0.1 };
+  if (hourIn(h, 10, 18)) return { tourist: 0.3, pensioner: 0.2, student: 0.2, commuter: 0.1, dogwalker: 0.1, street: 0.1, warden: 0.05 };
   if (hourIn(h, 18, 2)) return { student: 0.35, tourist: 0.2, commuter: 0.15, dogwalker: 0.1, street: 0.2 };
   return { street: 0.55, student: 0.3, dogwalker: 0.15 };
 }
@@ -171,6 +172,8 @@ export class Crowd {
     const colors = randomColors(cosmetic);
     if (type === 'street') { colors.top = cosmetic.pick([0x5a4a3a, 0x4a4f3a, 0x3a3a3a, 0x6a5a48]); colors.bottoms = 0x3a3530; }
     if (type === 'commuter') { colors.top = cosmetic.pick([0x2c3445, 0x1f1f1f, 0x4a4036, 0x5a5a5a]); }
+    // Parking wardens (parkolóőr): yellow hi-vis vests, dark trousers, walking in pairs.
+    if (type === 'warden') { colors.top = 0xd8e02a; colors.bottoms = 0x23262e; colors.hat = 0x23262e; }
     const prop = cosmetic.pick(TYPE_PROPS[type]);
     const speed = TYPE_SPEED[type] * (0.85 + Math.random() * 0.3);
     return {
@@ -197,6 +200,12 @@ export class Crowd {
     const n = this.make(type, x, z, hd, 'walk');
     n.edge = e; n.from = from; n.t = t;
     this.npcs.push(n);
+    if (type === 'warden' && t + 1.3 < E.len) {
+      const [x2, z2] = this.graph.point(e, from, t + 1.3);
+      const m = this.make('warden', x2, z2, hd, 'walk');
+      m.edge = e; m.from = from; m.t = t + 1.3; m.baseSpeed = m.speed = n.baseSpeed;
+      this.npcs.push(m);
+    }
   }
 
   private spawnGroup(kind: 'bar' | 'picnic' | 'bench', px: number, pz: number) {

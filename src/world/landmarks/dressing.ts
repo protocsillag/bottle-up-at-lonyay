@@ -154,28 +154,63 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
     }
   }
 
-  // ---------------------------------------------------------------- Lónyay utca: kerb trees and planters
+  // ---------------------------------------------------------------- Lónyay utca: kerb trees, crate planters, markings
   {
-    const pts: Vec2[] = [];
+    // reference/lonyay-utca: wooden crate planters with shrubs or young trees along the
+    // kerb every 15–20 m, young street trees in some stretches, double yellow kerb lines
+    // and a painted bike symbol in the lane.
+    const trees: Vec2[] = [], crates: THREE.Matrix4[] = [], bikes: THREE.Matrix4[] = [];
+    const lines: Part[] = [];
+    let k = 0;
     for (const r of city.roads.filter((r) => r.name === 'Lónyay utca' && r.kind === 'road')) {
       for (let i = 0; i < r.pts.length - 1; i++) {
         const [ax, az] = r.pts[i], [bx2, bz] = r.pts[i + 1];
         const len = Math.hypot(bx2 - ax, bz - az);
+        if (len < 1) continue;
         const ux = (bx2 - ax) / len, uz = (bz - az) / len;
-        for (let t = 6; t < len - 4; t += 14) for (const s of [-1, 1]) {
-          const x = ax + ux * t - uz * (r.w / 2 + 0.9) * s, z = az + uz * t + ux * (r.w / 2 + 0.9) * s;
-          if (place.free(x, z, 0.8)) pts.push([x, z]);
+        const ry = Math.atan2(ux, uz);
+        for (let t = 6; t < len - 4; t += 17) for (const sd of [-1, 1]) {
+          const x = ax + ux * t - uz * (r.w / 2 + 0.9) * sd, z = az + uz * t + ux * (r.w / 2 + 0.9) * sd;
+          if (!place.free(x, z, 0.8)) continue;
+          if (k++ % 3 === 0) trees.push([x, z]);
+          else crates.push(at(x, z, ry));
+          colliders.push({ x, z, w: 1.0, d: 1.0, rot: ry });
         }
+        // Double yellow lines along both kerbs (in the road, just off the kerb).
+        for (const sd of [-1, 1]) for (const o of [0.25, 0.4]) {
+          const cx = (ax + bx2) / 2 - uz * (r.w / 2 - o) * sd, cz = (az + bz) / 2 + ux * (r.w / 2 - o) * sd;
+          lines.push(colored(new THREE.BoxGeometry(0.08, 0.01, len).rotateY(ry).translate(cx, 0.062, cz), 0xd8b020));
+        }
+        for (let t = 20; t < len - 10; t += 45) bikes.push(new THREE.Matrix4().makeRotationY(ry).setPosition(ax + ux * t, 0.063, az + uz * t));
       }
     }
-    const trees = buildTrees(pts);
+    const tg = buildTrees(trees);
     // Kerb trees are young: shrink each instance.
-    for (const im of trees.children as THREE.InstancedMesh[]) {
-      const m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), s = new THREE.Vector3();
-      for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, m); m.decompose(p, q, s); s.multiplyScalar(0.6); im.setMatrixAt(i, m.compose(p, q, s)); }
+    for (const im of tg.children as THREE.InstancedMesh[]) {
+      const m = new THREE.Matrix4(), p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+      for (let i = 0; i < im.count; i++) { im.getMatrixAt(i, m); m.decompose(p, q, sc); sc.multiplyScalar(0.6); im.setMatrixAt(i, m.compose(p, q, sc)); }
     }
-    group.add(trees);
-    for (const [x, z] of pts) colliders.push({ x, z, w: 0.5, d: 0.5, rot: 0 });
+    group.add(tg);
+    const crate: Part[] = [];
+    for (let i = 0; i < 4; i++) bx(crate, 1.0, 0.16, 0.6, 0, 0.1 + i * 0.18, 0, i % 2 ? 0x7a6a56 : 0x8a7860);
+    bx(crate, 0.9, 0.05, 0.5, 0, 0.72, 0, 0x3a2f22);
+    crate.push(colored(new THREE.IcosahedronGeometry(0.42, 0).scale(1.1, 0.8, 0.7).translate(0, 0.98, 0), 0x4f7a39));
+    crate.push(colored(new THREE.CylinderGeometry(0.03, 0.04, 1.2, 5).translate(0.25, 1.2, 0), 0x5a4636));
+    crate.push(colored(new THREE.IcosahedronGeometry(0.35, 0).translate(0.25, 1.9, 0), 0x3f6f34));
+    group.add(instanced(merge(crate), crates));
+    if (lines.length) { const lm = new THREE.Mesh(merge(lines), new THREE.MeshLambertMaterial({ vertexColors: true })); lm.receiveShadow = true; group.add(lm); }
+    // Bike symbol: a yellow painted pictogram on the asphalt.
+    const c = document.createElement('canvas');
+    c.width = 128; c.height = 256;
+    const gx = c.getContext('2d')!;
+    gx.strokeStyle = '#d8b020'; gx.lineWidth = 7;
+    for (const [x, y] of [[64, 70], [64, 190]]) { gx.beginPath(); gx.arc(x, y, 32, 0, Math.PI * 2); gx.stroke(); }
+    gx.beginPath(); gx.moveTo(64, 70); gx.lineTo(64, 130); gx.lineTo(64, 190); gx.moveTo(64, 130); gx.lineTo(30, 110); gx.moveTo(64, 70); gx.lineTo(40, 60); gx.stroke();
+    gx.beginPath(); gx.moveTo(36, 240); gx.lineTo(64, 225); gx.lineTo(92, 240); gx.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    const bm = new THREE.InstancedMesh(new THREE.PlaneGeometry(1.0, 2.0).rotateX(-Math.PI / 2), new THREE.MeshLambertMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -24 }), bikes.length);
+    bikes.forEach((m, i) => bm.setMatrixAt(i, m));
+    group.add(bm);
   }
 
   // ---------------------------------------------------------------- Nehru part

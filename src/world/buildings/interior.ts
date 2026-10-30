@@ -120,6 +120,32 @@ export function jackpotMesh(kind: 'skip' | 'party') {
   return m;
 }
 
+let terrazzo: THREE.Texture | null = null;
+/** Black-and-white checkerboard terrazzo with a border pattern, for the passage floor. */
+function terrazzoTexture() {
+  if (terrazzo) return terrazzo;
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 512;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#d8d4cc'; g.fillRect(0, 0, 256, 512);
+  const s = 18;
+  g.save();
+  g.beginPath(); g.rect(30, 30, 196, 452); g.clip();
+  g.translate(128, 256); g.rotate(Math.PI / 4);
+  for (let x = -24; x < 24; x++) for (let y = -24; y < 24; y++) if ((x + y) % 2 === 0) { g.fillStyle = '#1c1c1c'; g.fillRect(x * s, y * s, s, s); }
+  g.restore();
+  // Border: a dark band with a row of small diamonds.
+  g.strokeStyle = '#1c1c1c'; g.lineWidth = 6; g.strokeRect(14, 14, 228, 484); g.strokeRect(28, 28, 200, 456);
+  g.fillStyle = '#1c1c1c';
+  for (let y = 24; y < 500; y += 16) for (const x of [21, 235]) { g.beginPath(); g.moveTo(x, y - 5); g.lineTo(x + 5, y); g.lineTo(x, y + 5); g.lineTo(x - 5, y); g.fill(); }
+  // Speckle.
+  for (let i = 0; i < 2500; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.15)'; g.fillRect(Math.random() * 256, Math.random() * 512, 1.5, 1.5); }
+  terrazzo = new THREE.CanvasTexture(c);
+  terrazzo.colorSpace = THREE.SRGBColorSpace;
+  terrazzo.anisotropy = 4;
+  return terrazzo;
+}
+
 export function buildInterior(b: Building, layout: InteriorLayout): Interior {
   const { W, D, H, floors } = layout;
   const L = PASSAGE_L, PW = PASSAGE_W;
@@ -127,14 +153,37 @@ export function buildInterior(b: Building, layout: InteriorLayout): Interior {
   const dark = 0x2a2724;
   const parts: Part[] = [];
 
-  // Passage: floor, ceiling, walls with a darker dado, mailboxes, the closed gate behind you.
-  bx(parts, PW, 0.1, L, 0, -0.05, -L / 2, 0x8d877c);
-  bx(parts, PW + 0.6, 0.3, L, 0, 4.35, -L / 2, 0xe6dfcf);
+  // Passage (kapualj), after reference/lonyay-utca/gateway-mailboxes-bins.jpg: white tiles to
+  // waist height, pale painted plaster with simple pilasters above, a wall of grey metal
+  // mailboxes with a small grey bin, and dark grey-green half-glazed inner doors standing
+  // open onto the courtyard. The black-and-white terrazzo floor is a textured plane below.
+  bx(parts, PW + 0.6, 0.3, L, 0, 4.35, -L / 2, 0xe6e4dc);
   for (const sx of [-1, 1]) {
-    bx(parts, 0.3, 4.2, L, sx * (PW / 2 + 0.15), 2.1, -L / 2, plaster);
-    bx(parts, 0.04, 1.2, L, sx * (PW / 2 - 0.01), 0.6, -L / 2, 0x9a8a6c);
+    bx(parts, 0.3, 4.2, L, sx * (PW / 2 + 0.15), 2.1, -L / 2, 0xe0ded6);
+    bx(parts, 0.04, 1.1, L, sx * (PW / 2 - 0.01), 0.55, -L / 2, 0xf2f2ee);
+    for (let z = -0.3; z > -L; z -= 0.3) bx(parts, 0.045, 1.1, 0.012, sx * (PW / 2 - 0.01), 0.55, z, 0xc8c8c2); // tile joints
+    bx(parts, 0.045, 0.012, L, sx * (PW / 2 - 0.01), 0.82, -L / 2, 0xc8c8c2);
+    for (let z = -1.2; z > -L + 0.5; z -= 2.2) bx(parts, 0.08, 3.0, 0.3, sx * (PW / 2 - 0.04), 2.6, z, 0xeceae2); // pilasters
   }
-  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) bx(parts, 0.12, 0.2, 0.3, -PW / 2 + 0.06, 1.2 + r * 0.24, -2 - c * 0.34, 0x3d5a45);
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) {
+    bx(parts, 0.14, 0.2, 0.26, PW / 2 - 0.07, 1.15 + r * 0.22, -2.4 - c * 0.28, 0x7a7f84);
+    bx(parts, 0.15, 0.03, 0.12, PW / 2 - 0.07, 1.22 + r * 0.22, -2.4 - c * 0.28, 0x3a3d40); // slot
+  }
+  bx(parts, 0.2, 0.32, 0.36, PW / 2 - 0.12, 0.85, -4.3, 0x9a9ea2); // small wall bin
+  // Inner double doors, open at the courtyard end of the passage.
+  const doorC = 0x2f3a36;
+  for (const sx of [-1, 1]) {
+    const hx = sx * (PW / 2 - 0.05);
+    const leaf = new THREE.BoxGeometry(0.06, 2.9, PW / 2 - 0.1).translate(0, 1.45, (PW / 2 - 0.1) / 2);
+    leaf.rotateY(sx * 0.15).translate(hx, 0, -L + 0.15);
+    const c = new THREE.Color(doorC);
+    const arr = new Float32Array(leaf.attributes.position.count * 3);
+    for (let i = 0; i < arr.length; i += 3) arr.set([c.r, c.g, c.b], i);
+    leaf.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+    parts.push(leaf);
+    for (let r = 0; r < 4; r++) bx(parts, 0.07, 0.3, 0.32, hx - sx * 0.01, 1.7 + r * 0.33, -L + 0.55 + (r % 2) * 0.05, 0x8fa6b0); // glazing
+  }
+  bx(parts, PW, 0.25, 0.2, 0, 3.05, -L + 0.05, doorC); // door head
   bx(parts, PW + 0.4, 4.2, 0.2, 0, 2.1, 0.25, 0x5a3a22);
   bx(parts, 0.06, 4.2, 0.22, 0, 2.1, 0.12, 0x3a2614);
 
@@ -209,6 +258,9 @@ export function buildInterior(b: Building, layout: InteriorLayout): Interior {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   group.add(mesh);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(PW, L).rotateX(-Math.PI / 2).translate(0, 0.01, -L / 2), new THREE.MeshLambertMaterial({ map: terrazzoTexture() }));
+  floor.receiveShadow = true;
+  group.add(floor);
   group.position.set(INTERIOR_ORIGIN[0], 0, INTERIOR_ORIGIN[1]);
 
   // Collision in world coordinates.

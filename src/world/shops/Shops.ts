@@ -5,7 +5,7 @@ import type { Interactable } from '../../player/Interaction';
 import type { BuildingHost } from '../buildings/BuildingSystem';
 import { pointInPolygon } from '../collision';
 import { buildHall, buildSpar, type ShopInterior } from './interiors';
-import { signTexture } from '../landmarks/common';
+import { buildSparFront, type SparFront } from './sparFront';
 import { SHOP_OPEN } from '../../state/balance';
 
 // The two return points as walk-in shops: SPAR on Kinizsi utca and the Central Market
@@ -59,24 +59,25 @@ export class Shops {
     });
   }
 
-  /** SPAR shopfront on the street: green sign band with a red stripe, glass doors, lit window. */
+  /** SPAR shopfronts in the style of reference/lonyay-utca/spar-corner.jpg. */
+  readonly fronts: SparFront[] = [];
   private sparFront(d: { x: number; z: number; facing: number }) {
-    const g = new THREE.Group();
-    g.position.set(d.x, 0, d.z);
-    g.rotation.y = d.facing;
-    const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(7, 1.1), new THREE.MeshLambertMaterial({ map: signTexture('SPAR', '#2b8a3e', '#ffffff', 512, 80, 'bold 60px system-ui, sans-serif', '#c8262c'), emissive: 0xffffff, emissiveIntensity: 0.06 }));
-    signMesh.position.set(0, 3.9, 0.95);
-    signMesh.rotation.y = Math.PI;
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(6.5, 2.9), new THREE.MeshLambertMaterial({ color: 0x8fb0b8, emissive: 0xfff4dc, emissiveIntensity: 0.12 }));
-    glass.position.set(0, 1.5, 0.96);
-    glass.rotation.y = Math.PI;
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.9, 0.1), new THREE.MeshLambertMaterial({ color: 0x2b2b2b }));
-    frame.position.set(0, 1.5, 0.93);
-    const mat = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.2), new THREE.MeshLambertMaterial({ color: 0x3a3a3a }));
-    mat.rotation.x = -Math.PI / 2;
-    mat.position.set(0, 0.07, 0.2);
-    g.add(signMesh, glass, frame, mat);
-    this.street.add(g);
+    const f = buildSparFront(d, 3);
+    this.fronts.push(f);
+    this.street.add(f.group);
+  }
+
+  /** A SPAR front that cannot be entered (the Lónyay corner from Alex's photo). */
+  addDecorativeFront(d: { x: number; z: number; facing: number }) {
+    const f = buildSparFront(d, 4);
+    this.fronts.push(f);
+    this.street.add(f.group);
+    return f;
+  }
+
+  /** Grilles down while shut, neon brighter at night. */
+  updateFronts(night: number) {
+    for (const f of this.fronts) { f.setClosed(!this.state.shopsOpen); f.setNight(night); }
   }
 
   private setLights(id: ShopId | null) {

@@ -50,8 +50,51 @@ if (vStyle.y > 0.5) {
     float col = floor(lu / sx);
     float fx = fract(lu / sx) * sx - sx * 0.5;
     bool inCols = lu > 0.0 && lu < n * sx;
-    if (v < 0.55) {
+    if (kind > 3.5) {
+      // Kind 4, the Református gimnázium: red brick with cream stone bands, paired
+      // round-arched windows with a little column between, an arcade on the ground floor.
+      vec3 cream = vec3(0.86, 0.8, 0.66);
+      float fv = v - groundH;
+      float fy = fract(max(fv, 0.0) / floorH) * floorH;
+      float brickRow = step(0.88, fract(v / 0.075));
+      diffuseColor.rgb = base * (1.0 - brickRow * 0.18);
+      if (v < 0.7) diffuseColor.rgb = vec3(0.55, 0.52, 0.47);
+      else if (v < groundH) {
+        float arch = box1(fx, 0.62) * step(0.7, v) * step(v, groundH - 1.0);
+        float archTop = step(length(vec2(fx, v - (groundH - 1.0))), 0.62);
+        float rim = box1(fx, 0.8) * step(0.7, v) * step(v, groundH - 0.8) + step(length(vec2(fx, v - (groundH - 1.0))), 0.8);
+        if (inCols) {
+          diffuseColor.rgb = mix(diffuseColor.rgb, cream, min(1.0, rim));
+          diffuseColor.rgb = mix(diffuseColor.rgb, glass, min(1.0, arch + archTop));
+        }
+      } else if (inCols) {
+        float cy = 1.7;
+        float w1 = box1(abs(fx) - 0.36, 0.25) * box1(fy - cy, 0.85);
+        float a1 = step(length(vec2(abs(fx) - 0.36, fy - cy - 0.85)), 0.25);
+        float surround = box1(fx, 0.78) * box1(fy - cy - 0.1, 1.15);
+        diffuseColor.rgb = mix(diffuseColor.rgb, cream, surround * 0.85);
+        float g = min(1.0, w1 + a1) * (1.0 - box1(fx, 0.05));
+        diffuseColor.rgb = mix(diffuseColor.rgb, glass, g);
+        facadeLit = g * step(0.6, fhash(vec3(seed * 7.0, col, floor(fv / floorH))));
+      }
+      // Cream bands at every storey and under the cornice.
+      if (v > groundH - 0.4) diffuseColor.rgb = mix(diffuseColor.rgb, cream, box1(fy - 0.15, 0.18));
+    } else if (v < 0.55) {
       diffuseColor.rgb = base * 0.72; // plinth
+    } else if (v < groundH && fhash(vec3(seed, 3.0, 1.0)) < 0.45 && kind < 1.5) {
+      // Rough rusticated sandstone ground floor with tall barred windows and plain dark doors
+      // (reference/lonyay-utca): staggered blocks in grey-beige stone.
+      vec3 stone = vec3(0.6, 0.56, 0.48) * (0.92 + 0.16 * fhash(vec3(floor(u / 0.9 + step(0.5, fract(v / 0.9)) * 0.5), floor(v / 0.45), seed)));
+      float joint = max(step(0.93, fract(v / 0.45)), step(0.96, fract(u / 0.9 + step(0.5, fract(v / 0.9)) * 0.5)));
+      diffuseColor.rgb = stone * (1.0 - joint * 0.35);
+      if (inCols && kind > 0.5) {
+        float w = 0.55;
+        float win = box1(fx, w) * step(1.0, v) * step(v, groundH - 0.8);
+        float bars = step(0.8, fract((fx + w) / 0.14));
+        diffuseColor.rgb = mix(diffuseColor.rgb, mix(glass, vec3(0.08), bars), win);
+        facadeLit = win * (1.0 - bars) * step(0.6, fhash(vec3(seed, col, 9.0)));
+      }
+      diffuseColor.rgb = mix(diffuseColor.rgb, frame, step(groundH - 0.32, v));
     } else if (v < groundH) {
       // Ground floor: rusticated plaster, shop windows on street facades.
       float rust = step(0.92, fract(v / 0.45));
