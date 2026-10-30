@@ -11,7 +11,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | `raday-utca/` | Ráday utca, the café and bar street | Done (M11) |
 | `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Done (M11) |
 | `kalvin-ter/` | Kálvin tér, the big square and junction at the north corner | Done (M11) |
-| `bakats-ter/` | Bakáts tér, the church square | Waiting for M11 |
+| `bakats-ter/` | Bakáts tér, the church square | Done (M11) |
 | `bins/` | Every kind of bin in the game: street bins, wheelie bins, skips, courtyard bins | Done (M11) |
 | `../mohu-repont-machines.png` | The REpont machine pair (used in M5) | Used |
 

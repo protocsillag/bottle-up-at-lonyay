@@ -113,7 +113,8 @@ export class Lamps {
   private lights: THREE.PointLight[] = [];
   private refresh = 0;
 
-  constructor(city: CityData, place: Placement) {
+  /** extraRaday: additional Ráday-style lamps (Bakáts tér paths): position and arm angle. */
+  constructor(city: CityData, place: Placement, extraRaday: { x: number; z: number; angle: number }[] = []) {
     this.group.name = 'lamps';
     let side = 1;
     const kinds: (0 | 1 | 2 | 3)[] = [];
@@ -156,6 +157,11 @@ export class Lamps {
         }
         walked += len;
       }
+    }
+    for (const e of extraRaday) {
+      this.positions.push(new THREE.Vector3(e.x, e.angle, e.z));
+      kinds.push(1);
+      spans.push([0, 0]);
     }
     const n = this.positions.length;
     const count = (k: number) => kinds.filter((v) => v === k).length;

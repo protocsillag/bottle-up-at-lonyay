@@ -244,34 +244,11 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
     }
   }
 
-  // ---------------------------------------------------------------- Bakáts tér church tower
+  // ---------------------------------------------------------------- Bakáts tér church nave roof
+  // (the brick tower, spires, portal and railing are in bakats.ts since M11)
   const church = city.buildings.find((b) => b.name === 'Assisi Szent Ferenc-templom');
   if (church) {
-    // The tower stands at the square-facing end; Bakáts tér is to the north-west.
     const o = obb(church.outer);
-    const sq = city.landmarks.bakatsTer ?? [o.cx, o.cz - 50];
-    const s = (sq[0] - o.cx) * o.ux + (sq[1] - o.cz) * o.uz > 0 ? 1 : -1;
-    const tx = o.cx + o.ux * (o.hl - 3) * s, tz = o.cz + o.uz * (o.hl - 3) * s;
-    const t = new THREE.Group();
-    const stone = new THREE.MeshLambertMaterial({ color: 0xe2d8c2 });
-    t.add(new THREE.Mesh(new THREE.BoxGeometry(7, 40, 7).translate(0, 20, 0), stone));
-    t.add(new THREE.Mesh(new THREE.BoxGeometry(7.6, 1, 7.6).translate(0, 26, 0), new THREE.MeshLambertMaterial({ color: 0xc8bea8 })));
-    const tiles = zsolnayTexture(['#2f7a4a', '#e0b23a', '#7a3a26', '#3a2a20']);
-    tiles.repeat.set(3, 6);
-    t.add(new THREE.Mesh(new THREE.ConeGeometry(5, 22, 8).translate(0, 51, 0), new THREE.MeshLambertMaterial({ map: tiles })));
-    t.add(new THREE.Mesh(new THREE.BoxGeometry(0.25, 3, 0.25).translate(0, 63, 0), new THREE.MeshLambertMaterial({ color: 0xd8b84a })));
-    t.add(new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.25).translate(0, 63.5, 0), new THREE.MeshLambertMaterial({ color: 0xd8b84a })));
-    // Clock faces and belfry openings.
-    for (let i = 0; i < 4; i++) {
-      const clock = new THREE.Mesh(new THREE.CircleGeometry(1.4, 20), new THREE.MeshLambertMaterial({ color: 0xf2efe6 }));
-      clock.position.set(Math.sin((i * Math.PI) / 2) * 3.52, 31, Math.cos((i * Math.PI) / 2) * 3.52);
-      clock.rotation.y = (i * Math.PI) / 2;
-      t.add(clock);
-      const bel = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 4.5), new THREE.MeshLambertMaterial({ color: 0x1a1612 }));
-      bel.position.set(Math.sin((i * Math.PI) / 2) * 3.52, 36.5, Math.cos((i * Math.PI) / 2) * 3.52);
-      bel.rotation.y = (i * Math.PI) / 2;
-      t.add(bel);
-    }
     // Steep roof over the nave.
     const roofTiles = zsolnayTexture(['#7a3a26', '#2f7a4a', '#c9622e', '#3a2a20']);
     roofTiles.repeat.set(6, 3);
@@ -280,9 +257,6 @@ export function buildDressing(city: CityData, place: Placement): Dressing {
     nave.position.set(o.cx, church.h + 6, o.cz);
     nave.rotation.y = o.rotY;
     group.add(nave);
-    t.position.set(tx, 0, tz);
-    t.traverse((m) => { if (m instanceof THREE.Mesh) m.castShadow = true; });
-    group.add(t);
   }
 
   // ---------------------------------------------------------------- Iparművészeti Múzeum: Zsolnay roof and dome

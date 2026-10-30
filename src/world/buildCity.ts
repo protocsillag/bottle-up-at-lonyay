@@ -175,11 +175,12 @@ function buildingLook(b: CityData['buildings'][number], seed: number, opts: Buil
   const name = b.name ?? '';
   let color = opts.colors?.get(b.id) ?? PLASTER[Math.floor(seed * PLASTER.length)];
   let kind = 1;
-  if (opts.brick?.has(b.id)) { kind = 4; color = 0x9a4a35; }
-  if (opts.palace?.has(b.id)) kind = 3;
   if (/palota|Múzeum|Egyetem|Corvinus|Sóház|Bánffy|Wenckheim|Almássy|Pálffy|Zichy|Hadik|Károlyi/i.test(name)) { kind = 3; color = [0xe8dcc0, 0xd8c8a8, 0xe3d3b0][Math.floor(seed * 3)]; }
   if (/templom|plébánia|kápolna/i.test(name)) { kind = 3; color = 0xe0d6c0; }
   if (/Corvinus Egyetem$/.test(name)) color = 0xd7c9a8;
+  // Hand-picked looks from the M11 photo passes win over the name rules.
+  if (opts.brick?.has(b.id)) { kind = 4; color = 0x9a4a35; }
+  if (opts.palace?.has(b.id)) kind = 3;
   if (b.h < 7) kind = 0; // kiosks, sheds, garages
   const wall = new THREE.Color(color);
   // Slight per-building variation so neighbours never match exactly.

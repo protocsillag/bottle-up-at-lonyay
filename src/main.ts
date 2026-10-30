@@ -17,6 +17,7 @@ import { buildLot, buildRaday, prepareRaday } from './world/landmarks/raday';
 import { excludeGateAreas } from './world/buildings/gates';
 import { buildErkel, prepareErkel } from './world/landmarks/erkel';
 import { buildKalvin } from './world/landmarks/kalvin';
+import { bakatsChurchId, buildBakats } from './world/landmarks/bakats';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -110,7 +111,7 @@ const cityGroup = buildCity(city, {
   palace: new Set(erkelPrep.palace ? [erkelPrep.palace.b.id] : []),
   colors: cityColors,
   noKerb: new Set(['Ráday utca']),
-  brick: new Set(gimnazium ? [gimnazium.b.id] : []),
+  brick: new Set([gimnazium?.b.id, bakatsChurchId(city)].filter((id): id is string => !!id)),
 });
 if (gimnazium) cityGroup.add(buildGimnaziumExtras(gimnazium));
 cityGroup.add(buildStreetSigns(city));
@@ -145,7 +146,12 @@ const items = new ItemSystem(city, placement, state, {
 scene.add(items.group);
 for (const c of hall?.colliders ?? []) world.addBox(c.x, c.z, c.w, c.d, c.rot);
 
-const lamps = new Lamps(city, placement);
+const bakats = buildBakats(city, placement);
+cityGroup.add(bakats.group);
+for (const c of bakats.colliders) world.addBox(c.x, c.z, c.w, c.d, c.rot);
+const lamps = new Lamps(city, placement, bakats.lamps);
+// Bakáts tér benches join the OSM ones (drawn above) for street people and evening groups.
+city.benches.push(...bakats.benches);
 scene.add(lamps.group);
 for (const [x, z] of lamps.posts) world.addBox(x, z, 0.3, 0.3);
 const dogMess = new DogMess(placement, state);
@@ -296,7 +302,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -509,6 +515,7 @@ function frame() {
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
   raday.update((state.minute / 60) % 24, lighting.lamps);
+  bakats.update(dt, player.position.x, player.position.z, player.speed);
   facadeUniforms.uNight.value = lighting.lamps;
   shops.updateFronts(lighting.lamps);
   sound.ambience(lighting.night, !inside() && screen === 'run', dt);
