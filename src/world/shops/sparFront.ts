@@ -52,7 +52,8 @@ function textures() {
 
 export interface SparFront { group: THREE.Group; setClosed(closed: boolean): void; setNight(n: number): void; colliders: { x: number; z: number; w: number; d: number; rot: number }[]; }
 
-export function buildSparFront(d: { x: number; z: number; facing: number }, arches = 3): SparFront {
+/** door: the middle arch is the shop's glazed entrance (the walk-in City Spar). */
+export function buildSparFront(d: { x: number; z: number; facing: number }, arches = 3, door = false): SparFront {
   const t = textures();
   const g = new THREE.Group();
   g.position.set(d.x, 0, d.z);
@@ -78,6 +79,7 @@ export function buildSparFront(d: { x: number; z: number; facing: number }, arch
     win.position.set(x, 0, 0.72);
     win.rotation.y = Math.PI;
     g.add(win);
+    if (door && i === Math.floor(arches / 2)) g.add(entrance(x));
     // Black fascia board across the arch with the name.
     const fascia = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 0.5), new THREE.MeshLambertMaterial({ map: t.fascia, emissive: 0xffffff, emissiveMap: t.fascia, emissiveIntensity: 0.2 }));
     fascia.position.set(x, 3.0, 0.7);
@@ -93,6 +95,7 @@ export function buildSparFront(d: { x: number; z: number; facing: number }, arch
     gr.visible = false;
     grilles.push(gr);
     g.add(gr);
+    if (door && i === Math.floor(arches / 2)) continue;
     const sill = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.12, 0.3).translate(x, 0.66, 0.6), black);
     g.add(sill);
   }
@@ -122,6 +125,7 @@ export function buildSparFront(d: { x: number; z: number; facing: number }, arch
   for (let i = 0; i < 4; i++) {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.75, 8).translate(0, 0.375, 0), green);
     const lx = -total / 2 + i * 1.6;
+    if (door && Math.abs(lx) < 1.3) continue; // keep the entrance clear
     b.position.set(lx, 0, -2.7);
     g.add(b);
     const w = toW(lx, -2.7);
@@ -136,4 +140,43 @@ export function buildSparFront(d: { x: number; z: number; facing: number }, arch
     setClosed(closed) { for (const gr of grilles) gr.visible = closed; glass.emissiveIntensity = closed ? 0.02 : 0.12; },
     setNight(n) { neonMat.color.setRGB(0.69 + 0.31 * n, 0.19 + 0.2 * n, 0.16 + 0.15 * n); },
   };
+}
+
+/** The entrance in the middle arch: green-framed sliding glass doors to the ground, a lit
+ *  "BEJÁRAT" sign over them, opening hours on the glass, a doormat and a step. */
+function entrance(x: number) {
+  const g = new THREE.Group();
+  const green = new THREE.MeshLambertMaterial({ color: 0x2b8a3e });
+  const glassIn = new THREE.MeshLambertMaterial({ color: 0xbfe0e6, emissive: 0xfff2d8, emissiveIntensity: 0.45, transparent: true, opacity: 0.85 });
+  // Dark reveal so the doorway reads as an opening.
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.5, 0.05).translate(x, 1.25, 0.74), new THREE.MeshLambertMaterial({ color: 0x1a1a1a })));
+  for (const s of [-1, 1]) {
+    const leaf = new THREE.Mesh(new THREE.BoxGeometry(0.98, 2.35, 0.03).translate(x + s * 0.5, 1.2, 0.7), glassIn);
+    g.add(leaf);
+    for (const [w, h, lx, ly] of [[1.0, 0.08, s * 0.5, 2.35], [1.0, 0.08, s * 0.5, 0.06], [0.08, 2.35, s * 0.04, 1.2], [0.08, 2.35, s * 0.96, 1.2], [1.0, 0.05, s * 0.5, 1.05]] as const) {
+      g.add(new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.05).translate(x + lx, ly, 0.68), green));
+    }
+  }
+  const tex = (text: string, bg: string, fg: string, w: number, h: number, font: string) => {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cx = c.getContext('2d')!;
+    cx.fillStyle = bg; cx.fillRect(0, 0, w, h);
+    cx.fillStyle = fg; cx.font = font; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    text.split('\n').forEach((line, i, all) => cx.fillText(line, w / 2, h / 2 + (i - (all.length - 1) / 2) * h / all.length));
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 0.38), new THREE.MeshLambertMaterial({ map: tex('BEJÁRAT', '#2b8a3e', '#ffffff', 512, 102, 'bold 64px system-ui, sans-serif'), emissive: 0xffffff, emissiveIntensity: 0.35 }));
+  sign.position.set(x, 2.62, 0.66);
+  sign.rotation.y = Math.PI;
+  const hours = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.3), new THREE.MeshLambertMaterial({ map: tex('NYITVA\n6–24', '#ffffff', '#c8262c', 128, 92, 'bold 30px system-ui, sans-serif') }));
+  hours.position.set(x + 0.5, 1.5, 0.66);
+  hours.rotation.y = Math.PI;
+  // Doormat and a stone step on the pavement.
+  const mat = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.03, 0.9).translate(x, 0.07, 0.15), new THREE.MeshLambertMaterial({ color: 0x2a3a2e }));
+  const step = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 0.5).translate(x, 0.04, 0.5), new THREE.MeshLambertMaterial({ color: 0xb8aea0 }));
+  g.add(sign, hours, mat, step);
+  return g;
 }

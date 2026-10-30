@@ -551,15 +551,15 @@ function frame() {
       const hit = player.world.raycast(player.position.x, player.position.z, player.position.x + fx * 1.6, player.position.z + fz * 1.6);
       if (hit < 1) {
         player.freeze = TIPSY.peeSeconds;
+        player.freezePose = 'pee';
         peeTimer = TIPSY.peeSeconds;
+        puddles.startStream(player.position.x, player.position.z, player.facing, hit * 1.6, TIPSY.peeSeconds);
         sound.play('stream');
       } else state.toast('Find a wall first', 'info');
     }
     if (peeTimer > 0) {
       peeTimer -= dt;
       if (peeTimer <= 0) {
-        const fx = -Math.sin(player.facing), fz = -Math.cos(player.facing);
-        puddles.add(player.position.x + fx * 0.6, player.position.z + fz * 0.6);
         state.stats.wallsWatered++;
         say('pee_sigh', 1.5);
         if (buildings.inside) buildings.peed();

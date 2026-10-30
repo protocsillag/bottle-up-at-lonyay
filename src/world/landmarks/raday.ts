@@ -27,6 +27,7 @@ export interface RadayPrep { lot: { b: Building; front: Facade } | null; art: Fa
  *  stretch, one-way for the rest, the empty lot (its building is removed) and the
  *  Art Nouveau house (picked here so its colour can go into the city colour map). */
 export function prepareRaday(city: CityData): RadayPrep {
+  fillRadayGaps(city);
   for (const r of city.roads) {
     if (r.name !== RADAY || r.kind !== 'road') continue;
     if (r.pts.every((p) => p[1] < CAR_FREE_NORTH_OF)) r.nocars = 1;
@@ -51,6 +52,62 @@ export function prepareRaday(city: CityData): RadayPrep {
     .filter((f) => f.len > 12 && f.len < 30 && f.b.h >= 14 && (!lot || Math.hypot(f.a[0] - lot.front.a[0], f.a[1] - lot.front.a[1]) > 40))
     .sort((p, q) => hash(p.b.id) - hash(q.b.id))[0] ?? null;
   return { lot, art };
+}
+
+/** The baked map misses Ráday's middle stretch (Köztelek utca to Biblia utca, ~230 m):
+ *  join loose Ráday ends that face each other across open ground with a new way that runs
+ *  through the cross streets' junction nodes, so walkers, cars and the dressing follow it. */
+function fillRadayGaps(city: CityData) {
+  const rs = city.roads.filter((r) => r.name === RADAY && r.kind === 'road');
+  const key = (p: Vec2) => `${p[0]},${p[1]}`;
+  const deg = new Map<string, number>();
+  for (const r of rs) for (const p of [r.pts[0], r.pts[r.pts.length - 1]]) deg.set(key(p), (deg.get(key(p)) ?? 0) + 1);
+  const ends = rs.filter((r) => deg.get(key(r.pts[r.pts.length - 1])) === 1);
+  const starts = rs.filter((r) => deg.get(key(r.pts[0])) === 1);
+  const others = city.roads.filter((r) => r.kind === 'road' && !r.bridge && r.name !== RADAY);
+  for (const e of ends) {
+    const a = e.pts[e.pts.length - 1], a0 = e.pts[e.pts.length - 2];
+    const dir: Vec2 = [a[0] - a0[0], a[1] - a0[1]];
+    const dl = Math.hypot(dir[0], dir[1]) || 1;
+    // The nearest loose start ahead of this end, roughly in line with it.
+    const next = starts.filter((s) => s !== e).map((s) => ({ s, b: s.pts[0] }))
+      .filter(({ b }) => {
+        const d = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        return d > 5 && d < 300 && ((b[0] - a[0]) * dir[0] + (b[1] - a[1]) * dir[1]) / (d * dl) > 0.97;
+      })
+      .sort((p, q) => Math.hypot(p.b[0] - a[0], p.b[1] - a[1]) - Math.hypot(q.b[0] - a[0], q.b[1] - a[1]))[0];
+    if (!next) continue;
+    const b = next.b;
+    const dx = b[0] - a[0], dz = b[1] - a[1], l2 = dx * dx + dz * dz;
+    // Skip if another way already covers the line, or a building stands on it.
+    let covered = 0, blocked = false;
+    for (let t = 0.1; t < 0.95; t += 0.1) {
+      const x = a[0] + dx * t, z = a[1] + dz * t;
+      if (city.buildings.some((bd) => pointInPolygon(x, z, bd.outer))) blocked = true;
+      if ([...others, ...rs].some((r) => r.pts.some((p, i) => i > 0 && segDist(x, z, r.pts[i - 1], p) < 2))) covered++;
+    }
+    // Another stretch of Ráday already running alongside means it is no gap.
+    const parallel = rs.some((r) => r.pts.some((p) => {
+      const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2;
+      return t > 0.05 && t < 0.95 && Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dz * t) < 10;
+    }));
+    if (blocked || parallel || covered > 4) continue;
+    // Pass through junction nodes of crossing streets that touch the line.
+    const mid: { t: number; p: Vec2 }[] = [];
+    for (const r of others) for (const p of r.pts) {
+      const t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2;
+      if (t <= 0.02 || t >= 0.98) continue;
+      if (Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dz * t) < 3 && !mid.some((m) => m.p === p)) mid.push({ t, p });
+    }
+    mid.sort((p, q) => p.t - q.t);
+    city.roads.push({ kind: 'road', hw: e.hw, w: e.w, name: RADAY, pts: [a, ...mid.map((m) => m.p), b] });
+  }
+}
+
+function segDist(x: number, z: number, p: Vec2, q: Vec2) {
+  const dx = q[0] - p[0], dz = q[1] - p[1], l2 = dx * dx + dz * dz || 1;
+  const t = Math.max(0, Math.min(1, ((x - p[0]) * dx + (z - p[1]) * dz) / l2));
+  return Math.hypot(x - p[0] - t * dx, z - p[1] - t * dz);
 }
 
 // ---------------------------------------------------------------- textures
@@ -151,7 +208,7 @@ export function buildRaday(city: CityData, place: Placement, prep: RadayPrep, op
   const beige = beigeTiles(), grey = greyBlocks();
   const steel: THREE.BufferGeometry[] = [];
   for (const r of roads) {
-    const tiles = new THREE.Mesh(uvRibbon(r.pts, 7.5, 0.062, 1.0), paveMat(beige, 5));
+    const tiles = new THREE.Mesh(uvRibbon(r.pts, 9.5, 0.062, 1.0), paveMat(beige, 5)); // wall to wall
     tiles.receiveShadow = true;
     group.add(tiles);
     if (!r.nocars) {

@@ -1,5 +1,13 @@
 # Changelog
 
+## M11 follow-up: Alex's tweaks (2026-10-30)
+
+- Ráday utca is paved the whole way: the map data was missing its middle stretch (Köztelek utca to Biblia utca, about 230 m), which showed as plain grey. It is now filled in at load time, with the beige tiles from wall to wall, the grey drive strip, bollards, Ráday lamps and terraces. Cars still drive it one way.
+- The házmester is visible in the courtyard: he was being drawn 6 km away by mistake, so only his shouting showed. He now patrols with his broom, and you see him coming when he chases you out.
+- Peeing (tipsy, P) now shows it: your character stands with hands to the front and head back, a yellow arc runs to the wall, a wet streak spreads down it and a puddle grows at its foot.
+- The City Spar on Kinizsi utca has a proper entrance: green-framed glass doors in the middle arch, a lit "BEJÁRAT" sign, opening hours on the glass, a doormat and a step, with no bollard in the way.
+- Inside SPAR the till has room in front of it (shelf rows moved back, self-checkouts along the right wall) and a shelf of bread, párizsi and beer behind the cashier under an "Étel és ital itt" sign.
+
 ## M11 Real streets from Alex's photos (2026-10-30)
 
 Every folder in `reference/` reworked, each artifact capped at about 20 minutes.

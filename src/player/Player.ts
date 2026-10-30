@@ -48,6 +48,8 @@ export class Player {
   allowDebug = false;
   /** Speed multiplier (dog mess slows to 0.7). */
   speedMul = 1;
+  /** Pose held while frozen ('pee' at a wall when tipsy). */
+  freezePose: 'normal' | 'pee' = 'normal';
   onBike = false;
   /** Seconds left lying on the ground after a crash. */
   stun = 0;
@@ -114,7 +116,8 @@ export class Player {
     if (this.freeze > 0) {
       this.freeze -= dt;
       this.velocity.set(0, 0);
-      this.model.animate(dt, 0, false, false, 0);
+      this.model.animate(dt, 0, false, false, 0, this.freezePose);
+      if (this.freeze <= 0) this.freezePose = 'normal';
       this.syncMesh();
       return;
     }

@@ -72,23 +72,23 @@ export function buildSpar(origin: Vec2): ShopInterior {
     for (let k = 0; k < 4; k++) bx(parts, 0.9, 0.22, 0.7, x - 0.48 + (k % 2) * 0.96, 0.9, z - 0.38 + Math.floor(k / 2) * 0.76, PRODUCE[(i * 4 + k) % PRODUCE.length]);
     colliders.push([x, z, 2, 1.6]);
   }
-  // Shelf rows.
+  // Shelf rows, kept to the back half so the till has room in front of it.
   for (const x of [-5.5, -1.5, 2.5]) {
-    const z = -14;
-    bx(parts, 1.1, 1.8, 11, x, 0.9, z, 0xe6e6e0);
+    const z = -17;
+    bx(parts, 1.1, 1.8, 8.6, x, 0.9, z, 0xe6e6e0);
     for (let lvl = 0; lvl < 4; lvl++) {
-      for (let k = 0; k < 9; k++) {
-        bx(parts, 1.14, 0.3, 1.1, x, 0.25 + lvl * 0.42, z - 5 + k * 1.2, PRODUCE[(lvl * 3 + k + Math.round(x)) % PRODUCE.length]);
+      for (let k = 0; k < 7; k++) {
+        bx(parts, 1.14, 0.3, 1.1, x, 0.25 + lvl * 0.42, z - 3.6 + k * 1.2, PRODUCE[(lvl * 3 + k + Math.round(x)) % PRODUCE.length]);
       }
     }
-    colliders.push([x, z, 1.1, 11]);
+    colliders.push([x, z, 1.1, 8.6]);
   }
   // Fridges along the back wall.
   bx(parts, W - 2, 2.2, 0.9, 0, 1.1, -D + 0.6, 0xbfd8e0);
   colliders.push([0, -D + 0.6, W - 2, 0.9]);
-  // Self-checkouts on the right near the entrance.
+  // Self-checkouts along the right wall, behind the till.
   for (let i = 0; i < 3; i++) {
-    const x = 7.3, z = -6 - i * 2;
+    const x = 7.3, z = -14.5 - i * 2;
     bx(parts, 0.9, 1.0, 0.7, x, 0.5, z, 0x3a3a3a);
     bx(parts, 0.6, 0.45, 0.06, x - 0.1, 1.3, z, 0x1b4a7a);
     colliders.push([x, z, 0.9, 0.7]);
@@ -111,8 +111,21 @@ export function buildSpar(origin: Vec2): ShopInterior {
   bx(till, 0.82, 0.06, 2.42, 4.4, 1.03, -10, 0xd8d8d0);
   bx(till, 0.35, 0.3, 0.3, 4.4, 1.2, -10.6, 0x1b1b1b); // till screen
   bx(till, 0.5, 0.18, 0.4, 4.4, 1.15, -9.3, 0xc9a25a); // bread rolls
+  // Behind the cashier: a shelf of bread, párizsi and beer under an "Étel és ital itt" sign.
+  bx(till, 0.5, 2.0, 2.8, 6.8, 1.0, -10, 0xe6e6e0);
+  for (let lvl = 0; lvl < 4; lvl++) {
+    for (let k = 0; k < 5; k++) {
+      const c = lvl === 0 ? 0xc9a25a : lvl === 1 ? 0xe8a0a0 : lvl === 2 ? 0x3d6b2a : 0xd8a020;
+      bx(till, 0.42, lvl >= 2 ? 0.3 : 0.18, 0.4, 6.7, 0.3 + lvl * 0.45 + (lvl >= 2 ? 0.15 : 0.09), -11.1 + k * 0.55, c);
+    }
+  }
   group.add(meshOf(till));
+  const foodSign = sign('Étel és ital itt', '#c8262c', '#ffffff', 2.8, 0.55);
+  foodSign.position.set(6.5, 2.4, -10);
+  foodSign.rotation.y = -Math.PI / 2;
+  group.add(foodSign);
   colliders.push([4.4, -10, 0.8, 2.4]);
+  colliders.push([6.8, -10, 0.5, 2.8]);
   // A cashier and a couple of shoppers.
   addPeople(group, [[5.4, -10, Math.PI / 2], [-3.4, -12, 0], [0.5, -17, Math.PI]]);
   group.position.set(ox, 0, oz);

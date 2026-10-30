@@ -259,7 +259,9 @@ export class BuildingSystem {
         this.hazmester = new Hazmester(layout.patrol, interior.world);
         // Start somewhere along his loop, not at the gate.
         this.hazmester.pos.set(layout.patrol[1][0], 0, layout.patrol[1][1]);
-        interior.group.attach(this.hazmester.model.root);
+        // His position is in world coordinates (the courtyard sits at INTERIOR_ORIGIN), so
+        // he lives in this group, not in the offset interior group.
+        this.group.add(this.hazmester.model.root);
       }
     }
   }
@@ -268,7 +270,7 @@ export class BuildingSystem {
   leave(fade = true) {
     const g = this.current;
     if (!g) return;
-    if (this.hazmester) this.interior?.group.remove(this.hazmester.model.root);
+    if (this.hazmester) this.group.remove(this.hazmester.model.root);
     if (this.interior) {
       this.group.remove(this.interior.group);
       this.interior.group.traverse((o) => { if (o instanceof THREE.Mesh) o.geometry.dispose(); });

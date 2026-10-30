@@ -269,7 +269,8 @@ export class CharacterModel {
    * speed: horizontal m/s. running: sprinting (more lean, bigger stride).
    * airborne: off the ground. vy: vertical velocity, to pick a rising or falling pose.
    */
-  animate(dt: number, speed: number, running: boolean, airborne: boolean, vy: number, pose: 'normal' | 'ride' | 'fallen' = 'normal') {
+  animate(dt: number, speed: number, running: boolean, airborne: boolean, vy: number, pose: 'normal' | 'ride' | 'fallen' | 'pee' = 'normal') {
+    if (pose === 'pee') return this.pee(dt);
     this.time += dt;
     this.body.rotation.z = 0;
     this.body.position.x = 0;
@@ -311,6 +312,19 @@ export class CharacterModel {
     this.torso.rotation.y = s * 0.08 * move;
     this.head.rotation.x = lean * 0.6;
     this.animatePet(dt, speed);
+  }
+
+  /** Standing at a wall (tipsy): hands to the front, leaning back a little, head up. */
+  private pee(dt: number) {
+    this.animate(dt, 0, false, false, 0);
+    const sway = Math.sin(this.time * 1.7) * 0.04;
+    this.armL.pivot.rotation.x = this.armR.pivot.rotation.x = 0.5;
+    this.armL.pivot.rotation.z = 0.32;
+    this.armR.pivot.rotation.z = -0.32;
+    this.armL.knee.rotation.x = this.armR.knee.rotation.x = 0.9;
+    this.torso.rotation.x = 0.1;
+    this.body.rotation.z = sway;
+    this.head.rotation.x = -0.3;
   }
 
   /** Shows 0–3 carried bags: right hand, left hand, then over the shoulder. */

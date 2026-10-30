@@ -62,7 +62,7 @@ export class Shops {
   /** SPAR shopfronts in the style of reference/lonyay-utca/spar-corner.jpg. */
   readonly fronts: SparFront[] = [];
   private sparFront(d: { x: number; z: number; facing: number }) {
-    const f = buildSparFront(d, 3);
+    const f = buildSparFront(d, 3, true);
     this.fronts.push(f);
     this.street.add(f.group);
   }
