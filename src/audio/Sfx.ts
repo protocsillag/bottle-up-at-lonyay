@@ -8,7 +8,8 @@ import type { Line, Speaker } from './lines';
 export type SfxName =
   | 'beep' | 'reject' | 'print' | 'clunk' | 'pop' | 'wipe' | 'pickup' | 'glass' | 'slam' | 'creak'
   | 'buzz' | 'crackle' | 'squelch' | 'bell' | 'ching' | 'step' | 'click' | 'search' | 'bag' | 'shout'
-  | 'tick' | 'honk' | 'thud' | 'stream' | 'kick' | 'till' | 'gulp' | 'munch';
+  | 'tick' | 'honk' | 'thud' | 'stream' | 'kick' | 'till' | 'gulp' | 'munch'
+  | 'whoosh' | 'hit' | 'block' | 'grunt' | 'cheer' | 'ko' | 'fire';
 
 export type VoiceMode = 'auto' | 'speech' | 'off';
 
@@ -186,6 +187,14 @@ export class Sound {
       case 'kick': this.tone('sine', 160, 60, t, 0.25, 0.5 * v); this.hiss(t + 0.05, 0.4, 0.15 * v, 'bandpass', 900, 1); for (let i = 0; i < 5; i++) this.tone('triangle', 2000 + Math.random() * 1500, 1800, t + 0.1 + Math.random() * 0.4, 0.08, 0.05 * v); break;
       case 'till': this.tone('sine', 1200, 1200, t, 0.08, 0.1 * v); this.tone('sine', 1800, 1800, t + 0.09, 0.15, 0.1 * v); break;
       case 'gulp': for (let i = 0; i < 3; i++) this.tone('sine', 300, 180, t + i * 0.25, 0.12, 0.15 * v); break;
+      // M13 fight sounds.
+      case 'whoosh': this.hiss(t, 0.14, 0.12 * v, 'bandpass', 900, 1.2, 2600); break;
+      case 'hit': this.tone('sine', 150, 50, t, 0.16, 0.55 * v); this.hiss(t, 0.08, 0.3 * v, 'lowpass', 1800); break;
+      case 'block': this.tone('square', 320, 260, t, 0.06, 0.12 * v); this.hiss(t, 0.05, 0.15 * v, 'highpass', 3000); break;
+      case 'grunt': this.tone('sawtooth', 140 + Math.random() * 30, 90, t, 0.18, 0.07 * v); break;
+      case 'cheer': for (let i = 0; i < 6; i++) this.hiss(t + i * 0.12, 0.35, 0.05 * v, 'bandpass', 700 + Math.random() * 900, 2); break;
+      case 'ko': this.tone('sine', 220, 40, t, 0.6, 0.6 * v); for (let i = 0; i < 4; i++) this.tone('triangle', 2400, 2200, t + 0.3 + i * 0.12, 0.06, 0.06 * v); break;
+      case 'fire': for (let i = 0; i < 5; i++) this.hiss(t + Math.random() * 0.35, 0.015 + Math.random() * 0.02, 0.05 * v, 'bandpass', 2200 + Math.random() * 1800, 3); break;
       case 'munch': for (let i = 0; i < 4; i++) this.hiss(t + i * 0.2, 0.08, 0.1 * v, 'bandpass', 1500, 2); break;
     }
   }
@@ -200,7 +209,7 @@ export class Sound {
     const u = new SpeechSynthesisUtterance(line.hu.replace(/\.\.\./g, ', '));
     u.voice = this.huVoice;
     u.lang = this.huVoice.lang;
-    const p: Record<Speaker, [number, number]> = { granny: [1.5, 0.85], grandpa: [0.6, 0.85], hazmester: [0.5, 1.15], street: [0.8, 0.95], player: [1, 1], machine: [1, 1], cashier: [1.2, 1.05], driver: [0.7, 1.2] };
+    const p: Record<Speaker, [number, number]> = { granny: [1.5, 0.85], grandpa: [0.6, 0.85], hazmester: [0.5, 1.15], zsiga: [0.4, 0.9], street: [0.8, 0.95], player: [1, 1], machine: [1, 1], cashier: [1.2, 1.05], driver: [0.7, 1.2] };
     [u.pitch, u.rate] = p[line.who];
     u.volume = this.volumes.master * this.volumes.voice;
     speechSynthesis.cancel();

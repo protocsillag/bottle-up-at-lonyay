@@ -111,6 +111,9 @@ export class Lamps {
   private poolMat: THREE.MeshBasicMaterial;
   private windowMat = new THREE.MeshLambertMaterial({ color: 0x2d3640, emissive: 0xffd28a, emissiveIntensity: 0 });
   private lights: THREE.PointLight[] = [];
+  /** A pooled light lent out (the M13 fire barrel); it keeps the scene's light count fixed. */
+  private lent: THREE.PointLight | null = null;
+  borrowLight(): THREE.PointLight { if (!this.lent) this.lent = this.lights[this.lights.length - 1]; return this.lent; }
   private refresh = 0;
 
   /** extraRaday: additional Ráday-style lamps (Bakáts tér paths): position and arm angle. */
@@ -282,14 +285,15 @@ export class Lamps {
     if (this.refresh > 0) return;
     this.refresh = 0.4;
     const on = lamps > 0.3;
-    if (!on) { for (const l of this.lights) l.intensity = 0; return; }
+    const pool = this.lights.filter((l) => l !== this.lent);
+    if (!on) { for (const l of pool) l.intensity = 0; return; }
     // Move the few real lights to the nearest lamps.
     const near = this.positions
       .map((p) => [p, (p.x - px) ** 2 + (p.z - pz) ** 2] as const)
       .sort((a, b) => a[1] - b[1])
-      .slice(0, POOL_LIGHTS);
+      .slice(0, pool.length);
     near.forEach(([p], i) => {
-      const l = this.lights[i];
+      const l = pool[i];
       l.position.set(p.x, 4.2, p.z);
       l.intensity = 18 * lamps;
     });

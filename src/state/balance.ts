@@ -125,6 +125,36 @@ export const HUNGER = {
   speed: 0.6, // walking speed multiplier when starving (and no running)
 };
 export const TILL = { food: 100, beer: 200 };
+/** M13 fire barrel fight. Distances are in fight units: the arena is 1600 wide, a
+ *  fighter about 360 tall (40% of the 900-unit-high screen). Times in real seconds. */
+export const FIGHT = {
+  health: 100,
+  time: 180,
+  walk: 270,
+  jumpSpeed: 980,
+  gravity: 2700,
+  arena: [140, 1460] as const,
+  // Moves: startup, active and recovery times, reach, damage.
+  punch: { startup: 0.07, active: 0.08, recovery: 0.16, reach: 150, damage: 6 },
+  kick: { startup: 0.15, active: 0.1, recovery: 0.26, reach: 215, damage: 9 },
+  jumpKick: { reach: 190, damage: 12 },
+  special: { startup: 0.6, active: 0.12, recovery: 0.4, reach: 230, damage: 18, cooldown: 10 },
+  zsigaSpecial: { startup: 0.55, active: 0.12, recovery: 0.45, reach: 200, damage: 16, every: [8, 12] as const },
+  blockedDamage: 1,
+  hitStun: 0.32,
+  blockStun: 0.16,
+  knockback: 70,
+  blockKnockback: 28,
+  knockdown: 1.1,
+  getUpInvuln: 0.6,
+  /** Zsiga's brain: reaction time, block chance, gap between attacks. */
+  ai: { react: [0.35, 0.5] as const, block: 0.3, attackGap: [0.95, 1.7] as const, range: 175, walk: 0.8 },
+  /** Zsiga is big and slow: his punches and kicks wind up this much longer. */
+  zsigaWindup: 1.25,
+  /** The player's punches do +1 per tipsy level. */
+  tipsyPunch: 1,
+};
+
 export const TIPSY = {
   /** Real minutes tipsy after the 1st, 2nd and 3rd beer in a row; more beers keep the last. */
   realMinutes: [3, 4, 5] as const,

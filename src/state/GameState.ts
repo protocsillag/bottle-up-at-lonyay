@@ -35,6 +35,9 @@ export interface RunStats {
   carHits: number;
   itemsLostToCars: number;
   timesStarving: number;
+  /** The fire barrel fight (M13): null until fought. */
+  fight: 'won' | 'lost' | 'draw' | null;
+  fightItems: number;
 }
 
 export interface Toast { text: string; kind?: 'good' | 'bad' | 'info'; }
@@ -43,7 +46,7 @@ const freshStats = (): RunStats => ({
   itemsCollected: 0, itemsReturned: 0, itemsRejected: 0, glassBroken: 0, binsSearched: 0,
   doorsSlammed: 0, bellsRung: 0, dogIncidents: 0, hazmesterCatches: 0, itemsLostToHazmester: 0,
   bikeCrashes: 0, distance: 0, foodBought: 0, beersBought: 0, spentFt: 0, wallsWatered: 0, binsKicked: 0,
-  carHits: 0, itemsLostToCars: 0, timesStarving: 0,
+  carHits: 0, itemsLostToCars: 0, timesStarving: 0, fight: null, fightItems: 0,
 });
 
 export class GameState {
@@ -209,6 +212,21 @@ export class GameState {
   }
 
   /** Loses `n` random items from the bag. */
+  /** True once the fire barrel fight has been fought this run (win, lose or draw). */
+  get fightDone() { return this.stats.fight !== null; }
+
+  /** Applies the fight's stakes. Returns [items before, items after]. Money is never at stake. */
+  settleFight(result: 'won' | 'lost' | 'draw'): [number, number] {
+    const before = this.bag.length;
+    this.stats.fight = result;
+    this.stats.fightItems = before;
+    if (result === 'won') {
+      const want = Math.min(before * 2, this.capacity);
+      while (this.bag.length < want) this.bag.push({ kind: this.rng.chance(0.5) ? 'can' : 'pet', cond: 'fine' });
+    } else if (result === 'lost') this.bag = [];
+    return [before, this.bag.length];
+  }
+
   loseItems(n: number) {
     for (let i = 0; i < n && this.bag.length; i++) this.bag.splice(this.rng.int(0, this.bag.length - 1), 1);
   }

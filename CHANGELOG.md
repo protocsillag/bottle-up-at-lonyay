@@ -1,5 +1,15 @@
 # Changelog
 
+## M13 The fire barrel fight (2026-10-31)
+
+- Have a beer and four street people turn up round a burning barrel on the Nehru part, by where Kinizsi utca reaches the river: flames, sparks, a column of smoke and a firelit glow you can see from far off at night, a crackle as you get close. They warm their hands and pass a bottle round. When you sober up they wander off toward the river. No minimap marker: finding them is the point.
+- Their leader, Zsiga, a Bajnok (Zsiga the Champion, olive army parka, black beanie, fingerless gloves, scarred nose), offers one round per run: win and your haul doubles (up to what your bags hold), lose and they tip your bags into their trolley, a draw changes nothing. The offer shows the real numbers ("Now: 23 items · Win: 46 · Lose: 0"). Your money is never at stake. With an empty bag he won't fight, and once you've fought he just chats.
+- The fight is a 2D side-view brawler on its own screen: your own character from the creator against Zsiga on the Nehru part at night, with the river, the lit green Szabadság híd, the fire barrel and the other three cheering behind. Health bars, a 3:00 timer, "HARC!" at the start and "K.O." or "DÖNTETLEN" at the end, stars, dust and cans flying out of the crowd.
+- Controls: A / D walk, W jump, S crouch, J punch, K kick, J + K the bag swing ("Zsákos csapás", 18 damage, knocks him down, every 10 s), hold away from him to block. Zsiga mixes punches and kicks, blocks some attacks, and every 8–12 s winds up his belly punch ("Gyomros") with a tell.
+- Being tipsy shows: the scene sways and your punches hit a little harder.
+- The world stops during the fight: game clock, countdown, tipsy timer, hunger, traffic and people all wait. Esc pauses the fight itself.
+- The end screen shows how it went ("Beat Zsiga the Champion", "Lost to Zsiga" or "Drew with Zsiga").
+
 ## Playtest tweaks (2026-10-30)
 
 - The intro card is wider and every control sits on one line.

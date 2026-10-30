@@ -269,8 +269,9 @@ export class CharacterModel {
    * speed: horizontal m/s. running: sprinting (more lean, bigger stride).
    * airborne: off the ground. vy: vertical velocity, to pick a rising or falling pose.
    */
-  animate(dt: number, speed: number, running: boolean, airborne: boolean, vy: number, pose: 'normal' | 'ride' | 'fallen' | 'pee' = 'normal') {
+  animate(dt: number, speed: number, running: boolean, airborne: boolean, vy: number, pose: 'normal' | 'ride' | 'fallen' | 'pee' | 'warm' = 'normal') {
     if (pose === 'pee') return this.pee(dt);
+    if (pose === 'warm') return this.warm(dt);
     this.time += dt;
     this.body.rotation.z = 0;
     this.body.position.x = 0;
@@ -312,6 +313,18 @@ export class CharacterModel {
     this.torso.rotation.y = s * 0.08 * move;
     this.head.rotation.x = lean * 0.6;
     this.animatePet(dt, speed);
+  }
+
+  /** Warming the hands over the fire barrel (M13), swaying a little. */
+  private warm(dt: number) {
+    this.animate(dt, 0, false, false, 0);
+    const t = this.time;
+    this.armL.pivot.rotation.x = 1.0 + Math.sin(t * 1.3) * 0.08;
+    this.armR.pivot.rotation.x = 1.0 + Math.sin(t * 1.3 + 1) * 0.08;
+    this.armL.pivot.rotation.z = 0.25;
+    this.armR.pivot.rotation.z = -0.25;
+    this.armL.knee.rotation.x = this.armR.knee.rotation.x = 0.7;
+    this.body.rotation.z = Math.sin(t * 0.9) * 0.05;
   }
 
   /** Standing at a wall (tipsy): hands to the front, leaning back a little, head up. */

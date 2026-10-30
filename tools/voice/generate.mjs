@@ -21,6 +21,7 @@ const SPEAKERS = {
   grandpa: { model: 'hu_HU-imre-medium', length: 1.2, filter: 'asetrate=22050*0.94,aresample=22050,atempo=1.0' },
   hazmester: { model: 'hu_HU-imre-medium', length: 0.95, filter: 'asetrate=22050*0.9,aresample=22050,atempo=1.08,volume=1.6' },
   street: { model: 'hu_HU-imre-medium', length: 1.0, filter: 'asetrate=22050*0.97,aresample=22050' },
+  zsiga: { model: 'hu_HU-imre-medium', length: 1.05, filter: 'asetrate=22050*0.86,aresample=22050,atempo=1.1,volume=1.5' },
   player: { model: 'hu_HU-berta-medium', length: 1.0, filter: 'anull' },
   machine: null,
 };

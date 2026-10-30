@@ -21,6 +21,8 @@ import { buildKalvin } from './world/landmarks/kalvin';
 import { bakatsChurchId, buildBakats } from './world/landmarks/bakats';
 import { buildBalna, prepareBalna } from './world/landmarks/balna';
 import { buildSparBranding, sparBuilding } from './world/shops/sparFront';
+import { FireBarrel, findBarrelSpot } from './minigames/fight/FireBarrel';
+import { FightGame, type FightInput, type FightResult } from './minigames/fight/FightGame';
 import { buildParking } from './world/landmarks/parking';
 import { buildStreetSigns } from './world/landmarks/streetSigns';
 import { Input } from './player/input';
@@ -162,6 +164,15 @@ const lamps = new Lamps(city, placement, bakats.lamps);
 // Bakáts tér benches join the OSM ones (drawn above) for street people and evening groups.
 city.benches.push(...bakats.benches);
 scene.add(lamps.group);
+// M13: the fire barrel on the Nehru part (only while tipsy), lit by one of the lamp pool lights.
+const barrelSpot = findBarrelSpot(city, placement);
+const fire = barrelSpot ? (() => {
+  const water = city.areas.filter((a) => a.kind === 'water').flatMap((a) => a.outer);
+  const river = water.reduce((a, b) => (Math.hypot(b[0] - barrelSpot[0], b[1] - barrelSpot[1]) < Math.hypot(a[0] - barrelSpot[0], a[1] - barrelSpot[1]) ? b : a), water[0] ?? barrelSpot);
+  return new FireBarrel(barrelSpot, world, lamps.borrowLight(), river);
+})() : null;
+if (fire) scene.add(fire.group);
+const fight = new FightGame();
 for (const [x, z] of lamps.posts) world.addBox(x, z, 0.3, 0.3);
 // Parked cars, with a gap wherever a lamp post, bin, planter or kerb tree stands, so the
 // pavement is never blocked.
@@ -201,6 +212,7 @@ const host = {
   player, follow, cityWorld: world,
   setOutsideVisible(v: boolean) {
     for (const g of [cityGroup, items.group, buildings.gates.group, lamps.group, dogMess.group, bikes.group, sweeper.group, garbage.group, shops.street]) g.visible = v;
+    if (fire) fire.group.visible = v && fire.present;
   },
 };
 // No street gates on top of the shop doors.
@@ -264,6 +276,7 @@ interaction.add((x, z) => buildings.getInteractables(x, z));
 interaction.add((x, z) => items.interactables(x, z), true);
 interaction.add(() => returns.interactables());
 interaction.add(() => shops.interactables());
+interaction.add((x, z) => fire?.interactables(x, z) ?? []);
 const hud = new Hud(state);
 hud.onTick = () => sound.play('tick');
 const hungerEl = $('hunger');
@@ -291,6 +304,65 @@ traffic.onHit = () => {
 };
 shops.onTill = (d) => { tillOpen = d; tillEl.classList.remove('hidden'); };
 function closeTill() { tillOpen = null; tillEl.classList.add('hidden'); }
+// ---- M13: Zsiga's offer, the fight and its result.
+const offerEl = $('fight-offer');
+let offerOpen = false;
+let resultOpen = false;
+function closeOffer() { offerOpen = false; offerEl.classList.add('hidden'); }
+function openOffer() {
+  if (state.fightDone) { say(['zs_chat1', 'zs_chat2', 'zs_chat3'][Math.floor(Math.random() * 3)], 3.5); return; }
+  if (!state.bag.length) { say('zs_empty', 3); return; }
+  say('zs_hello', 2.6);
+  setTimeout(() => { if (offerOpen) say('zs_offer', 5); }, 2600);
+  const n = state.bag.length;
+  $('fo-stakes').textContent = `Now: ${n} item${n === 1 ? '' : 's'} · Win: ${Math.min(n * 2, state.capacity)} · Lose: 0`;
+  offerOpen = true;
+  offerEl.classList.remove('hidden');
+}
+function acceptFight() {
+  closeOffer();
+  say('zs_fight', 1.6);
+  document.body.classList.add('fight-on');
+  fight.start(look, state.tipsyLevel, (r) => showFightResult(r));
+  // The fight takes the keyboard (Esc pauses it), so give the mouse back (after starting,
+  // so the pause card stays away).
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function declineFight() { closeOffer(); say('zs_later', 2.5); }
+$('fo-yes').onclick = () => acceptFight();
+$('fo-no').onclick = () => declineFight();
+function showFightResult(r: FightResult) {
+  document.body.classList.remove('fight-on');
+  const [before, after] = state.settleFight(r);
+  $('fr-title').textContent = r === 'won' ? 'K.O.!' : r === 'lost' ? 'K.O.' : 'Döntetlen';
+  $('fr-items').textContent = r === 'lost' ? `${before} → 0` : `${before} → ${after}`;
+  $('fr-text').textContent = r === 'won'
+    ? `You beat Zsiga, a Bajnok. Your haul ${after === before * 2 ? 'doubled' : 'filled your bags'}.`
+    : r === 'lost' ? 'Elvitték a zsákmányt — they took the haul and tipped your bags into their trolley.' : 'A draw. Nothing changes.';
+  const line = r === 'won' ? 'zs_win' : r === 'lost' ? 'zs_lose' : 'zs_draw';
+  say(line, 4);
+  $('fr-zsiga').textContent = r === 'won' ? '„Szép volt, haver!” — Nice one, mate!' : r === 'lost' ? '„Holnap is itt leszek.” — I\'ll be here tomorrow too.' : '„Döntetlen. Ezt még lejátsszuk egyszer.” — We\'ll settle this one day.';
+  resultOpen = true;
+  startEl.classList.add('hidden');
+  $('fight-result').classList.remove('hidden');
+}
+function closeFightResult() {
+  resultOpen = false;
+  $('fight-result').classList.add('hidden');
+  input.lock();
+}
+$('fr-go').onclick = () => closeFightResult();
+addEventListener('keydown', (e) => { if (resultOpen && (e.code === 'Enter' || e.code === 'Space')) closeFightResult(); });
+if (fire) fire.onTalk = () => openOffer();
+function fightInput(): FightInput {
+  const k = (...codes: string[]) => codes.some((c) => input.isDown(c));
+  const p = (...codes: string[]) => codes.some((c) => input.wasPressed(c));
+  return {
+    left: k('KeyA', 'ArrowLeft'), right: k('KeyD', 'ArrowRight'), up: k('KeyW', 'ArrowUp'), down: k('KeyS', 'ArrowDown'),
+    punch: p('KeyJ'), kick: p('KeyK'), special: p('KeyL'), pause: p('Escape', 'KeyP'),
+  };
+}
+
 function buy(what: 'food' | 'beer') {
   const price = TILL[what];
   if (!state.spend(price)) { say('till_nomoney'); sound.play('reject'); return; }
@@ -324,7 +396,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, balna, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, balna, fire, fight, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -395,6 +467,8 @@ function startRun() {
   player.freeze = 0;
   traffic.reset();
   puddles.reset();
+  fire?.reset();
+  closeOffer();
   roadWorks.reset(state.rng);
   closeTill();
   hungerWarned = false;
@@ -438,6 +512,7 @@ async function endRun() {
     ['Walls watered', s.wallsWatered],
     ['Bins kicked over', s.binsKicked],
     ['Hit by cars', s.carHits],
+    ...(s.fight ? [[s.fight === 'won' ? 'Beat Zsiga the Champion' : s.fight === 'lost' ? 'Lost to Zsiga' : 'Drew with Zsiga', `${s.fightItems} items at stake`] as [string, string]] : []),
     ['Distance walked', `${(s.distance / 1000).toFixed(1)} km`],
   ];
   $('end-stats').replaceChildren(...rows.map(([k, v]) => {
@@ -475,9 +550,9 @@ $('p-quit').onclick = () => {
 };
 $('again').onclick = () => openCreator();
 $('e-title').onclick = () => show('title');
-canvas.onclick = () => { if (!input.locked && screen === 'run' && state.status === 'playing') input.lock(); };
+canvas.onclick = () => { if (!input.locked && screen === 'run' && state.status === 'playing' && !fight.active && !resultOpen) input.lock(); };
 document.addEventListener('pointerlockchange', () => {
-  startEl.classList.toggle('hidden', input.locked || screen !== 'run' || state.status !== 'playing');
+  startEl.classList.toggle('hidden', input.locked || screen !== 'run' || state.status !== 'playing' || fight.active || resultOpen);
 });
 show('title');
 
@@ -547,6 +622,12 @@ function frame() {
     input.endFrame();
     return;
   }
+  // M13: during the fight the whole world is paused and the 3D view is not drawn.
+  if (fight.active) {
+    fight.update(dt, fightInput());
+    input.endFrame();
+    return;
+  }
   const playing = state.status === 'playing' && input.locked;
   const lighting = dayNight.update(state.minute);
   lamps.update(dt, lighting.lamps, player.position.x, player.position.z);
@@ -573,7 +654,7 @@ function frame() {
     player.speedMul = (dogMess.slowed > 0 ? DOG.slowFactor : 1) * (state.starving ? HUNGER.speed : 1) * (state.tipsy ? TIPSY.speed : 1);
     player.canRun = !state.starving;
     if (!hungerWarned && state.hunger < HUNGER.warnAt && !state.starving) { hungerWarned = true; state.toast('Getting hungry — buy food at SPAR or Aldi', 'bad'); }
-    if (state.starving && !wasStarving) state.toast("Too hungry! Slow, and you can't collect until you eat.", 'bad');
+    if (state.starving && !wasStarving) state.toast('Too hungry! Slow, and too weak for bins and courtyards. Street items only until you eat.', 'bad');
     wasStarving = state.starving;
     const wobble = state.tipsy ? state.tipsyLevel * (lowFx ? 0.5 : 1) : 0;
     const drift = wobble ? Math.sin(state.realTime * 0.9) * 0.08 * wobble : 0;
@@ -582,6 +663,13 @@ function frame() {
       if (input.wasPressed('Digit2') || input.wasPressed('Numpad2')) buy('beer');
       if (input.wasPressed('KeyE') || Math.hypot(player.position.x - tillOpen.interior.till.x, player.position.z - tillOpen.interior.till.z) > 2.6) closeTill();
     }
+    // Zsiga's offer: 1 yes, 2 no; walking off or sobering up closes it.
+    if (offerOpen) {
+      if (input.wasPressed('Digit1') || input.wasPressed('Numpad1')) acceptFight();
+      else if (input.wasPressed('Digit2') || input.wasPressed('Numpad2')) declineFight();
+      else if (!fire?.present || Math.hypot(player.position.x - fire.x, player.position.z - fire.z) > 5) closeOffer();
+    }
+    if (fight.active) { input.endFrame(); return; }
     // Tipsy: P pees on the wall in front of you.
     if (state.tipsy && input.wasPressed('KeyP') && !player.onBike && player.freeze <= 0 && !mohu.active && !shops.inside) {
       const fx = -Math.sin(player.facing), fz = -Math.cos(player.facing);
@@ -659,10 +747,11 @@ function frame() {
       }
     }
     puddles.update(dt);
+    fire?.update(dt, state.tipsy, lighting.night, player.position.x, player.position.z);
     returns.update(dt, player.position.x, player.position.z);
     interaction.holdDisabledReason = player.onBike ? 'Get off the bike first (F)' : null;
     interaction.collectBlockedReason = state.starving ? 'Too weak to search — eat first (SPAR or Aldi)' : null;
-    if (tillOpen) interaction.prompt = null;
+    if (tillOpen || offerOpen) interaction.prompt = null;
     else if (!mohu.active) interaction.update(dt, input, player.position.x, player.position.z, player.facing);
     else interaction.prompt = null;
     if (input.wasPressed('KeyM')) minimap.toggleLarge();

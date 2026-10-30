@@ -16,7 +16,8 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M10 Gameplay round 2: done** (2026-10-30).
 - **M11 Real streets from Alex's photos: done** (2026-10-30). Reference folders done: `bins/`, `lonyay-utca/`, `matyas-utca/`, `raday-utca/`, `erkel-torok-pal-utca/`, `kalvin-ter/`, `bakats-ter/` (status column in `reference/README.md`).
 - **M12 Shared high scores: done** (2026-10-30). Alex deployed the Worker from his Mac at `https://bottle-up-scores.protocsillag.workers.dev` (D1 `d3adc35d-…`); the URL is in `.env.production`. Redeploy the Worker from his Mac with `npm run deploy` in `server/` (the sandbox cannot reach Cloudflare or workers.dev).
-- Next: **M13 The fire barrel fight**, then **M14 Phones** (added by Alex on 2026-10-30, meant to run unattended overnight; see the Build plan in `BRIEF.md`).
+- **M13 The fire barrel fight: done** (2026-10-31, unattended).
+- Next: **M14 Phones** (see the Build plan in `BRIEF.md`).
 
 ## Commands
 
@@ -30,6 +31,8 @@ npm run osm:bake   # -> public/data/city.json (committed)
 Node is not installed system-wide on Alex's Mac; it lives at `~/.local/node/bin` (Node 24 LTS). Use `export PATH=~/.local/node/bin:$PATH`.
 
 ## Controls (current)
+
+Fire barrel fight (M13): A / D walk · W jump · S crouch · J punch · K kick · J + K together (or L) bag swing · hold away from Zsiga to block · Esc or P pauses the fight. Zsiga's offer: 1 yes, 2 no.
 
 At the bottle machine: hold Space to feed · E mash / hold to fix a refused item · A / D roll it · Space push it in · E (between items) or S walk away.
 
@@ -112,6 +115,7 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 - Bálna (`balna.ts`): `prepareBalna()` replaces the block named Bálna with two brick wings (`brick` set, ochre via `colors`; `buildingLook` now takes a brick colour from `colors`) and a glass middle used only for collision (skipped in `buildCity`); `buildBalna()` lofts the glass whale (40 × 24 grid, rising to 21 m, bulging on the river side) with a `LineSegments` diagrid and a lit shop row, plus five pubs on the promenade paths nearest Bálna inside the boundary (the quay right in front of it is outside the boundary). Their `barSpots` go to `crowd.addBarSpots()` (bar groups pick them half the time). Zone `rakpart` = within 150 m of Bálna (`zoneAt`): evening weight like Ráday, bins top up there, party heaps 25% of the time, bins refill extra in the evening. `Bálna` is in the gates' non-residential regex.
 - Kálvin tér (M11, `kalvin.ts`; church parts in `dressing.ts`): paving over the plaza areas within 70 m of the landmark, stone balls on a jittered 3.6 m grid inside them (solid), props kept apart through a `taken` list, the metro dome first; billboard on the largest nearby roof.
 - Bakáts tér (M11, `bakats.ts`): the church is in the `brick` set; tower, spires, portal and railing are hand-built; plaza, paths, benches (pushed into `city.benches` after `Lamps` draws the OSM ones, so street people use them), lamps (`extraRaday`), and 18 pigeons updated in `bakats.update()` that scatter when you come within 5 m running (1.6 m walking) and glide back after ~14 s.
+- Fire barrel fight (M13, `src/minigames/fight/`): `findBarrelSpot()` puts the barrel on the Nehru part lawn nearest the river end of Kinizsi utca, ≥ 4 m off paths (it lands at the north-west corner by Közraktár utca, about (9, 289)). `FireBarrel` (flame sprites, smoke column, spark points, a crackle with distance falloff, four `CharacterModel`s in the `warm` pose passing a bottle, toggle-box colliders) appears when `state.tipsy` starts and walks off toward the river (or vanishes if you are > 60 m away) when it ends. Its light is the last lamp pool light, taken with `lamps.borrowLight()`, so the light count never changes. E on the group → `openOffer()`: chat only once `state.fightDone`; "Üres zsákkal nem bunyózunk" with an empty bag; else the offer panel (`#fight-offer`, 1 / 2 or buttons) with the stakes. `FightGame` is a full-screen 2D canvas (virtual 1600 × 900, cover-scaled); while `fight.active` the frame loop only runs the fight (world, clock, countdown, tipsy and hunger all frozen) and the mouse is released (Esc / P pause the fight). Fighters are drawn from the creator look (`CharacterLook.colors/opts`) as jointed shapes; poses use angles where 0 points down and positive swings toward the opponent. Zsiga's AI: walks in, punch/kick every `FIGHT.ai.attackGap`, blocks 30% after a 350–500 ms reaction, belly-punch special every 8–12 s with a "!" tell; his punches and kicks wind up `FIGHT.zsigaWindup` × longer. Specials knock down and cannot be blocked; punches go over a crouch. Tuned with a bot: a novice-like bot wins ~45%, a decent one ~60%; fights last 20–25 s. `state.settleFight()` applies the stakes (win: `min(2n, capacity)` with fine cans/PET; lose: bag emptied; draw: nothing) and sets `stats.fight` (once per run; end-screen row). The result card (`#fight-result`, Enter / Space / button) re-locks the mouse.
 - Headless testing: `scratchpad/shot.cjs`-style Playwright scripts fake pointer lock by overriding `Document.prototype.pointerLockElement`; launch Chromium with `--use-angle=swiftshader`. `window.game` exposes state, items, returns, placement and interaction in dev.
 
 ## File map
@@ -134,6 +138,8 @@ WASD move (relative to camera) · mouse look (click to lock pointer) · Shift ru
 | `src/npc/looks.ts` | NPC colour palettes |
 | `src/audio/lines.ts`, `voice.ts` | Voice line catalogue, subtitles |
 | `src/minigames/mohu/MachineModel.ts` | REpont-style machine, canvas textures, live screen, receipt strip |
+| `src/minigames/fight/FireBarrel.ts` | Fire barrel group on the Nehru part (tipsy only), spot finding |
+| `src/minigames/fight/FightGame.ts` | The 2D fight: fighters, Zsiga's AI, HUD, effects |
 | `src/minigames/mohu/MohuGame.ts` | Close-up feeding mini-game, rejects, fixes, receipt |
 | `src/world/DayNight.ts` | Sun/moon, sky, fog by clock |
 | `src/world/lamps.ts` | Street lamps, light pools, shop windows, benches |
@@ -235,3 +241,7 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M12 old local scores** from every browser that played before go up once, the first time that browser reaches the board, with their original dates. If you'd rather start the shared board empty, it's one line in `OnlineScoreStore.doSync()`.
 - **Street names.** The corridor from the Lónyay × Mátyás corner to Ráday is named Mátyás utca because it lines up with it; the piece across Ráday is Kinizsi utca because both loose ends of Kinizsi face each other there. Tell me if either name is wrong.
 - **Bálna promenade.** The playable boundary follows the quay along Bálna, so the pubs stand by its north-west end and along the inland side, not on the narrow quay in front of the glass. Widening the boundary there would need a river-edge collision line; say if you want it.
+- **M13 barrel spot.** "The point nearest where Kinizsi utca reaches the riverside" lands at the north-west corner of the Nehru part lawn by Közraktár utca, because Kinizsi utca's river end is on Közraktár utca near Bálna, about 100 m north of the park. Say if you meant somewhere deeper in the park.
+- **M13 fight balance.** Zsiga is tuned against a bot: a button-mashing bot that rarely blocks wins about 45% of fights, a steadier one about 60%. Fights last 20–25 seconds, so the 3-minute timer only matters if you keep away from him. Big and slow: his punches and kicks wind up 25% longer than yours. All numbers are in `FIGHT` in `balance.ts`.
+- **M13 bag swing.** J + K pressed together (within 70 ms), or L, does the bag swing. It has a 0.6 s wind-up as the brief says, so Zsiga can punch you out of it; time it after he swings.
+- **M13 voice.** Zsiga's lines are in `lines.ts` with a new `zsiga` speaker (low, slow); `tools/voice/generate.mjs` knows him for the Piper run on your Mac.

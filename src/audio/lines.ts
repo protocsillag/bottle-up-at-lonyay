@@ -1,7 +1,7 @@
 // Every spoken line in the game: Hungarian text, English subtitle, who says it.
 // M9 synthesises public/audio/voice/<id>.mp3 for each line with Piper TTS.
 
-export type Speaker = 'granny' | 'grandpa' | 'hazmester' | 'street' | 'player' | 'machine' | 'cashier' | 'driver';
+export type Speaker = 'granny' | 'grandpa' | 'hazmester' | 'street' | 'player' | 'machine' | 'cashier' | 'driver' | 'zsiga';
 
 export interface Line { id: string; hu: string; en: string; who: Speaker; nightOnly?: boolean; }
 
@@ -24,6 +24,18 @@ export const LINES: Record<string, Line> = Object.fromEntries([
   { id: 'hz_snore', hu: 'Hhhrrr… zzz…', en: '(snoring through a window)', who: 'hazmester' },
   { id: 'ic_buzz', hu: '(bzzzz)', en: '(the door buzzes open)', who: 'machine' },
   { id: 'st_szia', hu: 'Szia, haver!', en: 'Hi, mate!', who: 'street' },
+  // M13: Zsiga, a Bajnok (Zsiga the Champion) at the fire barrel on the Nehru part.
+  { id: 'zs_hello', hu: 'Na, haver! Látom, jól megy a gyűjtés.', en: "Well, mate! Collecting's going well, I see.", who: 'zsiga' },
+  { id: 'zs_offer', hu: 'Egy menet. Ha nyersz, duplázom a zsákmányodat. Ha veszítesz, az enyém minden, ami nálad van.', en: 'One round. Win and I double your haul. Lose and everything you carry is mine.', who: 'zsiga' },
+  { id: 'zs_empty', hu: 'Üres zsákkal nem bunyózunk.', en: "We don't fight over an empty bag.", who: 'zsiga' },
+  { id: 'zs_later', hu: 'Ahogy gondolod. Itt leszünk.', en: "Suit yourself. We'll be here.", who: 'zsiga' },
+  { id: 'zs_fight', hu: 'HARC!', en: 'FIGHT!', who: 'zsiga' },
+  { id: 'zs_win', hu: 'Szép volt, haver!', en: 'Nice one, mate!', who: 'zsiga' },
+  { id: 'zs_lose', hu: 'Holnap is itt leszek.', en: "I'll be here tomorrow too.", who: 'zsiga' },
+  { id: 'zs_draw', hu: 'Döntetlen. Ezt még lejátsszuk egyszer.', en: "A draw. We'll settle this one day.", who: 'zsiga' },
+  { id: 'zs_chat1', hu: 'Melegedj csak, haver. Ma már nem bunyózunk.', en: "Warm yourself up, mate. No more fighting today.", who: 'zsiga' },
+  { id: 'zs_chat2', hu: 'A Szabadság hídon túl fúj a szél. Itt jó.', en: "The wind blows past Liberty Bridge. It's nice here.", who: 'zsiga' },
+  { id: 'zs_chat3', hu: 'Kérsz egy kortyot? Na, látom, már ittál.', en: "Want a sip? Ah, I see you've had a few already.", who: 'zsiga' },
   { id: 'st_jo_fogas', hu: 'Jó fogást!', en: 'Happy hunting!', who: 'street' },
   { id: 'till_nomoney', hu: 'Nincs elég pénze, kérem.', en: "You don't have enough money.", who: 'cashier' },
   { id: 'till_food', hu: 'Egy párizsis zsemle, tessék.', en: 'One bread roll with párizsi, here you go.', who: 'cashier' },

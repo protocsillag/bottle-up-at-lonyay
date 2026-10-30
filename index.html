@@ -34,12 +34,29 @@
       <div id="mohu-help"></div>
     </div>
     <div id="receipt" class="hidden"></div>
+    <div id="fight-offer" class="hidden">
+      <div class="till-title">Zsiga, a Bajnok</div>
+      <div class="fo-line">„Egy menet. Ha nyersz, duplázom a zsákmányodat. Ha veszítesz, az enyém minden, ami nálad van.”</div>
+      <div class="fo-en">One round. Win and I double your haul. Lose and everything you carry is mine.</div>
+      <div class="fo-stakes" id="fo-stakes">Now: 0 items · Win: 0 · Lose: 0</div>
+      <div class="fo-buttons"><button id="fo-yes"><b>1</b> Benne vagyok! <small>I'm in!</small></button><button id="fo-no" class="ghost"><b>2</b> Majd máskor. <small>Another time.</small></button></div>
+    </div>
+    <canvas id="fight" class="hidden"></canvas>
+    <div id="fight-result" class="overlay hidden">
+      <div class="card">
+        <h1 id="fr-title">K.O.</h1>
+        <p class="big" id="fr-items">40 → 80</p>
+        <p id="fr-text"></p>
+        <p class="muted" id="fr-zsiga"></p>
+        <button id="fr-go">Carry on</button>
+      </div>
+    </div>
     <div id="till" class="hidden">
       <div class="till-title">Till</div>
       <div class="till-row"><b>1</b> Bread roll with párizsi <span>100&nbsp;Ft</span></div>
       <div class="till-sub">Fills you up</div>
       <div class="till-row"><b>2</b> Beer, „folyékony kenyér” <span>200&nbsp;Ft</span></div>
-      <div class="till-sub">Tipsy for a few hours: faster, wobbly; P to pee on a wall, hold E to kick a bin over</div>
+      <div class="till-sub">Tipsy for a few minutes: faster, wobbly; P to pee on a wall, hold E to kick a bin over</div>
       <div class="till-foot">E or walk away to close</div>
     </div>
 

@@ -205,6 +205,26 @@ body.in-menu #hud, body.in-menu #countdown, body.in-menu #wallet, body.in-menu #
 #countdown.final { animation: pulse 1s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
 .card .endtime { font-size: 14px; }
+/* ---- M13 fire barrel fight ---- */
+#fight { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 30; background: #0b1020; touch-action: none; }
+#fight.hidden { display: none; }
+body.fight-on #hud, body.fight-on #countdown, body.fight-on #wallet, body.fight-on #stamina, body.fight-on #minimap,
+body.fight-on #prompt, body.fight-on #toasts, body.fight-on #tipsy-fx { display: none; }
+#subtitle { z-index: 35; }
+#fight-result { z-index: 40; }
+#fight-offer { position: fixed; left: 50%; bottom: 110px; transform: translateX(-50%); width: min(520px, 92vw); padding: 12px 16px;
+  border-radius: 10px; background: rgba(20, 18, 14, 0.92); color: #fff; border-top: 4px solid #e8822a; z-index: 12; }
+#fight-offer.hidden { display: none; }
+.fo-line { font-size: 15px; font-weight: 700; margin-top: 6px; }
+.fo-en { font-size: 13px; color: #bbb; margin-top: 2px; }
+.fo-stakes { font-size: 16px; font-weight: 800; color: var(--mohu-yellow); margin-top: 10px; }
+.fo-buttons { display: flex; gap: 10px; margin-top: 10px; }
+.fo-buttons button { flex: 1; min-height: 44px; border: 0; border-radius: 8px; font-size: 16px; font-weight: 800; cursor: pointer;
+  background: var(--mohu-yellow); color: var(--ink); }
+.fo-buttons button.ghost { background: transparent; color: #fff; border: 2px solid #777; }
+.fo-buttons b { background: var(--ink); color: var(--mohu-yellow); border-radius: 4px; padding: 0 6px; margin-right: 6px; }
+.fo-buttons .ghost b { background: #555; color: #fff; }
+.fo-buttons small { display: block; font-weight: 400; font-size: 12px; opacity: 0.8; }
 #till { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); width: 380px; padding: 12px 16px;
   border-radius: 10px; background: rgba(20, 20, 20, 0.88); color: #fff; border-top: 4px solid #2b8a3e; pointer-events: none; }
 #till.hidden { display: none; }
