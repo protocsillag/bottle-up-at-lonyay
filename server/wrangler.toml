@@ -10,4 +10,4 @@ ALLOWED_ORIGINS = "https://protocsillag.github.io,http://localhost:5173,http://1
 binding = "DB"
 database_name = "bottle-up-scores"
 # Filled in by `npx wrangler d1 create bottle-up-scores` (see README.md).
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "d3adc35d-9b5c-4731-a8c4-28b0272aaf80"

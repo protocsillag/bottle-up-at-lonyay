@@ -15,7 +15,7 @@ Read `BRIEF.md` first. One milestone per session; each ends playable with `npm r
 - **M9 Polish: done** (2026-10-29, unattended), except the Piper voice files (generate locally, see `tools/voice/README.md`) and the playtest with friends.
 - **M10 Gameplay round 2: done** (2026-10-30).
 - **M11 Real streets from Alex's photos: done** (2026-10-30). Reference folders done: `bins/`, `lonyay-utca/`, `matyas-utca/`, `raday-utca/`, `erkel-torok-pal-utca/`, `kalvin-ter/`, `bakats-ter/` (status column in `reference/README.md`).
-- **M12 Shared high scores: built and tested locally** (2026-10-30); waiting for Alex to deploy the Worker from his Mac (Cloudflare's API is not reachable from the sandbox). Steps in `server/README.md`; then put the URL in `.env.production`. Until then the live game keeps scores locally, as before.
+- **M12 Shared high scores: done** (2026-10-30). Alex deployed the Worker from his Mac at `https://bottle-up-scores.protocsillag.workers.dev` (D1 `d3adc35d-…`); the URL is in `.env.production`. Redeploy the Worker from his Mac with `npm run deploy` in `server/` (the sandbox cannot reach Cloudflare or workers.dev).
 
 ## Commands
 
@@ -224,6 +224,6 @@ Open questions and assumptions made while building unattended (M3–M9). Answer 
 - **M11 graffiti everywhere.** Plinths and tags are applied to street walls all over the district, not just Mátyás utca, since the notes say "almost every ground floor". Say if you want it calmer.
 - **M11 hung lamps.** Every street narrower than ~13 m between facades now has dish lamps on wires instead of posts (the notes say "roughly under 12 m"). Ráday and roads ≥ 14 m keep posts.
 - **M11 street plates.** House-number ranges on the plates are invented; OSM has almost no address data here.
-- **M12 deploy needs you.** Cloudflare's API is blocked from this sandbox, so the Worker is tested only locally (`wrangler dev` with a local D1). Run the five commands in `server/README.md` on your Mac, then either commit `server/wrangler.toml` and `.env.production` yourself or send me the `database_id` and the Worker URL and I'll do it.
+- **M12 deploy.** Done from your Mac. Any later change to `server/` needs `npm run deploy` there again; the game side deploys with GitHub Pages as usual.
 - **M12 anti-cheat is light**, as the brief says: anyone who reads the code can post a believable score under 50 000 Ft. A signed run log or server-side replay would be the next step if it ever matters.
 - **M12 old local scores** from every browser that played before go up once, the first time that browser reaches the board, with their original dates. If you'd rather start the shared board empty, it's one line in `OnlineScoreStore.doSync()`.
