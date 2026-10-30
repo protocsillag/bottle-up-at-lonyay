@@ -11,6 +11,7 @@ Number plates and mailbox name labels are blurred on purpose; the repo is public
 | `raday-utca/` | Ráday utca, the café and bar street | Waiting for M11 |
 | `erkel-torok-pal-utca/` | Erkel utca and Török Pál utca, two side streets | Waiting for M11 |
 | `kalvin-ter/` | Kálvin tér, the big square and junction at the north corner | Waiting for M11 |
+| `bakats-ter/` | Bakáts tér, the church square | Waiting for M11 |
 | `../mohu-repont-machines.png` | The REpont machine pair (used in M5) | Used |
 
 ## `lonyay-utca/` — Lónyay utca
@@ -191,3 +192,24 @@ The busy square and junction at the north corner of the map, where the Kiskörú
 - Big modern glass office buildings with sharp, angled glass prows.
 - A large beige hotel with a dark mansard roof full of dormers and green-glass bay windows.
 - Billboards: on the building next to the church, and on the rooftops. Use invented adverts, or adverts for the game itself ("Mohu: minden üveg számít" — every bottle counts).
+
+## `bakats-ter/` — Bakáts tér
+
+A green church square, recently renovated, and the calmest place on the map. One photo is in the folder (`church-and-square.jpg`). Alex also shared an architect's rendering of the renovated square. It is not in the repo because it isn't his image, but it is described below.
+
+**The church** (Ferencváros parish church). Already in the game as a tower, spire and tiled nave; rework it to match:
+
+- Walls of orange-red brick with pale grey stone bands, corners, window frames and portal.
+- **The main tower** at the front: square, tall, with a stone portal at its foot (a deep round-arched doorway with a statue in a niche above it, steps leading up), a tall arched window, a stone arcade frieze, then a belfry with tall narrow louvred openings, a clock face on each side, small triangular gables with pinnacles at the base of the spire, and a tall, slim dark grey pointed spire.
+- **A second, smaller spire** beside it over a side tower, topped with a gold cross.
+- A long brick nave with round-arched windows, a round window and a stone cornice; an iron railing around the church and a low hedge.
+
+**The square** (photo, plus the rendering).
+
+- Large lawns edged with pale concrete kerbs, with grey granite cobble paving around them and wide pale paths curving between the lawns.
+- In the middle: a round plaza with a radial or circular paving pattern, ringed by benches facing inward.
+- **Benches:** wooden slats on dark steel legs, lots of them, along the paths and around the circle. Good spots for street-people NPCs to sit and sleep, and for evening groups (a guitarist, people with drinks), so bins near the benches fill up in the evening.
+- Young trees planted in the lawns, big mature plane trees on the edges, beds of tall ornamental grasses.
+- The curly dark green lamp posts with copper lanterns (as in Ráday utca) around the paths.
+- Surrounding tenements in ochre and grey with tall facades all round the square.
+- Gameplay ideas: pigeons on the plaza that scatter when you run through; a bin by each bench cluster.
