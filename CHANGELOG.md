@@ -6,6 +6,7 @@
 - Room for music: put `menu.mp3` and `game.mp3` in `public/audio/music/` and they play (menus and high scores / during a run), looping and cross-fading. Without the files the game stays silent as before. An optional `fight.mp3` plays during Zsiga's fight (without it the run's music carries on). Settings has a Music volume and Music on / off.
 - Ringing a bell now gets you buzzed in 4 times in 10 (was 1 in 10).
 - The SPAR on the Lónyay utca corner is a real shop now: walk in through its green glass door (BEJÁRAT) to find a pair of bottle machines and a till with food and beer, like the SPAR on Kinizsi utca. It has its own red S on the map, so there are three places to return bottles.
+- Tipsy makes you 1.5× faster, walking and running (was 1.2×).
 - Bikes are 1.5× faster: 12 m/s instead of 8, and they pick up speed as quickly as before.
 
 ## M14 Phones (2026-10-31)

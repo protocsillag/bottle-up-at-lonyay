@@ -158,7 +158,7 @@ export const FIGHT = {
 export const TIPSY = {
   /** Real minutes tipsy after the 1st, 2nd and 3rd beer in a row; more beers keep the last. */
   realMinutes: [3, 4, 5] as const,
-  speed: 1.2,
+  speed: 1.5, // walking and running speed multiplier while tipsy
   maxLevel: 3, // wobble strength stacks with each beer while tipsy
   peeSeconds: 3,
   kickHold: 1, // hold E on a public bin to kick it over
