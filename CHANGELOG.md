@@ -10,6 +10,7 @@
 - Compact HUD on phones: the countdown and the clock at the top centre, money, bags, stamina and hunger in a small panel under the ❚❚ / Map buttons, a smaller minimap top right, toasts and subtitles kept clear of your thumbs.
 - Every menu (title, character creator, intro, pause, settings, end screen, top 10) fits a phone held sideways without scrolling. The creator is a two-column panel with the model beside it; swipe the model to turn it. Settings has "Look sensitivity" for the drag-to-look speed.
 - Phones start on Medium graphics (a quality you saved still wins). If the game runs under 25 fps for 10 seconds, a tip offers to switch to Low.
+- Fix (same day): the phone controls list was also showing, garbled, on the desktop intro and pause cards. Desktop shows only the keyboard controls again.
 - Landscape is the main layout; portrait works too. Notches and home bars are respected, the page never scrolls, zooms or selects text, Android goes full screen on the first tap, and sound and Hungarian speech start with the first touch.
 
 ## M13 The fire barrel fight (2026-10-31)

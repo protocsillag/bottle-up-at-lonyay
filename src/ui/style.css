@@ -246,6 +246,8 @@ body.fight-on #prompt, body.fight-on #toasts, body.fight-on #tipsy-fx { display:
 
 /* ---- M14 phones: everything below applies only with body.touch (set by main.ts) ---- */
 .touch-only, .touch-layer, .touch-bar, .touch-street, .touch-mohu, .touch-fight { display: none; }
+/* Desktop never shows touch-only content, whatever display a more specific rule sets. */
+body:not(.touch) .touch-only { display: none !important; }
 body.touch .desktop-only { display: none !important; }
 body.touch span.touch-only { display: inline; }
 body.touch ul.controls.touch-only { display: grid; }
