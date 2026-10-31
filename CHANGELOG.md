@@ -3,7 +3,7 @@
 ## Tweaks after M14 (2026-10-31)
 
 - Shorter queues at the bottle machines: each person ahead of you now takes 8–20 seconds (was 10–30), so you never wait more than 20 seconds.
-- Room for music: put `menu.mp3` and `game.mp3` in `public/audio/music/` and they play (menus and high scores / during a run), looping and cross-fading. Without the files the game stays silent as before. Settings has a Music volume and Music on / off.
+- Room for music: put `menu.mp3` and `game.mp3` in `public/audio/music/` and they play (menus and high scores / during a run), looping and cross-fading. Without the files the game stays silent as before. An optional `fight.mp3` plays during Zsiga's fight (without it the run's music carries on). Settings has a Music volume and Music on / off.
 - Bikes are 1.5× faster: 12 m/s instead of 8, and they pick up speed as quickly as before.
 
 ## M14 Phones (2026-10-31)

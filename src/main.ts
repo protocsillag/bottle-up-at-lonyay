@@ -333,6 +333,7 @@ function acceptFight() {
   say('zs_fight', 1.6);
   document.body.classList.add('fight-on');
   fight.start(look, state.tipsyLevel, (r) => showFightResult(r));
+  music.play('fight', 'game');
   // The fight takes the keyboard (Esc pauses it), so give the mouse back (after starting,
   // so the pause card stays away).
   input.unlock();
@@ -342,6 +343,7 @@ $('fo-yes').onclick = () => acceptFight();
 $('fo-no').onclick = () => declineFight();
 function showFightResult(r: FightResult) {
   document.body.classList.remove('fight-on');
+  music.play('game');
   const [before, after] = state.settleFight(r);
   $('fr-title').textContent = r === 'won' ? 'K.O.!' : r === 'lost' ? 'K.O.' : 'Döntetlen';
   $('fr-items').textContent = r === 'lost' ? `${before} → 0` : `${before} → ${after}`;
