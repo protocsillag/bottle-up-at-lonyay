@@ -5,7 +5,7 @@ import { CharacterModel, type CharacterColors, type CharacterOptions } from './C
 import { BIKE } from '../state/balance';
 
 const BIKE_TURN = 3.2; // rad/s
-const BIKE_ACCEL = 5; // m/s²
+const BIKE_ACCEL = 7.5; // m/s² (reaches the faster top speed in the same time)
 
 // The player: walks the city at real speeds, runs on stamina, jumps, and collides with
 // walls as a circle (capsule seen from above).

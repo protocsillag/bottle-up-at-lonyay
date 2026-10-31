@@ -1,5 +1,10 @@
 # Changelog
 
+## Tweaks after M14 (2026-10-31)
+
+- Shorter queues at the bottle machines: each person ahead of you now takes 8–20 seconds (was 10–30), so you never wait more than 20 seconds.
+- Bikes are 1.5× faster: 12 m/s instead of 8, and they pick up speed as quickly as before.
+
 ## M14 Phones (2026-10-31)
 
 - The game now plays in phone browsers. Phones and tablets get touch controls and a compact layout; a laptop or desktop (even one with a touchscreen) looks and plays exactly as before.

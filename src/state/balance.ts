@@ -96,7 +96,7 @@ export const MOHU = {
   wipeHold: 1.2, // seconds of holding E to wipe a wet label
   alignTolerance: 0.26, // radians either side of upright that counts as green
   queueOdds: [0.5, 0.35, 0.15], // 0, 1 or 2 people already at the machines
-  queueTime: [10, 30] as const, // real seconds each
+  queueTime: [8, 20] as const, // real seconds each (at most 20 s wait)
   megtelt: 0.1, // chance one machine is full on arrival
 };
 
@@ -108,7 +108,7 @@ export const DOG = {
 
 export const BIKE = {
   count: [6, 10] as const,
-  speed: 8,
+  speed: 12, // 1.5× the original 8 m/s
   crashSpeed: 4.5, // m/s: hitting a wall or a person faster than this throws you off
   stun: 2.5, // real seconds on the ground
 };
