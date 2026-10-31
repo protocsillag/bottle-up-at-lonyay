@@ -52,6 +52,7 @@ import { loadLook, saveLook, type CharacterLook } from './player/look';
 import { OnlineScoreStore, createScoreStore, type ScoreStore } from './state/scores';
 import { renderScores } from './ui/Scores';
 import { sound } from './audio/Sfx';
+import { music } from './audio/Music';
 import { loadSettings, saveSettings, type Settings } from './state/settings';
 import { TouchControls, isTouchDevice, type TouchMode } from './ui/touch';
 
@@ -407,7 +408,7 @@ for (const d of shops.doors) {
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
-if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, balna, fire, fight, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
+if (import.meta.env.DEV) Object.assign(window, { game: { renderer, scene, camera, player, follow, city, world, minimap, state, items, returns, placement, interaction, buildings, shops, hall, mohu, music, traffic, gimnazium, roadWorks, mosoda, raday, radayPrep, erkelPrep, bakats, kalvin, balna, fire, fight, puddles, crowd, bikes, dogMess, sweeper, lamps, dayNight, graph } });
 
 function mount(b: import('./world/Bikes').Bike) {
   sound.play('bell');
@@ -445,6 +446,7 @@ function show(next: Screen) {
   scoresEl.classList.toggle('hidden', next !== 'scores');
   startEl.classList.add('hidden');
   document.body.classList.toggle('in-menu', next !== 'run');
+  music.play(next === 'run' ? 'game' : 'menu');
 }
 
 function openCreator() {
@@ -573,6 +575,7 @@ function applySettings() {
   sound.volumes = { master: settings.master, sfx: settings.sfx, voice: settings.voice };
   sound.voiceMode = settings.voiceMode;
   sound.applyVolumes();
+  music.setVolume(settings.musicMode === 'off' ? 0 : settings.master * settings.music);
   follow.sensitivity = settings.mouse;
   const q = settings.quality;
   renderer.setPixelRatio(q === 'low' ? 1 : Math.min(devicePixelRatio, q === 'medium' ? 1.5 : 2));
@@ -592,12 +595,12 @@ let settingsReturn: Screen | 'pause' = 'title';
 const stEl = $('settings');
 function openSettings(from: Screen | 'pause') {
   settingsReturn = from;
-  for (const [id, key] of [['st-master', 'master'], ['st-sfx', 'sfx'], ['st-voice', 'voice'], ['st-mouse', 'mouse']] as const) {
+  for (const [id, key] of [['st-master', 'master'], ['st-sfx', 'sfx'], ['st-voice', 'voice'], ['st-music', 'music'], ['st-mouse', 'mouse']] as const) {
     const el = $(id) as HTMLInputElement;
     el.value = String(settings[key]);
     el.oninput = () => { settings[key] = Number(el.value); applySettings(); saveSettings(settings); };
   }
-  for (const [id, key] of [['st-voicemode', 'voiceMode'], ['st-quality', 'quality']] as const) {
+  for (const [id, key] of [['st-voicemode', 'voiceMode'], ['st-musicmode', 'musicMode'], ['st-quality', 'quality']] as const) {
     const el = $(id) as HTMLSelectElement;
     el.value = settings[key];
     el.onchange = () => { (settings as unknown as Record<string, string>)[key] = el.value; applySettings(); saveSettings(settings); };
@@ -616,7 +619,8 @@ $('t-settings').classList.remove('hidden');
 $('t-settings').onclick = () => openSettings('title');
 $('p-settings').onclick = () => openSettings('pause');
 // Audio starts on the first click (browsers require a gesture); every button clicks.
-addEventListener('pointerdown', () => sound.init());
+addEventListener('pointerdown', () => { sound.init(); music.unlock(); });
+addEventListener('keydown', () => music.unlock());
 // ---------------------------------------------------------------- phones (M14)
 const touch = TOUCH ? new TouchControls(input, () => input.unlock()) : null;
 if (TOUCH) {

@@ -9,12 +9,14 @@ export interface Settings {
   sfx: number;
   voice: number;
   voiceMode: VoiceMode;
+  music: number; // 0–1
+  musicMode: 'on' | 'off';
   mouse: number; // multiplier, 0.3–2.5
   quality: Quality;
 }
 
 const KEY = 'bual.settings.v1';
-export const DEFAULT_SETTINGS: Settings = { master: 0.8, sfx: 0.8, voice: 0.9, voiceMode: 'auto', mouse: 1, quality: 'high' };
+export const DEFAULT_SETTINGS: Settings = { master: 0.8, sfx: 0.8, voice: 0.9, voiceMode: 'auto', music: 0.5, musicMode: 'on', mouse: 1, quality: 'high' };
 
 /** touch: phones start on Medium (M14); a saved setting still wins. */
 export function loadSettings(touch = false): Settings {

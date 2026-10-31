@@ -451,6 +451,11 @@ body.touch #creator input { font-size: 16px; padding: 6px 8px; min-height: 40px;
 body.touch #creator .row button { min-height: 44px; flex: 1; }
 @media (max-height: 380px) {
   body.touch #minimap:not(.large) { width: 100px; height: 100px; }
+  body.touch .settings label { margin: 1px 0; }
+  body.touch .settings input[type=range] { height: 30px; }
+  body.touch .settings select { min-height: 36px; }
+  body.touch .card.settings h1 { margin-bottom: 0; }
+  body.touch .card.settings .muted { margin: 2px 0; }
   body.touch #end .card h1 { font-size: 18px; margin: 0; }
   body.touch #end .card p { margin: 2px 0; }
   body.touch #end .card .big { font-size: 24px; }
