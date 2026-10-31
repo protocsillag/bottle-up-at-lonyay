@@ -1,3 +1,4 @@
+import type { ShopId } from './shops/Shops';
 import * as THREE from 'three';
 import type { GameState } from '../state/GameState';
 import type { Interactable } from '../player/Interaction';
@@ -12,7 +13,7 @@ import { binGeometry } from './items/models';
 // using the machines; rarely one machine shows "Megtelt" (full).
 
 export interface ReturnPoint {
-  id: 'spar' | 'aldi';
+  id: ShopId;
   name: string;
   /** Centre of the machine pair. */
   x: number; z: number;

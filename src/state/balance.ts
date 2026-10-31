@@ -72,7 +72,7 @@ export const KIND_ODDS = { pet: 0.45, can: 0.38, glass: 0.17 } as const;
 export const GLASS_BREAK = { minFill: 0.8, perSecond: 1 / 25 };
 
 export const COURTYARD = {
-  bellOdds: 0.1, // 1 in 10 rings buzzes the door open
+  bellOdds: 0.4, // 4 in 10 rings buzz the door open
   binItems: [5, 20] as const,
   /** Courtyard bins by lid colour (reference/bins/): yellow-lid recycling holds the bottles,
    *  green mixed waste a few (often crushed or wet), blue-lid paper nothing. */

@@ -8,10 +8,10 @@ import { buildHall, buildSpar, type ShopInterior } from './interiors';
 import { buildSparFront, type SparFront } from './sparFront';
 import { SHOP_OPEN } from '../../state/balance';
 
-// The two return points as walk-in shops: SPAR on Kinizsi utca and the Central Market
-// Hall (Aldi inside). Doors are open 06:00–24:00; at midnight you are shown out.
+// The return points as walk-in shops: SPAR on Kinizsi utca, the SPAR on the Lónyay
+// utca corner and the Central Market Hall (Aldi inside). Doors are open 06:00–24:00; at midnight you are shown out.
 
-export type ShopId = 'spar' | 'aldi';
+export type ShopId = 'spar' | 'spar-lonyay' | 'aldi';
 export interface ShopDoor { id: ShopId; name: string; x: number; z: number; facing: number; interior: ShopInterior; }
 
 export class Shops {
@@ -53,7 +53,7 @@ export class Shops {
     this.doors.push(door);
     this.its.push({
       x: d.x, z: d.z, reach: 2.4, hold: 0,
-      label: () => (this.current ? null : `Go into ${id === 'spar' ? 'SPAR' : 'the market hall'}`),
+      label: () => (this.current ? null : `Go into ${id === 'aldi' ? 'the market hall' : 'SPAR'}`),
       blocked: () => (!this.state.shopsOpen ? `${name}: closed — opens at 0${SHOP_OPEN}:00` : this.enterBlock()),
       act: () => this.enter(door),
     });
@@ -67,12 +67,11 @@ export class Shops {
     this.street.add(f.group);
   }
 
-  /** A SPAR front that cannot be entered (the Lónyay corner from Alex's photo). */
-  addDecorativeFront(d: { x: number; z: number; facing: number }) {
-    const f = buildSparFront(d, 4);
-    this.fronts.push(f);
-    this.street.add(f.group);
-    return f;
+  /** The SPAR on the Lónyay utca corner (reference/lonyay-utca/spar-corner.jpg): a second
+   *  walk-in SPAR with its own machines and till, the same layout as Kinizsi utca. */
+  addLonyaySpar(d: { x: number; z: number; facing: number }) {
+    this.add('spar-lonyay', 'SPAR, Lónyay utca', d, buildSpar([9000, 9000]));
+    this.sparFront(d);
   }
 
   /** Grilles down while shut, neon brighter at night. */

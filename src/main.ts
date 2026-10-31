@@ -225,8 +225,8 @@ const host = {
 };
 // No street gates on top of the shop doors.
 const [sx0, sz0] = city.landmarks.spawn ?? [0, 0];
-// The SPAR corner on Lónyay utca (reference/lonyay-utca/spar-corner.jpg): decorative only;
-// the return point stays the City Spar on Kinizsi utca.
+// The SPAR corner on Lónyay utca (reference/lonyay-utca/spar-corner.jpg): a second walk-in
+// SPAR with machines and a till, like the City Spar on Kinizsi utca.
 const lonyaySpar = city.shops.find((s) => /spar/i.test(s.name ?? '') && Math.hypot(s.p[0] - sx0, s.p[1] - sz0) < 120 && s.p !== city.landmarks.spar);
 const lonyaySparDoor = lonyaySpar ? doorOnFacade(city, lonyaySpar.p) : null;
 const shopDoorSpots = [city.landmarks.spar ? doorOnFacade(city, city.landmarks.spar) : null, hall?.door ?? null, lonyaySparDoor]
@@ -235,7 +235,7 @@ const buildings = new BuildingSystem(city, placement, state, host, streets, shop
 scene.add(buildings.group);
 const shops = new Shops(city, state, host, hall?.door ?? null);
 scene.add(shops.group, shops.street, shops.lights);
-if (lonyaySparDoor) shops.addDecorativeFront(lonyaySparDoor);
+if (lonyaySparDoor) shops.addLonyaySpar(lonyaySparDoor);
 if (sparB && city.landmarks.spar) cityGroup.add(buildSparBranding(sparB, doorOnFacade(city, city.landmarks.spar), (x, z) => placement.free(x, z, 0.5)));
 // Mátyás utca wear and tear (reference/matyas-utca/): plinths, graffiti, road works.
 const openings = [
@@ -403,10 +403,10 @@ interaction.onRustle = () => sound.play('search');
   if (kalvin) follow.yaw = Math.atan2(sx - kalvin[0], sz - kalvin[1]);
 }
 
-// The two return points: SPAR at Kinizsi/Ráday and Aldi in the market hall.
+// The return points: the two SPARs (Kinizsi utca, Lónyay utca) and Aldi in the market hall.
 const markers: MapMarker[] = [];
 for (const d of shops.doors) {
-  markers.push(d.id === 'spar' ? { p: [d.x, d.z], label: 'S', color: '#d4202c' } : { p: [d.x, d.z], label: 'A', color: '#1f5fa8' });
+  markers.push(d.id !== 'aldi' ? { p: [d.x, d.z], label: 'S', color: '#d4202c' } : { p: [d.x, d.z], label: 'A', color: '#1f5fa8' });
 }
 const minimap = new Minimap($('minimap') as HTMLCanvasElement, city, markers);
 
